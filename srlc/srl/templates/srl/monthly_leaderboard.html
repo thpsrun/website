@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        {% load static %}
+        <meta charset="utf-8">
+        <meta name="description" content="THPS Speedrun Leaderboards">
+        <meta name="author" content="THPS Speedrun Community">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="keywords" content="speedrun, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+
+        <title>Monthly Leaderboards - thps.run</title>
+        
+        <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+        {% load django_bootstrap5 %}
+        {% bootstrap_css %}
+        {% bootstrap_javascript %}
+
+        <script type="text/javascript" src="{% static 'srl/misc/monthly-data.js' %}"></script>
+        <link rel="stylesheet" type="text/css" href="{% static 'srl/misc/css.css' %}">
+    </head>
+    <body>
+        <div id="player-totals" style="display: none;">{{ player_totals|json_script:"monthly-data" }}</div>
+        {% include 'srl/navbar.html' %}
+        <br />
+
+        <form id="subcategory-form" class="search-bar">
+            <select id="month-menu" name="subcategory" onchange="updateMonthlyLeaderboard()">
+                <option value="2024" {% if month.0 == "None" %}selected{% endif %}>-----2024-----</option>
+                {% for month in months %}
+                    <option value="{{ month.0 }}" {% if month.0 == month_query %}selected{% endif %}>{{ month.1 }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        <table id="leaderboard-table" class="table table-striped">
+            <thead class="bg-info">
+                <tr>
+                    {% if month_query > 0 %}<th colspan="4">Monthly Leaderboards</th>
+                    {% else %}<th colspan="4">Yearly Leaderboards</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <thead class="bg-info">
+                <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Points</th> 
+                    <th>Runs Accepted</th>
+                </tr>
+            </thead>
+            <tbody id="main">
+                <!---{% for item in player_totals.1 %}
+                    <tr>
+                        <td>{{ item.1.rank }}</td>
+                        {% if item.1.countrycode %}
+                            <td><img src="https://flagcdn.com/h20/{{ item.1.countrycode }}.png" onerror="this.onerror=null; this.src=''" height="15" />
+                                {% if item.nickname %}
+                                    <a href="/player/{{ item.0 }}">{{ item.1.nickname }}</a></td>
+                                {% else %}
+                                    <a href="/player/{{ item.0 }}">{{ item.0 }}</a></td>
+                                {% endif %}
+                        {% else %}
+                            {% if item.nickname %}
+                                <td><a href="/player/{{ item.0 }}">{{ item.1.nickname }}</a></td>
+                            {% else %}
+                                <td><a href="/player/{{ item.0 }}">{{ item.0 }}</a></td>
+                            {% endif %}
+                        {% endif %}
+                        <td>{{ item.1.points }}</td>
+                        <td>{{ item.1.runs }}</td>
+                    </tr>
+                {% endfor %}-->
+            </tbody>
+        </table>
+        {% include 'srl/footer.html' %}
+    </body>
+</html>
+

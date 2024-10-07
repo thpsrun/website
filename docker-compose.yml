@@ -1,7 +1,8 @@
 version: "3"
 services:
   postgres:
-    image: postgres
+    container_name: postgres
+    image: postgres:latest
     restart: unless-stopped
     shm_size: 128mb
     env_file:
@@ -12,7 +13,7 @@ services:
   django:
     container_name: django
     restart: unless-stopped
-    command: python manage.py runserver 0.0.0.0:8000
+    command: bash -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     build: .
     ports:
       - 8000:8000
@@ -21,4 +22,4 @@ services:
     depends_on:
       - postgres
     volumes:
-      - ./code:/code
+      - ./srlc:/srlc

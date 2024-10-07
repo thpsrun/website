@@ -1,0 +1,78 @@
+<html>
+    <head>
+        {% load static %}
+        <meta charset="utf-8">
+        <meta name="description" content="THPS Speedrun Leaderboards">
+        <meta name="author" content="THPS Speedrun Community">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="keywords" content="speedrun, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+
+        {% if "/lbs/ils/" in request.path %}
+            {% if game_abbr == "thps12" %}
+                <title>THPS1+2 IL Leaderboards - thps.run</title>
+            {% elif game_abbr == "thps12ce" %}
+                <title>THPS1+2 CE IL Leaderboards - thps.run</title>
+            {% else %}
+                <title>{{ game_abbr|upper }} IL Leaderboards - thps.run</title>
+            {% endif %}
+        {% else %}
+            {% if game_abbr == 'thps12' %}
+                <title>THPS1+2 Full Game Leaderboards - thps.run</title>
+            {% else %}
+                <title>{{ game_abbr|upper }} Full Game Leaderboards - thps.run</title>
+            {% endif %}
+        {% endif %}
+
+        <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
+        <script type="text/javascript" src="{% static 'srl/misc/runs-data.js' %}"></script>
+
+        {% load django_bootstrap5 %}
+        {% bootstrap_css %}
+        {% bootstrap_javascript %}
+
+        <link rel="stylesheet" type="text/css" href="{% static 'srl/misc/css.css' %}">
+    </head>
+    <body>
+        {% include 'srl/navbar.html' %}
+        <div id="runs-data" style="display: none;">{{ runs|json_script:"runs-data" }}</div>
+        <form id="subcategory-form" class="search-bar">
+            <select id="subcategory-dropdown" name="subcategory" onchange="updateLeaderboard()">
+                {% for subcategory in subcategories %}
+                    <option value="{{ subcategory }}" {% if subcategory == selected_subcategory %}selected{% endif %}>{{ subcategory }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        
+        <table id="leaderboard-table" class="table table-striped">
+            <thead class="bg-info">
+                <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Time 
+                        {% if runs.0.defaulttime == 'ingame' %} (IGT)
+                        {% elif runs.0.defaulttime == 'realtime' %} (RTA)
+                        {% elif runs.0.defaulttime == 'realtime_noloads' %} (LRT)
+                        {% else %} ({{ runs.0.defaulttime }})
+                        {% endif %}
+                    </th>
+                    <th>Date</th>
+                    <th>Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for run in runs %}
+                    {% if run.subcategory == selected_subcategory %}
+                        <tr data-subcategory="{{ run.subcategory }}">
+                            <td>{{ run.place }}</td>
+                            <td>{{ run.player }}</td>
+                            <td>{{ run.time }}</td>
+                            <td>{{ run.date }}</td>
+                            <td>{{ run.points }}</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% include 'srl/footer.html' %}
+    </body>
+</html>

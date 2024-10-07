@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        {% load static %}
+        <meta charset="utf-8">
+        <meta name="description" content="THPS Speedrun Leaderboards">
+        <meta name="author" content="THPS Speedrun Community">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="keywords" content="speedrun, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+        
+        <title>SERVER ERROR 500</title>
+        
+        <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+        {% load django_bootstrap5 %}
+        {% bootstrap_css %}
+        {% bootstrap_javascript %}
+
+        <link rel="stylesheet" type="text/css" href="{% static 'srl/misc/css.css' %}">
+    </head>
+    <body>
+        {% include 'srl/navbar.html' %}
+        <br />
+        <table id="privacy" class="privacy">
+            <thead class="bg-info">
+                <tr>
+                    <th>Server Error 500 - Internal Server Error</th>
+                </tr>
+                <tr>
+                    <th>An error occurred when looking up the specified user. This error has been reported.</th>
+                </tr>
+            </thead>
+        </table>
+        {% include 'srl/footer.html' %}
+    </body>
+</html>
+

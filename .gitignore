@@ -10,7 +10,7 @@ __pycache__/
 .Python
 .DS_Store
 db/
-build/
+code/
 develop-eggs/
 dist/
 downloads/

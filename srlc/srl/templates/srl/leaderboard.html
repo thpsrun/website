@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        {% load static %}
+        <meta charset="utf-8">
+        <meta name="description" content="THPS Speedrun Leaderboards">
+        <meta name="author" content="THPS Speedrun Community">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="keywords" content="speedrun, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+
+        {% if "/fullgame" in request.path %}
+            <title>Full Game Leaderboard - thps.run</title>
+        {% elif "/lbs/" in request.path %}
+            {% if game_abbr == "thps12" %}
+                <title>THPS1+2 IL Overall Leaderboard - thps.run</title>
+            {% elif game_abbr == "thps12ce" %}
+                <title>THPS1+2 CE IL Overall Leaderboard - thps.run</title>
+            {% else %}
+                <title>{{ game_abbr|upper }} IL Overall Leaderboard - thps.run</title>
+            {% endif %}
+        {% else %}
+            <title>Overall Leaderboard - thps.run</title>
+        {% endif %}
+        
+        <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+        {% load django_bootstrap5 %}
+        {% bootstrap_css %}
+        {% bootstrap_javascript %}
+
+        <link rel="stylesheet" type="text/css" href="{% static 'srl/misc/css.css' %}">
+    </head>
+    <body>
+        <div id="leaderboard-data" style="display: none;">{{ leaderboard.object_list|json_script:"leaderboard-data"  }}</div>
+        {% include 'srl/navbar.html' %}
+        {% if leaderboard.has_other_pages %}
+            <form id="searchForm" method="GET" class="search-bar">
+                <input type="text" name="search" id="searchInput" placeholder="Search player...">
+                <button type="submit">Search</button>
+            </form>
+        {% else %}
+            <br />
+        {% endif %}
+
+        <table id="leaderboardTable" class="table table-striped">
+            <thead class="bg-info">
+                <tr>
+                    {% if "/fullgame" in request.path %}
+                        <th colspan="3">Full Game Leaderboard</th>
+                    {% elif "/lbs/" in request.path %}
+                        {% if game_abbr == "thps12" %}
+                            <th colspan="3">Tony Hawk's Pro Skater 1+2 Overall IL Leaderboard</th>
+                        {% elif game_abbr == "thps12ce" %}
+                            <th colspan="3">THPS1+2 Category Extensions Overall IL Leaderboard</th>
+                        {% else %}
+                            <th colspan="3">{{ game_name }} Overall IL Leaderboard</th>
+                        {% endif %}
+                    {% else %}
+                        <th colspan="3">Overall Leaderboard</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <thead class="bg-info">
+                <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Points</th>
+                </tr>
+            </thead>
+            <tbody id="main">
+                {% for item in leaderboard %}
+                    <tr>
+                        <td>{{ item.rank }}</td>
+                        {% if item.countrycode %}
+                            <td><img src="https://flagcdn.com/h20/{{ item.countrycode }}.png" onerror="this.onerror=null; this.src=''" height="15" />
+                                {% if item.nickname %}
+                                    <a href="/player/{{ item.player }}">{{ item.nickname }}</a></td>
+                                {% else %}
+                                    <a href="/player/{{ item.player }}">{{ item.player }}</a></td>
+                                {% endif %}
+                        {% else %}
+                            {% if item.nickname %}
+                                <td><a href="/player/{{ item.player }}">{{ item.nickname }}</a></td>
+                            {% else %}
+                                <td><a href="/player/{{ item.player }}">{{ item.player }}</a></td>
+                            {% endif %}
+                        {% endif %}
+                        <td>{{ item.total_points }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            <tbody>
+                {% if leaderboard.has_other_pages %}
+                    <tr>
+                        <td colspan="3">
+                            {% if leaderboard.has_previous %}
+                                <a href="?search={{ search_query }}&page=1">&laquo; First</a>
+                                <a href="?search={{ search_query }}&page={{ leaderboard.previous_page_number }}">Previous</a>
+                            {% endif %}
+            
+                            {% for num in leaderboard.paginator.page_range %}
+                                {% if leaderboard.number == num %}
+                                    <span class="current-page">{{ num }}</span>
+                                {% else %}
+                                    <a href="?search={{ search_query }}&page={{ num }}">{{ num }}</a>
+                                {% endif %}
+                            {% endfor %}
+            
+                            {% if leaderboard.has_next %}
+                                <a href="?search={{ search_query }}&page={{ leaderboard.next_page_number }}">Next</a>
+                                <a href="?search={{ search_query }}&page={{ leaderboard.paginator.num_pages }}">Last &raquo;</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <script>
+            $(document).ready(function() {
+                var originalLeaderboard = JSON.parse(document.getElementById("leaderboard-data").textContent);
+            
+                function populateLeaderboard(data) {
+                    var tableBody = document.getElementById("leaderboardTable").getElementsByTagName('tbody')[0];
+                    tableBody.innerHTML = ''; // Clear the existing content
+            
+                    data.forEach(function(item, index) {
+                        var row = tableBody.insertRow();
+                        var rankCell = row.insertCell();
+                        var playerCell = row.insertCell();
+                        var pointsCell = row.insertCell();
+            
+                        console.log(item);
+                        if (item.countrycode) {
+                            
+                            playerCellContent = '<img src="https://flagcdn.com/h20/' + item.countrycode + '.png" height="15" />' + ' ' + '<a href="/player/' + item.player + '">' + item.player + '</a>';
+                        } else {
+                            playerCellContent = '<a href="/player/' + item.player + '">' + item.player + '</a>';
+                        }
+                        rankCell.textContent = item.rank;
+                        playerCell.innerHTML = playerCellContent;
+                        pointsCell.textContent = item.total_points;
+                    });
+                }
+            
+                $("#searchForm").submit(function(event) {
+                    event.preventDefault();
+                    var searchQuery = $("#searchInput").val().trim();
+                    if (searchQuery === "") {
+                        populateLeaderboard(originalLeaderboard);
+                        return;
+                    }
+                    var url = "{% url 'search_leaderboard' %}";
+                    $.ajax({
+                        url: url,
+                        data: { search: searchQuery },
+                        success: function(data) {
+                            populateLeaderboard(data);
+                        }
+                    });
+                });
+            });
+            
+        </script>
+        {% include 'srl/footer.html' %}
+    </body>
+</html>
+

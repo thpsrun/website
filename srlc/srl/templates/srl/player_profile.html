@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        {% load static %}
+        <meta charset="utf-8">
+        <meta name="description" content="THPS Speedrun Leaderboards">
+        <meta name="author" content="THPS Speedrun Community">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="keywords" content="speedrun, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+
+        {% load custom_filters %}
+        <title>{{ player.name }} - thps.run</title>
+        <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
+
+    
+        {% load django_bootstrap5 %}
+        {% bootstrap_css %}
+        {% bootstrap_javascript %}
+
+        <link rel="stylesheet" type="text/css" href="{% static 'srl/misc/css.css' %}">
+        
+    </head>
+    <body>
+        {% include 'srl/navbar.html' %}
+
+        <div class="super-container">
+            <div class="profile-container">
+                <div class="profile-info">
+                    <div class="profile-pfp">
+                        <img src="{% static 'pfp/'|add:player.id|add:'.jpg' %}" onerror="this.onerror=null; this.src='{% static 'pfp/default.png' %}'" title="{{ player.name }}" class="pfp-img" />
+                    </div>                    
+                    <div class="profile-data">
+                        <div class="profile-username">
+                            {% if player.countrycode %}
+                                {% if player.nickname %}
+                                    <img src="https://flagcdn.com/h20/{{ player.countrycode }}.png" title="{{ country }}" onerror="this.onerror=null; this.src=''" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
+                                {% else %}
+                                    <img src="https://flagcdn.com/h20/{{ player.countrycode }}.png" title="{{ country }}" onerror="this.onerror=null; this.src=''" /> {{ player.name }}
+                                {% endif %}
+                            {% else %}
+                                {% if player.nickname %}
+                                    <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
+                                {% else %}
+                                    {{ player.name }}
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        {% if player.pronouns %}
+                            <div class="profile-pronouns">({{ player.pronouns }})</div>
+                        {% endif %}
+                        {% if player.location %}
+                            <div class="profile-location">{{ player.location }}</div>
+                        {% endif %}
+                        <div class="profile-socials">
+                            <p class="socialicons">
+                                {% if player.twitch %}
+                                    <a href="{{ player.twitch }}" target="_blank"><i class="fab fa-twitch fa-lg"></i></a>
+                                {% endif %}
+                                {% if player.twitter %}
+                                    <a href="{{ player.twitter }}" target="_blank"><i class="fab fa-twitter fa-lg"></i></a>
+                                {% endif %}
+                                {% if player.youtube %}
+                                    <a href="{{ player.youtube }}" target="_blank"><i class="fab fa-youtube fa-lg"></i></a>
+                                {% endif %}
+                                <a href="https://speedrun.com/user/{{ player.name }}" target="_blank"><i class="fas fa-trophy fa-lg"></i></a>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="profile-stats">
+                        <p class="stats">Total Points: {{ total_points }}<br />
+                        Overall Rank: {{ player_rank }} / {{ player_count }}<br />
+                        Total Runs: {{ total_runs }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if awards %}
+            <div class="super-container">
+                <div class="profile-container">
+                    <h6 style="text-decoration:underline;">Awards</h6>
+                    {% for award in awards %}
+                        <img src="{% static 'srl/imgs/awards/'|add:award.1 %}" title="{{ award.0 }}" />
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <table class="table table-striped">
+            <thead class="bg-info">
+                {% if main_runs.count > 0 %}
+                <tr class="bg-info">
+                    <th colspan="6">Full Game Speedruns - Points: {{ main_points }} - Rank: {{ main_rank }} / {{ main_count }} </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for game_tuple in unique_game_names %}
+                    {% with game_name=game_tuple.0 release_date=game_tuple.1 %}
+                        {% with game_runs=main_runs|filter_game_name:game_name %}
+                            {% for game in game_runs %}
+                                {% if forloop.first %}
+                                <tr class="bg-info">
+                                    <th colspan="6">
+                                        {{ game_name }}
+                                    </th>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td>
+                                        <div class="subcategory">{% if game.subcategory %} {{ game.subcategory }} {% endif %}</div>
+                                    </td>
+                                    <td>
+                                        <div class="placing">{{ game.place }}
+                                            <br />
+                                            <a href="{{ game.url }}">{{ game.time }}</a>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="date">{{ game.date }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="points">{{ game.points }}</div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% endwith %}
+                    {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        {% if il_runs.count > 0 %}
+        <table class="table table-striped">
+            <thead class="bg-info">
+                <tr class="bg-info">
+                    <th colspan="6">IL Speedruns - Overall Points: {{ il_points }} - Overall Rank: {{ il_rank }} / {{ il_count }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for game_tuple in unique_game_names %}
+                    {% with game_name=game_tuple.0 release_date=game_tuple.1 %}
+                        {% with game_runs=il_runs|filter_game_name:game_name %}
+                            {% for game in game_runs %}
+                                {% if forloop.first %}
+                                <tr class="bg-info">
+                                    <th colspan="6" class="bg-info">
+                                        {{ game_name }}
+                                        {% comment %}{% with leaderboard=game_name|get_rank:player %}
+                                            <h5>Points: {{ leaderboard|get_item:"total_points" }} - Rank: {{ leaderboard|get_item:"rank" }}</h5>
+                                        {% endwith %}{% endcomment %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td colspan="2">
+                                        <div class="subcategory">{% if game.subcategory %} {{ game.subcategory }} {% endif %}</div>
+                                    </td>
+                                    <td>
+                                        <div class="placing">{{ game.place }}
+                                            <br />
+                                            <a href="{{ game.url }}">{{ game.time }}</a>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="date">{{ game.date }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="points">{{ game.points }}</div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% endwith %}
+                    {% endwith %}
+                {% endfor %}
+            </tbody>
+        {% endif %}
+        </table>
+        {% include 'srl/footer.html' %}
+    </body>
+</html>
