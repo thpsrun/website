@@ -18,7 +18,7 @@ def twitch_redirect(request):
 
 def twitter_redirect(request):
     return redirect(env("TWITTER_URL"))
-
+  
 def youtube_redirect(request):
     return redirect(env("YOUTUBE_URL"))
 
