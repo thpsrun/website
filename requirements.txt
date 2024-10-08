@@ -21,7 +21,7 @@ click-plugins==1.1.1
 click-repl==0.3.0
 colorama==0.4.6
 crispy-bootstrap5==2024.10
-Django==5.1
+Django==5.1.1
 django-bootstrap5==24.3
 django-classy-tags==4.1.0
 django-cors-headers==4.4.0
