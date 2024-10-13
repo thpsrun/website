@@ -25,6 +25,9 @@ def youtube_redirect(request):
 def src_redirect(request):
     return redirect(env("SRC_URL"))
 
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
@@ -35,6 +38,7 @@ urlpatterns = [
     path("twitter",twitter_redirect,name="twitter_redirect"),
     path("youtube",youtube_redirect,name="youtube_redirect"),
     path("src",src_redirect,name="src_redirect"),
+    path('debug', trigger_error),
 ]
 
 handler404 = "srl.static_views.page_not_found"

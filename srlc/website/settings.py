@@ -4,16 +4,14 @@ from pathlib import Path
 env = environ.Env()
 environ.Env.read_env()
 
-if env("SENTRY_ENABLED") is True:
-    from sentry_sdk.integrations.django import DjangoIntegration
-    sentry_sdk.init(
-        dsn                     = env("SENTRY_DSN"),
-        integrations            = [DjangoIntegration()],
-        auto_session_tracking   = False,
-        traces_sample_rate      = 0.01,
-        release                 = "2.2.0",
-        environment             = "development",
-    )
+## REMOVE OR COMMENT OUT THESE LINES IF YOU WANT TO DISABLE SENTRY/GLITCHTIP.
+from sentry_sdk.integrations.django import DjangoIntegration
+sentry_sdk.init(
+    dsn=env("SENTRY_DSN"),
+    integrations=[DjangoIntegration()],
+    auto_session_tracking=False,
+    traces_sample_rate=0
+)
 
 # Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -96,21 +94,20 @@ REST_FRAMEWORK = {
 
 WSGI_APPLICATION = "website.wsgi.application"
 
-if env("LOCAL") is False:
-    # Security Setttings
-    CSRF_COOKIE_SECURE              = True
-    SESSION_COOKIE_SECURE           = True
-    SECURE_SSL_REDIRECT             = True
-    SECURE_HSTS_SECONDS             = 3600
-    SECURE_HSTS_INCLUDE_SUBDOMAINS  = True
-    SECURE_HSTS_PRELOAD             = True
-    SECURE_SSL_HOST                 = True
-    SECURE_CONTENT_TYPE_NOSNIFF     = True
-    SECURE_BROWSER_XSS_FILTER       = True
-    X_FRAME_OPTIONS                 = "DENY"
-    SECURE_SSL_HOST                 = env("SSL_HOST")
-else:
-    DEBUG                           = True
+DEBUG                           = True
+# Security Setttings
+#CSRF_COOKIE_SECURE              = True
+#SESSION_COOKIE_SECURE           = True
+#SECURE_SSL_REDIRECT             = True
+#SECURE_HSTS_SECONDS             = 3600
+#SECURE_HSTS_INCLUDE_SUBDOMAINS  = True
+#SECURE_HSTS_PRELOAD             = True
+#SECURE_SSL_HOST                 = True
+#SECURE_CONTENT_TYPE_NOSNIFF     = True
+#SECURE_BROWSER_XSS_FILTER       = True
+#X_FRAME_OPTIONS                 = "DENY"
+#SECURE_SSL_HOST                 = env("SSL_HOST")
+    
 
 
 DATABASES = {
