@@ -2,19 +2,17 @@ import os,sentry_sdk,environ
 from pathlib import Path
 from sentry_sdk.integrations.django import DjangoIntegration
 
-env = environ.Env()
-environ.Env.read_env()
 
 ## REMOVE OR COMMENT OUT THESE LINES IF YOU WANT TO DISABLE SENTRY/GLITCHTIP.
 sentry_sdk.init(
-    dsn=env("SENTRY_DSN"),
-    integrations=[DjangoIntegration()],
+    dsn                     = os.getenv("SENTRY_DSN"),
+    integrations            = [DjangoIntegration()],
+    auto_session_tracking   = False,
+    traces_sample_rate      = 1.0,
+    profiles_sample_rate    = 1.0,
+    release                 = "2.2.0",
+    environment             = "development",
 )
-    environment="development",
-    release="2.2.0",
-    profiles_sample_rate=1.0,
-    traces_sample_rate=1.0,
-    auto_session_tracking=False,
 
 # Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-SECRET_KEY = env("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 ALLOWED_HOSTS = ["localhost","127.0.0.1"]
 #ALLOWED_IPS = ["127.0.0.1"]
@@ -97,7 +95,7 @@ REST_FRAMEWORK = {
 
 WSGI_APPLICATION = "website.wsgi.application"
 
-if env("LOCAL") is False:
+if os.getenv("LOCAL") is False:
     # Security Setttings
     CSRF_COOKIE_SECURE              = True
     SESSION_COOKIE_SECURE           = True
@@ -109,7 +107,7 @@ if env("LOCAL") is False:
     SECURE_CONTENT_TYPE_NOSNIFF     = True
     SECURE_BROWSER_XSS_FILTER       = True
     X_FRAME_OPTIONS                 = "DENY"
-    SECURE_SSL_HOST                 = env("SSL_HOST")
+    SECURE_SSL_HOST                 = os.getenv("SSL_HOST")
 else:
     DEBUG                           = True
 
@@ -117,10 +115,10 @@ else:
 DATABASES = {
     "default": {
         "ENGINE"    : "django.db.backends.postgresql",
-        "NAME"      : env("POSTGRES_DB"),
-        "USER"      : env("POSTGRES_USER"),
-        "PASSWORD"  : env("POSTGRES_PASSWORD"),
-        "HOST"      : "postgres"
+        "NAME"      : os.getenv("POSTGRES_NAME"),
+        "USER"      : os.getenv("POSTGRES_USER"),
+        "PASSWORD"  : os.getenv("POSTGRES_PASSWORD"),
+        "HOST"      : "postgres",
     }
 }
 

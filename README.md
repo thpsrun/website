@@ -32,11 +32,11 @@ The points system utilized within this project was created by ibeechu and goatro
 ### Post-Installation Thingies
 * Create Super User
   - Super users are required to do anything in the admin portal; think of it as your root account. To create one, you need to access the `django` docker image command-line in some way.
-    - `docker -it django /bin/bash`
-    - `python manage.py createsuperuser`
+    - `docker run -it srlc-django /bin/bash`
+    - `cd srlc && python manage.py createsuperuser`
     - Follow on-screen instructions.
 
 * Static images
   - Static images checks need to be done regularly.
-    - `docker -it django /bin/bash`
-    - `python manage.py collectstatic --no-input`
+    - `docker run -it srlc-django /bin/bash`
+    - `cd srlc && python manage.py collectstatic --no-input`

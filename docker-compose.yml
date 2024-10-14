@@ -5,8 +5,10 @@ services:
     image: postgres:latest
     restart: unless-stopped
     shm_size: 128mb
-    env_file:
-      - .env
+    environment:
+      POSTGRES_DB: "thps_run"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "Tony-Hawks-Project-8"
     volumes:
       - ./db:/var/lib/postgresql/data
 
@@ -17,8 +19,23 @@ services:
     build: .
     ports:
       - 8000:8000
-    env_file:
-      - .env
+    environment:
+      COMMUNITY_NAME: "THPS Speedrun Community"
+      POSTGRES_NAME: "thps_run"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "Tony-Hawks-Project-8"
+      SECRET_KEY: "dm_4hnt4x)3**z-2!#*x@w3ao0-+s1&%%&*83kkb^!cp(fu6=-"
+      SSL_HOST: "thps.run"
+      LOCAL: True ## SET TO False IF IN PRODUCTION.
+
+      SENTRY_DSN: "https://f2fbdaa408df4af191c2777634f632a2@alerts.thps.run/1"
+      EVENT_STORE_DEBUG: True ## SET TO False IF IN PRODUCTION.
+      ##SOCIAL MEDIA
+      DISCORD_URL: "https://discord.com/invite/Jyb7E9Qab8"
+      TWITTER_URL: "https://twitter.com/thpsruns"
+      TWITCH_URL: "https://twitch.tv/thps"
+      YOUTUBE_URL: "https://www.youtube.com/@THPSRuns"
+      SRC_URL: "https://speedrun.com/tonyhawk"
     depends_on:
       - postgres
     volumes:

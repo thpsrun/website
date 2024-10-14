@@ -599,24 +599,20 @@ def invoke_timereview():
                     wr_time, run_time, latest_time = wr_run.timeigt_secs, run.timeigt_secs, latest_run.timeigt_secs
                 
                 with transaction.atomic():
-                    MainRunTimeframe.objects.update_or_create(
+                    MainRunTimeframe.objects.create(
                         run_id      = wr_run.id,
-                        defaults    = {
-                            "start_date"    : wr_run.date,
-                            "points"        : run_type,
-                        }
+                        start_date  = wr_run.date,
+                        points      = run_type,
                     )
                     
                     if wr_time > run_time:
                         if len(latest_time) > 0:
                             if run_time > latest_time:
                                 latest_run.update(end_date=run.date)
-                                MainRunTimeframe.objects.update_or_create(
+                                MainRunTimeframe.objects.create(
                                     run_id      = run.id,
-                                    defaults    = {
-                                        "start_date"    : run.date,
-                                        "points"        : math.floor((0.008 * math.pow(math.e, (4.8284 * (wr_time / run_time)))) * run_type),
-                                    }
+                                    start_date  = run.date,
+                                    points      = math.floor((0.008 * math.pow(math.e, (4.8284 * (wr_time / run_time)))) * run_type),
                                 )
 
                     else:
