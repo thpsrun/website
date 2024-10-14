@@ -184,7 +184,20 @@ class Players(models.Model):
                 default=False,
                 blank=True,
                 help_text="Earned awards can be selected here. All selected awards will appear on the Player's profile."
-    )      
+    )
+
+class MainRunTimeframe(models.Model):
+    def __str__(self):
+        return "Run ID: " + self.run_id + " - " + self.timeframe
+    
+    class Meta:
+        verbose_name_plural = "Main Run Timeframes"
+
+    id          = models.AutoField(primary_key=True)
+    run_id      = models.ForeignKey("MainRuns",max_length=10,verbose_name="Run ID")
+    start_date  = models.DateTimeField(verbose_name="Approved Date")
+    end_date    = models.DateTimeField(verbose_name="Beaten Date")
+    points      = models.IntegerField(verbose_name="Packle Points",default=0)
 
 class MainRuns(models.Model):
     def __str__(self):
@@ -212,6 +225,13 @@ class MainRuns(models.Model):
     points      = models.IntegerField(verbose_name="Packle Points",default=0)
     platform    = models.ForeignKey(Platforms,verbose_name="Platform",blank=True,null=True,on_delete=models.SET_NULL)
     emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
+    timeframes  = models.ManyToManyField(
+                MainRunTimeframe,
+                verbose_name="Run Timeframes",
+                default=False,
+                blank=True,
+                help_text="This is a list of all the timeframes this run held certain point values; upon being beaten by that player or another, this is updated."
+    )
     obsolete    = models.BooleanField(
                 verbose_name="Obsolete?",
                 default=False,
@@ -243,6 +263,13 @@ class ILRuns(models.Model):
     timeigt_secs= models.FloatField(verbose_name="IGT Time (Seconds)",blank=True,null=True)
     points      = models.IntegerField(verbose_name="Packle Points",default=0)
     platform    = models.ForeignKey(Platforms,verbose_name="Platform",blank=True,null=True,on_delete=models.SET_NULL)
+    timeframes  = models.ManyToManyField(
+                MainRunTimeframe,
+                verbose_name="Run Timeframes",
+                default=False,
+                blank=True,
+                help_text="This is a list of all the timeframes this run held certain point values; upon being beaten by that player or another, this is updated."
+    )
     emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
     obsolete    = models.BooleanField(
                 verbose_name="Obsolete?",

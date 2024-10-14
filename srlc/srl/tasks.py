@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.db import transaction
 from asgiref.sync import sync_to_async
 from langcodes import standardize_tag
-from .models import GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,CountryCodes,Platforms
+from .models import GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,CountryCodes,Platforms,MainRunTimeframe
 from .m_tasks import src_api,convert_time
 
 def update_game(src_game):
@@ -576,3 +576,71 @@ def import_srltimes(run):
                         "emulated"    : run_info["system"]["emulated"],
                     }
                 )
+
+def invoke_timereview():
+    for game in GameOverview.objects.all():
+        pref_time   = game.defaulttime
+        main        = MainRuns.objects.all()
+        categories  = main.filter(game_id=game.id).values("subcategory").distinct()
+
+        run_type = 25 if game.id in ["o6glkk8d","o1yjk541","9d38jey1"] else 1000
+
+        for category in categories:
+            runs        = main.filter(game_id=game.id,subcategory=category).order_by("-date")
+            wr_run      = runs.first()
+            latest_run  = MainRunTimeframe.objects.filter(run_id__player__id=run.player.id,end_date__isnull=True).order_by("-start_date").first()
+
+            for run in runs[1:]:
+                if pref_time == "realtime":
+                    wr_time, run_time, latest_time = wr_run.time_secs, run.time_secs, latest_run.time_secs
+                elif pref_time == "realtime_noloads":
+                    wr_time, run_time, latest_time = wr_run.timenl_secs, run.timenl_secs, latest_run.timenl_secs
+                elif pref_time == "ingame":
+                    wr_time, run_time, latest_time = wr_run.timeigt_secs, run.timeigt_secs, latest_run.timeigt_secs
+                
+                with transaction.atomic():
+                    MainRunTimeframe.objects.update_or_create(
+                        run_id      = wr_run.id,
+                        defaults    = {
+                            "start_date"    : wr_run.date,
+                            "points"        : run_type,
+                        }
+                    )
+                    
+                    if wr_time > run_time:
+                        if len(latest_time) > 0:
+                            if run_time > latest_time:
+                                latest_run.update(end_date=run.date)
+                                MainRunTimeframe.objects.update_or_create(
+                                    run_id      = run.id,
+                                    defaults    = {
+                                        "start_date"    : run.date,
+                                        "points"        : math.floor((0.008 * math.pow(math.e, (4.8284 * (wr_time / run_time)))) * run_type),
+                                    }
+                                )
+
+                    else:
+                        MainRunTimeframe.objects.update_or_create(
+                            run_id   = wr_run.id,
+                            defaults = {
+                                "start_date"    : wr_run.date,
+                                "end_date"      : run.date,
+                                "points"        : run_type,
+                            }
+                        )
+                        wr_run = run
+
+                        for archived_run in MainRunTimeframe.objects.filter(run_id__subcategory=run.subcategory,end_date__isNull=True).order_by("-start_date"):
+                            archived_run.update(end_date=wr_run.date)
+                            if pref_time == "realtime":
+                                wr_time, run_time= wr_run.time_secs, archived_run.time_secs
+                            elif pref_time == "realtime_noloads":
+                                wr_time, run_time= wr_run.timenl_secs, archived_run.timenl_secs
+                            elif pref_time == "ingame":
+                                wr_time, run_time= wr_run.timeigt_secs, archived_run.timeigt_secs
+
+                            MainRunTimeframe.objects.create(
+                                run_id        = archived_run.id,
+                                start_date    = wr_run.date,
+                                points        = math.floor((0.008 * math.pow(math.e, (4.8284 * (wr_time / run_time)))) * run_type),
+                            )

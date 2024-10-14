@@ -6,5 +6,6 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /srlc
 COPY requirements.txt /srlc/
 COPY .env /srlc/
+RUN echo "If this failed, make sure .env.example is renamed to .env in the root folder!!"
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . /srlc/

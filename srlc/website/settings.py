@@ -1,19 +1,20 @@
 import os,sentry_sdk,environ
 from pathlib import Path
+from sentry_sdk.integrations.django import DjangoIntegration
 
 env = environ.Env()
 environ.Env.read_env()
 
-if env("SENTRY_ENABLED") is True:
-    from sentry_sdk.integrations.django import DjangoIntegration
-    sentry_sdk.init(
-        dsn                     = env("SENTRY_DSN"),
-        integrations            = [DjangoIntegration()],
-        auto_session_tracking   = False,
-        traces_sample_rate      = 0.01,
-        release                 = "2.2.0",
-        environment             = "development",
-    )
+## REMOVE OR COMMENT OUT THESE LINES IF YOU WANT TO DISABLE SENTRY/GLITCHTIP.
+sentry_sdk.init(
+    dsn=env("SENTRY_DSN"),
+    integrations=[DjangoIntegration()],
+)
+    environment="development",
+    release="2.2.0",
+    profiles_sample_rate=1.0,
+    traces_sample_rate=1.0,
+    auto_session_tracking=False,
 
 # Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent

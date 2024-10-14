@@ -4,7 +4,6 @@ from django.shortcuts import render
 from django.db.models import Sum,Q,Case,When,Value,CharField,Max,F
 from .models import GameOverview,Players,Categories,MainRuns,ILRuns,NewRuns,NewWRs,CountryCodes,VariableValues
 
-
 def PlayerProfile(request,name):
     try:
         player          = Players.objects.get(name__iexact=name)
