@@ -2,9 +2,8 @@ import os,sentry_sdk,environ
 from pathlib import Path
 from sentry_sdk.integrations.django import DjangoIntegration
 
-
 ## REMOVE OR COMMENT OUT THESE LINES IF YOU WANT TO DISABLE SENTRY/GLITCHTIP.
-sentry_sdk.init(
+"""sentry_sdk.init(
     dsn                     = os.getenv("SENTRY_DSN"),
     integrations            = [DjangoIntegration()],
     auto_session_tracking   = False,
@@ -12,7 +11,7 @@ sentry_sdk.init(
     profiles_sample_rate    = 1.0,
     release                 = "2.2.0",
     environment             = "development",
-)
+)"""
 
 # Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -51,6 +50,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -95,7 +95,9 @@ REST_FRAMEWORK = {
 
 WSGI_APPLICATION = "website.wsgi.application"
 
-if os.getenv("LOCAL") is False:
+if os.getenv("LOCAL"):
+    DEBUG = True
+else:
     # Security Setttings
     CSRF_COOKIE_SECURE              = True
     SESSION_COOKIE_SECURE           = True
@@ -108,8 +110,6 @@ if os.getenv("LOCAL") is False:
     SECURE_BROWSER_XSS_FILTER       = True
     X_FRAME_OPTIONS                 = "DENY"
     SECURE_SSL_HOST                 = os.getenv("SSL_HOST")
-else:
-    DEBUG                           = True
 
 
 DATABASES = {

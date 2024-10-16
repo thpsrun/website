@@ -11,15 +11,17 @@ services:
       POSTGRES_PASSWORD: "Tony-Hawks-Project-8"
     volumes:
       - ./db:/var/lib/postgresql/data
+    networks:
+      - srlc
 
   django:
     container_name: django
     restart: unless-stopped
-    command: bash -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     build: .
     ports:
       - 8000:8000
     environment:
+      #TODO: Make these .envs eventually.
       COMMUNITY_NAME: "THPS Speedrun Community"
       POSTGRES_NAME: "thps_run"
       POSTGRES_USER: "postgres"
@@ -40,3 +42,22 @@ services:
       - postgres
     volumes:
       - ./srlc:/srlc
+      - ./static:/srlc/static
+    networks:
+      - srlc
+
+  nginx:
+    container_name: nginx
+    restart: unless-stopped
+    build: ./nginx
+    ports:
+      - "8000:80"
+    depends_on:
+      - django
+      - postgres
+    volumes:
+      - srlc
+
+networks:
+  srlc:
+    driver: bridge
