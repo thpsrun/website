@@ -8,8 +8,9 @@
 ######################################################################################################################################################
 """
 
-from .tasks import src_api,update_game,update_category,update_level,update_variable,update_category_runs,update_platform
-from .models import GameOverview, Categories, Levels, Variables, VariableValues,MainRuns,ILRuns,Players,NewRuns,NewWRs
+import asyncio
+from .tasks import src_api,update_game,update_category,update_level,update_variable,update_category_runs,update_platform,import_obsolete
+from .models import GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,NewRuns,NewWRs,MainRunTimeframe
 
 def init_series(series_id):
     GameOverview.objects.all().delete()
@@ -20,8 +21,9 @@ def init_series(series_id):
     MainRuns.objects.all().delete()
     ILRuns.objects.all().delete()
     Players.objects.all().delete()
-    #NewRuns.objects.all().delete()
-    #NewWRs.objects.all().delete()
+    NewRuns.objects.all().delete()
+    NewWRs.objects.all().delete()
+    MainRunTimeframe.objects.all().delete()
 
     src_games = src_api(f"https://www.speedrun.com/api/v1/series/{series_id}/games?max=50")
 
@@ -50,6 +52,9 @@ def init_series(series_id):
 
                 for category in game_check["categories"]["data"]:
                     update_category_runs(game_check["id"],category,game_check["levels"]["data"])
+    
+    for player in Players.objects["name"]:
+        asyncio.run(import_obsolete(player))
 
 async def init_series_async(series_id):
     init_series(series_id)

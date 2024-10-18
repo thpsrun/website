@@ -1,6 +1,6 @@
 from django.urls import path
 from .complex_views import MainPage,PlayerProfile,Leaderboard,GameLeaderboard,IL_Leaderboard,FG_Leaderboard,RG_Leaderboard,search_leaderboard,ILGameLeaderboard,OL_Leaderboard,MonthlyLeaderboard
-from .static_views import PrivacyPolicy,Changelog,FAQ,page_not_found
+from .static_views import PrivacyPolicy,Changelog,FAQ
 
 urlpatterns = [
     path("", MainPage, name="Leaderboard"),
