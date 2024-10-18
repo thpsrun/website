@@ -244,7 +244,7 @@ class ILRuns(models.Model):
     subcategory = models.CharField(max_length=100,verbose_name="Subcategory Name",blank=True,null=True)
     values      = models.CharField(max_length=100,verbose_name="Subcategory Values",blank=True,null=True)
     level       = models.ForeignKey(Levels,verbose_name="Level ID",null=True,on_delete=models.SET_NULL)
-    player      = models.ForeignKey(Players,verbose_name="Player ID",null=True,on_delete=models.SET_NULL)
+    player      = models.ForeignKey(Players,verbose_name="Player ID",blank=True,null=True,on_delete=models.SET_NULL)
     place       = models.IntegerField(verbose_name="Placing")
     url         = models.URLField(verbose_name="URL")
     video       = models.URLField(verbose_name="Video",blank=True,null=True)

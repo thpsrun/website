@@ -38,8 +38,8 @@ google-api-python-client==2.143.0
 google-auth==2.34.0
 google-auth-httplib2==0.2.0
 googleapis-common-protos==1.65.0
-gunicorn==23.0.0
 httplib2==0.22.0
+hypercorn==0.17.3
 idna==3.8
 kombu==5.4.0
 langcodes==3.4.0

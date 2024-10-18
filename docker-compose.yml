@@ -32,7 +32,6 @@ services:
 
       SENTRY_DSN: "https://f2fbdaa408df4af191c2777634f632a2@alerts.thps.run/1"
       EVENT_STORE_DEBUG: True ## SET TO False IF IN PRODUCTION.
-      ##SOCIAL MEDIA
       DISCORD_URL: "https://discord.com/invite/Jyb7E9Qab8"
       TWITTER_URL: "https://twitter.com/thpsruns"
       TWITCH_URL: "https://twitch.tv/thps"
@@ -55,7 +54,7 @@ services:
     depends_on:
       - django
       - postgres
-    volumes:
+    networks:
       - srlc
 
 networks:
