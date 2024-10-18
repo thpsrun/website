@@ -86,13 +86,7 @@ class Variables(models.Model):
     id          = models.CharField(max_length=10,primary_key=True,verbose_name="Variable ID")
     name        = models.CharField(max_length=50,verbose_name="Name")
     game        = models.ForeignKey(GameOverview,verbose_name="Linked Game",null=True,on_delete=models.SET_NULL)
-    cat         = models.CharField(
-                max_length=10,
-                verbose_name="Linked Category",
-                null=True,
-                blank=True,
-                default=None
-    )
+    cat         = models.ForeignKey(Categories,verbose_name="Category",null=True,on_delete=models.SET_NULL)
     all_cats    = models.BooleanField(
                 verbose_name="All Categories",
                 default=False,
@@ -184,7 +178,20 @@ class Players(models.Model):
                 default=False,
                 blank=True,
                 help_text="Earned awards can be selected here. All selected awards will appear on the Player's profile."
-    )      
+    )
+
+class MainRunTimeframe(models.Model):
+    def __str__(self):
+        return "Run ID: " + self.run_id + " - " + self.timeframe
+    
+    class Meta:
+        verbose_name_plural = "Main Run Timeframes"
+
+    id          = models.AutoField(primary_key=True)
+    run_id      = models.ForeignKey("MainRuns",max_length=10,verbose_name="Run ID",null=True,on_delete=models.SET_NULL)
+    start_date  = models.DateTimeField(verbose_name="Approved Date")
+    end_date    = models.DateTimeField(verbose_name="Beaten Date")
+    points      = models.IntegerField(verbose_name="Packle Points",default=0)
 
 class MainRuns(models.Model):
     def __str__(self):
@@ -212,6 +219,13 @@ class MainRuns(models.Model):
     points      = models.IntegerField(verbose_name="Packle Points",default=0)
     platform    = models.ForeignKey(Platforms,verbose_name="Platform",blank=True,null=True,on_delete=models.SET_NULL)
     emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
+    timeframes  = models.ManyToManyField(
+                MainRunTimeframe,
+                verbose_name="Run Timeframes",
+                default=False,
+                blank=True,
+                help_text="This is a list of all the timeframes this run held certain point values; upon being beaten by that player or another, this is updated."
+    )
     obsolete    = models.BooleanField(
                 verbose_name="Obsolete?",
                 default=False,
@@ -230,7 +244,7 @@ class ILRuns(models.Model):
     subcategory = models.CharField(max_length=100,verbose_name="Subcategory Name",blank=True,null=True)
     values      = models.CharField(max_length=100,verbose_name="Subcategory Values",blank=True,null=True)
     level       = models.ForeignKey(Levels,verbose_name="Level ID",null=True,on_delete=models.SET_NULL)
-    player      = models.ForeignKey(Players,verbose_name="Player ID",null=True,on_delete=models.SET_NULL)
+    player      = models.ForeignKey(Players,verbose_name="Player ID",blank=True,null=True,on_delete=models.SET_NULL)
     place       = models.IntegerField(verbose_name="Placing")
     url         = models.URLField(verbose_name="URL")
     video       = models.URLField(verbose_name="Video",blank=True,null=True)
@@ -243,6 +257,13 @@ class ILRuns(models.Model):
     timeigt_secs= models.FloatField(verbose_name="IGT Time (Seconds)",blank=True,null=True)
     points      = models.IntegerField(verbose_name="Packle Points",default=0)
     platform    = models.ForeignKey(Platforms,verbose_name="Platform",blank=True,null=True,on_delete=models.SET_NULL)
+    timeframes  = models.ManyToManyField(
+                MainRunTimeframe,
+                verbose_name="Run Timeframes",
+                default=False,
+                blank=True,
+                help_text="This is a list of all the timeframes this run held certain point values; upon being beaten by that player or another, this is updated."
+    )
     emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
     obsolete    = models.BooleanField(
                 verbose_name="Obsolete?",

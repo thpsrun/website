@@ -125,3 +125,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .DS_Store
+srlc/srl/static/pfp/*
+srlc/website/static/pfp/*
