@@ -128,4 +128,8 @@ dmypy.json
 # Other shit to ignore
 */.DS_Store
 .DS_Store
+<<<<<<< Updated upstream
 srlc/srl/static/pfp/
+=======
+srlc/srl/static/pfp/*
+>>>>>>> Stashed changes
