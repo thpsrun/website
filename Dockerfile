@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-#ENV DJANGO_SETTINGS_MODULE=django.settings
 WORKDIR /srlc
 COPY requirements.txt /srlc/
 RUN pip install --no-cache-dir -r requirements.txt

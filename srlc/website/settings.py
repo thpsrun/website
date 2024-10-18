@@ -3,7 +3,7 @@ from pathlib import Path
 from sentry_sdk.integrations.django import DjangoIntegration
 
 ## REMOVE OR COMMENT OUT THESE LINES IF YOU WANT TO DISABLE SENTRY/GLITCHTIP.
-"""sentry_sdk.init(
+sentry_sdk.init(
     dsn                     = os.getenv("SENTRY_DSN"),
     integrations            = [DjangoIntegration()],
     auto_session_tracking   = False,
@@ -11,7 +11,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
     profiles_sample_rate    = 1.0,
     release                 = "2.2.0",
     environment             = "development",
-)"""
+)
 
 # Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","django"]
 #ALLOWED_IPS = ["127.0.0.1"]
 
 # Application definition
@@ -101,16 +101,15 @@ else:
     # Security Setttings
     CSRF_COOKIE_SECURE              = True
     SESSION_COOKIE_SECURE           = True
-    SECURE_SSL_REDIRECT             = True
+    SECURE_SSL_REDIRECT             = False ## ASSUMES YOU ARE USING NPM
     SECURE_HSTS_SECONDS             = 3600
     SECURE_HSTS_INCLUDE_SUBDOMAINS  = True
     SECURE_HSTS_PRELOAD             = True
-    SECURE_SSL_HOST                 = True
+    SECURE_SSL_HOST                 = False ## ASSUMES YOU ARE USING NPM
     SECURE_CONTENT_TYPE_NOSNIFF     = True
     SECURE_BROWSER_XSS_FILTER       = True
     X_FRAME_OPTIONS                 = "DENY"
-    SECURE_SSL_HOST                 = os.getenv("SSL_HOST")
-
+    SECURE_PROXY_SSL_HEADER         = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 DATABASES = {
     "default": {
