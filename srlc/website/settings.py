@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-ALLOWED_HOSTS = ["localhost","127.0.0.1","django","srlc"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","django"]
 #ALLOWED_IPS = ["127.0.0.1"]
 
 # Application definition
@@ -95,12 +95,11 @@ REST_FRAMEWORK = {
 
 WSGI_APPLICATION = "website.wsgi.application"
 
-#if os.getenv("LOCAL"):
-if 1 == 1:
+if os.getenv("LOCAL"):
     DEBUG = True
 else:
     # Security Setttings
-    CSRF_COOKIE_SECURE              = False
+    CSRF_COOKIE_SECURE              = True
     SESSION_COOKIE_SECURE           = True
     SECURE_SSL_REDIRECT             = False ## ASSUMES YOU ARE USING NPM
     SECURE_HSTS_SECONDS             = 3600
@@ -112,24 +111,13 @@ else:
     X_FRAME_OPTIONS                 = "DENY"
     SECURE_PROXY_SSL_HEADER         = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-"""DATABASES = {
+DATABASES = {
     "default": {
         "ENGINE"    : "django.db.backends.postgresql",
         "NAME"      : os.getenv("POSTGRES_NAME"),
         "USER"      : os.getenv("POSTGRES_USER"),
         "PASSWORD"  : os.getenv("POSTGRES_PASSWORD"),
         "HOST"      : "postgres",
-    }
-}"""
-SECRET_KEY = "hvtqw9f$tw_ex73s^y&3e13=*yz45v#bcd^$%%%%(6m#xpjphn"
-DATABASES = {
-    "default": {
-        "ENGINE"    : "django.db.backends.postgresql",
-        "NAME"      : "thps_run",
-        "USER"      : "postgres",
-        "PASSWORD"  : "Tony-Hawks-Project-8",
-        "HOST"      : "127.0.0.1",
-        "PORT"      : "5432"
     }
 }
 

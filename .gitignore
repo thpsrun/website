@@ -138,13 +138,3 @@ srlc/srl/static/pfp/*
 srlc/srl/static/pfp/*
 srlc/website/static/pfp/*
 >>>>>>> origin/master
-
-bin/
-
-share/man/man1/
-
-srlc/website/settings.py
-
-pyvenv.cfg
-
-.vscode/

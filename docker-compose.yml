@@ -19,9 +19,7 @@ services:
     restart: unless-stopped
     build: .
     ports:
-      - "8000:8000"
-    #expose:
-    #  - 8000
+      - 8000:8000
     environment:
       #TODO: Make these .envs eventually.
       COMMUNITY_NAME: "THPS Speedrun Community"
@@ -47,18 +45,18 @@ services:
     networks:
       - srlc
 
-  #nginx:
-    #container_name: nginx
-    #restart: unless-stopped
-    #build: ./nginx
-    #ports:
-    #  - "8000:80"
-    #depends_on:
-    #  - django
-    #  - postgres
-    #networks:
-    #  - srlc
+  nginx:
+    container_name: nginx
+    restart: unless-stopped
+    build: ./nginx
+    ports:
+      - "8000:80"
+    depends_on:
+      - django
+      - postgres
+    networks:
+      - srlc
 
 networks:
   srlc:
-    external: true
+    driver: bridge

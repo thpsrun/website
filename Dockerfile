@@ -8,10 +8,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-WORKDIR /django
-COPY requirements.txt /django/
+WORKDIR /srlc
+COPY requirements.txt /srlc/
 RUN pip install --no-cache-dir -r requirements.txt
-COPY . /django/
-COPY ./entrypoint.sh /django/
-RUN chmod +x /django/entrypoint.sh
-ENTRYPOINT ["sh", "/django/entrypoint.sh"]
+COPY . /srlc/
+
+COPY ./entrypoint.sh /srlc/
+ENTRYPOINT ["sh", "entrypoint.sh"]
