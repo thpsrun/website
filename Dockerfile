@@ -13,5 +13,4 @@ COPY requirements.txt /srlc/
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . /srlc/
 
-COPY ./entrypoint.sh /srlc/
 ENTRYPOINT ["sh", "entrypoint.sh"]

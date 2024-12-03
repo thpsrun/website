@@ -95,7 +95,8 @@ REST_FRAMEWORK = {
 
 WSGI_APPLICATION = "website.wsgi.application"
 
-if os.getenv("LOCAL"):
+if os.getenv("DEBUG_MODE"):
+    print("DEBUG ENABLED!!!!! MAKE SURE YOU AREN'T IN PRODUCTION!!!!!")
     DEBUG = True
 else:
     # Security Setttings
@@ -158,6 +159,6 @@ USE_TZ          = True
 
 PROJECT_DIR     = os.path.dirname(os.path.abspath(__file__))
 STATIC_ROOT     = os.path.join(PROJECT_DIR, 'static')
-STATIC_URL      = "static/"
+STATIC_URL      = "website/static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
