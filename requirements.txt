@@ -84,4 +84,4 @@ wcwidth==0.2.13
 websockets==13.0.1
 wheel==0.44.0
 whitenoise==6.7.0
-yarl==1.9.7
+yarl==1.18.3

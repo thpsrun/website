@@ -94,9 +94,9 @@ def update_variable(gameid,variable):
             id      = variable["id"],
             defaults = {
                 "name"      : variable["name"],
-                "game_id"   : Categories.objects.get(id=variable["category"]).game.id,
-                "cat"       : Categories.objects.get(id=variable["category"]),
-                "all_cats"  : True if variable["category"] == "all" else False,
+                "game"      : GameOverview.objects.get(id=gameid),
+                "cat"       : None if variable["category"] == None else Categories.objects.get(id=variable["category"]),
+                "all_cats"  : True if variable["category"] == None else False,
                 "scope"     : variable["scope"]["type"],
             }
         )
@@ -107,7 +107,7 @@ def update_variable(gameid,variable):
 
 def update_variable_value(variable,value):
     with transaction.atomic():
-        VariableValues.objects.create(
+        VariableValues.objects.update_or_create(
             var     = Variables.objects.get(id=variable["id"]),
             value   = value,
             name    = variable["values"]["values"][value]["label"],

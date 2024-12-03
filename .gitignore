@@ -136,3 +136,4 @@ include/
 share/man/man1/
 pyvenv.cfg
 docker-compose.yml
+srlc/srl/migrations-old/

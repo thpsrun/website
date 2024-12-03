@@ -86,7 +86,8 @@ class Variables(models.Model):
     id          = models.CharField(max_length=10,primary_key=True,verbose_name="Variable ID")
     name        = models.CharField(max_length=50,verbose_name="Name")
     game        = models.ForeignKey(GameOverview,verbose_name="Linked Game",null=True,on_delete=models.SET_NULL)
-    cat         = models.ForeignKey(Categories,verbose_name="Category",null=True,on_delete=models.SET_NULL)
+    cat         = models.ForeignKey(Categories,verbose_name="Category",null=True,blank=True,on_delete=models.SET_NULL)
+    #cat         = models.CharField(max_length=10,verbose_name="Category ID")
     all_cats    = models.BooleanField(
                 verbose_name="All Categories",
                 default=False,
