@@ -53,7 +53,8 @@ def init_series(series_id):
                 for category in game_check["categories"]["data"]:
                     update_category_runs(game_check["id"],category,game_check["levels"]["data"])
     
-    for player in Players.objects["name"]:
+    for player in Players.objects.values_list("id", flat=True):
+        print(f"IMPORTING {player} OBSOLETE RUNS...")
         asyncio.run(import_obsolete(player))
 
 async def init_series_async(series_id):

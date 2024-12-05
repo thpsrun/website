@@ -137,3 +137,5 @@ share/man/man1/
 pyvenv.cfg
 docker-compose.yml
 srlc/srl/migrations-old/
+
+srlc/website/sqlite3.db

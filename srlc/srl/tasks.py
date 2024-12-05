@@ -136,8 +136,8 @@ def update_category_runs(game_id,category,il_check):
         var_str_list  = []
 
         if len(global_fg_cats) == 2:
-            global_cat_one = VariableValues.objects.filter(id=global_fg_cats[0].id)
-            global_cat_two = VariableValues.objects.filter(id=global_fg_cats[1].id)
+            global_cat_one = VariableValues.objects.filter(var_id=global_fg_cats[0].id)
+            global_cat_two = VariableValues.objects.filter(var_id=global_fg_cats[1].id)
 
             for global_value_one in global_cat_one:
                 var_name   = ""
