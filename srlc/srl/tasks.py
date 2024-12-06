@@ -1,3 +1,12 @@
+"""
+######################################################################################################################################################
+### File Name: tasks.py
+### Author: ThePackle
+### Description: Script that holds a lot of the tasks utilized by Django to perform operations.
+### Dependencies: srl/m_tasks, srl/models
+######################################################################################################################################################
+"""
+
 import time,math,requests,os
 from django.db import transaction
 from django.db.models import Q
@@ -314,6 +323,14 @@ def update_player(player):
 
         if isinstance(cc, str) and cc.startswith("ca-"):
             cc = "ca"
+            
+        with transaction.atomic():
+            CountryCodes.objects.update_or_create(
+                id = cc,
+                defaults = {
+                    "name" : player_data.get("location").get("country").get("names").get("international")
+                }
+            )
 
         with transaction.atomic():
             Players.objects.update_or_create(
@@ -543,7 +560,7 @@ def import_obsolete(player):
                         if isinstance(lb_info,dict):
                             add_run(lb_info["game"]["data"],run,lb_info["category"]["data"],lb_info["level"]["data"],run["values"],True,False)
 
-                            print(f"DEBUG: Added {run['id']} without issue...")
+                            print(f"-- DEBUG: Added {run['id']} without issue...")
                     except Exception as e:
                         print(e,lb_info["game"]["data"]["name"])
 

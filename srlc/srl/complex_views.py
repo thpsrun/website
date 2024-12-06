@@ -1,9 +1,21 @@
+"""
+######################################################################################################################################################
+### File Name: complex_views.py
+### Author: ThePackle
+### Description: Script that holds a lot of the complex views (webpages) for the project.
+### Dependencies: srl/models
+######################################################################################################################################################
+"""
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.db.models import Sum,Q,Case,When,Value,CharField,Max,F
 from .models import GameOverview,Players,Categories,MainRuns,ILRuns,NewRuns,NewWRs,CountryCodes,VariableValues
 
+
+## PlayerProfile grabs all of the unique information for a single user
+## (e.g., username, nickname, main runs, individual level runs, etc.) and context's them
+## so the webpage can render them.
 def PlayerProfile(request,name):
     try:
         player          = Players.objects.get(name__iexact=name)
@@ -15,15 +27,15 @@ def PlayerProfile(request,name):
     unique_game_names   = set()
     games               = GameOverview.objects.all().order_by("name")
     categories          = Categories.objects.all()
-    main_runs           = MainRuns.objects.filter(Q(playerid=player.id) | Q(playerid2=player.id)).filter()
-    il_runs             = ILRuns.objects.filter(playerid=player.id).filter()
-    country             = CountryCodes.objects.filter(id=player.countrycode).values("name")[0]["name"]
+    main_runs           = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).filter()
+    il_runs             = ILRuns.objects.filter(player_id=player.id).filter()
+    country             = player.countrycode.name
     total_runs          = len(main_runs) + len(il_runs)
     
     main_runs           = main_runs.filter(obsolete=False)
     il_runs             = il_runs.filter(obsolete=False)
 
-    hidden_cats         = VariableValues.objects.filter(hidden=True).values_list("valueid")
+    hidden_cats         = VariableValues.objects.filter(hidden=True).values_list("value")
     main_runs           = main_runs.exclude(values__in=hidden_cats)
 
     if main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)"):
@@ -99,7 +111,7 @@ def Leaderboard(request,profile=None,game=None):
 
     for player in players_all:
         if profile == 1:
-            main_runs = main_runs_all.filter(Q(playerid=player.id) | Q(playerid2=player.id))
+            main_runs = main_runs_all.filter(Q(player_id=player.id) | Q(player2_id=player.id))
             if main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)"):
                 exclude = main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)").order_by("-points").values("id")[1:]
 
@@ -116,7 +128,7 @@ def Leaderboard(request,profile=None,game=None):
 
         elif profile == 2:
             game_id   = games_all.get(abbr=game).id
-            il_runs   = il_runs_all.filter(playerid=player.id,gameid=game_id)
+            il_runs   = il_runs_all.filter(player_id=player.id,gameid=game_id)
             il_wrs    = il_runs.filter(place=1).count() or 0
             il_points = il_runs.aggregate(total_points=Sum("points"))["total_points"] or 0
             
@@ -135,7 +147,7 @@ def Leaderboard(request,profile=None,game=None):
                 })
         elif profile == 5:
             game_id     = games_all.get(abbr=game).id
-            il_runs     = il_runs_all.filter(playerid=player.id,gameid=game_id)
+            il_runs     = il_runs_all.filter(player_id=player.id,gameid=game_id)
             il_wrs      = il_runs.filter(place=1).count() or 0
         
             if il_wrs > 1:
@@ -146,14 +158,14 @@ def Leaderboard(request,profile=None,game=None):
                     "il_wrs"        : il_wrs
                 })     
         else:
-            main_runs = main_runs_all.filter(Q(playerid=player.id) | Q(playerid2=player.id))
+            main_runs = main_runs_all.filter(Q(player_id=player.id) | Q(player2_id=player.id))
             if main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)"):
                 exclude = main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)").order_by("-points").values("id")[1:]
 
                 main_runs = main_runs.exclude(id__in=exclude)
 
             main_points = main_runs.aggregate(total_points=Sum("points"))["total_points"] or 0
-            il_points = il_runs_all.filter(playerid=player.id).aggregate(total_points=Sum("points"))["total_points"] or 0
+            il_points = il_runs_all.filter(player_id=player.id).aggregate(total_points=Sum("points"))["total_points"] or 0
 
             total_points = main_points + il_points
 

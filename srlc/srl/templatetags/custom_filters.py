@@ -29,7 +29,7 @@ def get_category_name(categories, category_id):
 
 @register.filter
 def filter_game_name(game_runs, game_name):
-    return [game for game in game_runs if GameOverview.objects.get(id=game.gameid).name == game_name]
+    return [game for game in game_runs if GameOverview.objects.get(id=game.game.id).name == game_name]
 
 @register.filter
 def get_game_boxart(games, game_id):

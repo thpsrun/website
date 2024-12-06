@@ -13,7 +13,9 @@ from .tasks import src_api,update_game,update_category,update_level,update_varia
 from .models import GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,NewRuns,NewWRs,MainRunTimeframe
 
 def init_series(series_id):
-    GameOverview.objects.all().delete()
+    ## Removes all objects from all of the listed models below.
+    ## Initialize Series should only be performed by the superadmin.
+    """GameOverview.objects.all().delete()
     Categories.objects.all().delete()
     Levels.objects.all().delete()
     Variables.objects.all().delete()
@@ -23,8 +25,13 @@ def init_series(series_id):
     Players.objects.all().delete()
     NewRuns.objects.all().delete()
     NewWRs.objects.all().delete()
-    MainRunTimeframe.objects.all().delete()
+    MainRunTimeframe.objects.all().delete()"""
 
+    ## Iterates through the series ID provided to find all of the games associated. Max is set to 50, but can be increased.
+    ## After all games are found, they are interated upon to add the platforms, runs, categories, and so on as seen below.
+    ##
+    ## This process can take some time, since we are relying upon SRL's API... which is hit or miss (mostly miss).
+    
     src_games = src_api(f"https://www.speedrun.com/api/v1/series/{series_id}/games?max=50")
 
     if not isinstance(src_games,int):
@@ -53,9 +60,19 @@ def init_series(series_id):
                 for category in game_check["categories"]["data"]:
                     update_category_runs(game_check["id"],category,game_check["levels"]["data"])
     
-    for player in Players.objects.values_list("id", flat=True):
-        print(f"IMPORTING {player} OBSOLETE RUNS...")
-        asyncio.run(import_obsolete(player))
+    ## Speedrun.com API sucks sometimes and will miss some runs; this reiterates to add runs it
+    ## somehow missed the first time. Good website.
+    ##
+    ## This may take a while...
+    redo = 0
+    while redo < 3:
+        for player in Players.objects.values_list("id", flat=True):
+            print(f"IMPORTING {player} OBSOLETE RUNS...")
+            asyncio.run(import_obsolete(player))
+            
+            redo = redo + 1
 
+## Actually kicks off the initialization of the code.
+## Kinda ass, should be fixed sometime. But, if it ain't broke...
 async def init_series_async(series_id):
     init_series(series_id)
