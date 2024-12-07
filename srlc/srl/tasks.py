@@ -297,6 +297,7 @@ def update_category_runs(game_id,category,il_check):
             if leaderboard != 400:
                 invoke_runs(game_id,category,leaderboard,category["name"])
 
+@sync_to_async
 def update_player(player):
     player_data = src_api(f"https://www.speedrun.com/api/v1/users/{player}")
 
@@ -324,13 +325,14 @@ def update_player(player):
         if isinstance(cc, str) and cc.startswith("ca-"):
             cc = "ca"
             
-        with transaction.atomic():
-            CountryCodes.objects.update_or_create(
-                id = cc,
-                defaults = {
-                    "name" : player_data.get("location").get("country").get("names").get("international")
-                }
-            )
+        if cc is not None:
+            with transaction.atomic():
+                CountryCodes.objects.update_or_create(
+                    id = cc,
+                    defaults = {
+                        "name" : player_data.get("location").get("country").get("names").get("international")
+                    }
+                )
 
         with transaction.atomic():
             Players.objects.update_or_create(
@@ -505,8 +507,17 @@ def invoke_players(players_data,player=None):
 
             cc = standardize_tag(player_data.get("location").get("country").get("code").replace("/","_")) if player_data.get("location") is not None and player_data.get("location").get("country") is not None and player_data.get("location").get("country").get("code") is not None and player_data.get("location").get("country").get("code") is not None else None
 
-            if cc is not None and cc.startswith("ca-"):
+            if isinstance(cc, str) and cc.startswith("ca-"):
                 cc = "ca"
+            
+            if cc is not None:
+                with transaction.atomic():
+                    CountryCodes.objects.update_or_create(
+                        id = cc,
+                        defaults = {
+                            "name" : player_data.get("location").get("country").get("names").get("international")
+                        }
+                    )
 
             with transaction.atomic():
                 Players.objects.update_or_create(

@@ -122,7 +122,7 @@ def Leaderboard(request,profile=None,game=None):
             leaderboard.append({
                 "player"        : player.name,
                 "nickname"      : player.nickname,
-                "countrycode"   : player.countrycode,
+                "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
                 "total_points"  : main_points
             })
 
@@ -141,7 +141,7 @@ def Leaderboard(request,profile=None,game=None):
                 leaderboard.append({
                     "player"        : player.name,
                     "nickname"      : player.nickname,
-                    "countrycode"   : player.countrycode,
+                    "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
                     "game"          : game,
                     "total_points"  : total_points
                 })
@@ -154,7 +154,7 @@ def Leaderboard(request,profile=None,game=None):
                 il_leaderboard.append({
                     "player"        : player.name,
                     "nickname"      : player.nickname,
-                    "countrycode"   : player.countrycode,
+                    "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
                     "il_wrs"        : il_wrs
                 })     
         else:
@@ -172,7 +172,8 @@ def Leaderboard(request,profile=None,game=None):
             leaderboard.append({
                 "player"        : player.name,
                 "nickname"      : player.nickname,
-                "countrycode"   : player.countrycode,
+                #CountryCodes.objects.get(id=cc) if CountryCodes.objects.filter(id=cc).exists() else None
+                "countrycode"   : player.countrycode.id if player.countrycode is not None else None if player.countrycode is not None else None,
                 "total_points"  : total_points
             })
 
@@ -182,7 +183,7 @@ def Leaderboard(request,profile=None,game=None):
                     fg_leaderboard.append({
                         "player"        : player.name,
                         "nickname"      : player.nickname,
-                        "countrycode"   : player.countrycode,
+                        "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
                         "total_points"  : main_points
                     })
             if profile in [2,3]:
@@ -190,7 +191,7 @@ def Leaderboard(request,profile=None,game=None):
                     il_leaderboard.append({
                         "player"        : player.name,
                         "nickname"      : player.nickname,
-                        "countrycode"   : player.countrycode,
+                        "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
                         "total_points"  : il_points
                     })            
 
@@ -293,13 +294,13 @@ def search_leaderboard(request):
     leaderboard         = []
     
     for player in players_all:
-        main_points     = MainRuns.objects.filter(Q(playerid=player.id) | Q(playerid2=player.id)).filter(points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
-        il_points       = ILRuns.objects.filter(playerid=player.id).filter(points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
+        main_points     = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).filter(points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
+        il_points       = ILRuns.objects.filter(player_id=player.id).filter(points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
         total_points    = main_points + il_points
 
         leaderboard_all.append({
             "player"        : player,
-            "countrycode"   : player.countrycode,
+            "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
             "total_points"  : total_points
         })
 
@@ -330,7 +331,7 @@ def OL_Leaderboard(request):
 
     for country in country_filter:
         player_filter   = players.filter(countrycode=country.id).values_list("id",flat=True)
-        run_filter      = main_runs.filter(playerid__in=player_filter).filter(place__in=[1,2,3])
+        run_filter      = main_runs.filter(player_id__in=player_filter).filter(place__in=[1,2,3])
 
         country_output = {
             "countrycode"   : country.id,
@@ -365,13 +366,13 @@ def RG_Leaderboard(request):
         country_players = players.filter(countrycode=country)
 
         for player in country_players:
-            main_points     = main_runs.filter(Q(playerid=player.id) | Q(playerid2=player.id)).aggregate(total_points=Sum("points"))["total_points"] or 0
-            il_points       = il_runs.filter(playerid=player.id).aggregate(total_points=Sum("points"))["total_points"] or 0
+            main_points     = main_runs.filter(Q(player_id=player.id) | Q(player2_id=player.id)).aggregate(total_points=Sum("points"))["total_points"] or 0
+            il_points       = il_runs.filter(player_id=player.id).aggregate(total_points=Sum("points"))["total_points"] or 0
             total_points    = main_points + il_points
 
             try:
-                countrycode = player.countrycode
-                countryname = countries.filter(id=country).values("name")[0]["name"]
+                countrycode = player.countrycode.id if player.countrycode is not None else None
+                countryname = player.countrycode.name
             except:
                 countrycode = ""
                 countryname = "Unknown"
@@ -387,8 +388,8 @@ def RG_Leaderboard(request):
             runs_list.append(leaderboard_item)
 
     for player in null_countries:
-        main_points     = main_runs.filter(Q(playerid=player.id) | Q(playerid2=player.id)).aggregate(total_points=Sum("points"))["total_points"] or 0
-        il_points       = il_runs.filter(playerid=player.id).aggregate(total_points=Sum("points"))["total_points"] or 0
+        main_points     = main_runs.filter(Q(player_id=player.id) | Q(player2_id=player.id)).aggregate(total_points=Sum("points"))["total_points"] or 0
+        il_points       = il_runs.filter(player_id=player.id).aggregate(total_points=Sum("points"))["total_points"] or 0
         total_points    = main_points + il_points
 
         leaderboard_item = {
