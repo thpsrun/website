@@ -15,7 +15,7 @@ urlpatterns = [
     path("fullgame", FG_Leaderboard, name="FullGameLeaderboard"),
     path("player/<str:name>", PlayerProfile, name="PlayerProfile"),
     path("<str:abbr>/", GameLeaderboard, name="CategorySelection"),
-    path("<str:game_abbr>/points", IL_Leaderboard, name="GameLeaderboard"),
+    path("<str:game_abbr>/all", IL_Leaderboard, name="GameLeaderboard"),
     path("<str:abbr>/ils", ILGameLeaderboard, name="CategorySelection"),
     path("lbs/search", search_leaderboard, name="search_leaderboard"),
 ]

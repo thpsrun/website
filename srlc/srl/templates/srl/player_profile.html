@@ -89,7 +89,7 @@
             <thead class="bg-info">
                 {% if main_runs.count > 0 %}
                 <tr class="bg-info">
-                    <th colspan="6">Full Game Speedruns - Points: {{ main_points }} - Rank: {{ main_rank }} / {{ main_count }} </th>
+                    <th colspan="6" class="bg-info">Full Game Speedruns - Points: {{ main_points }} - Rank: {{ main_rank }} / {{ main_count }} </th>
                 </tr>
             </thead>
             <tbody>
@@ -98,8 +98,8 @@
                         {% with game_runs=main_runs|filter_game_name:game_name %}
                             {% for game in game_runs %}
                                 {% if forloop.first %}
-                                <tr class="bg-info">
-                                    <th colspan="6">
+                                <tr>
+                                    <th colspan="6"  class="bg-info">
                                         {{ game_name }}
                                     </th>
                                 </tr>
@@ -130,9 +130,9 @@
         {% endif %}
         {% if il_runs.count > 0 %}
         <table class="table table-striped">
-            <thead class="bg-info">
-                <tr class="bg-info">
-                    <th colspan="6">IL Speedruns - Overall Points: {{ il_points }} - Overall Rank: {{ il_rank }} / {{ il_count }}</th>
+            <thead>
+                <tr>
+                    <th colspan="6" class="bg-info">IL Speedruns - Overall Points: {{ il_points }} - Overall Rank: {{ il_rank }} / {{ il_count }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -141,7 +141,7 @@
                         {% with game_runs=il_runs|filter_game_name:game_name %}
                             {% for game in game_runs %}
                                 {% if forloop.first %}
-                                <tr class="bg-info">
+                                <tr>
                                     <th colspan="6" class="bg-info">
                                         {{ game_name }}
                                         {% comment %}{% with leaderboard=game_name|get_rank:player %}

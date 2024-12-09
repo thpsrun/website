@@ -35,19 +35,19 @@
         </form>
 
         <table id="leaderboard-table" class="table table-striped">
-            <thead class="bg-info">
-                <tr>
+            <thead>
+                <tr class="bg-info">
                     {% if month_query > 0 %}<th colspan="4">Monthly Leaderboards</th>
                     {% else %}<th colspan="4">Yearly Leaderboards</th>
                     {% endif %}
                 </tr>
             </thead>
-            <thead class="bg-info">
+            <thead>
                 <tr>
-                    <th>Rank</th>
-                    <th>Player</th>
-                    <th>Points</th> 
-                    <th>Runs Accepted</th>
+                    <th class="bg-info">Rank</th>
+                    <th class="bg-info">Player</th>
+                    <th class="bg-info">Points</th> 
+                    <th class="bg-info">Runs Accepted</th>
                 </tr>
             </thead>
             <tbody id="main">

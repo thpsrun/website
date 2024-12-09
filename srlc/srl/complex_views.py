@@ -29,7 +29,7 @@ def PlayerProfile(request,name):
     categories          = Categories.objects.all()
     main_runs           = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).filter()
     il_runs             = ILRuns.objects.filter(player_id=player.id).filter()
-    country             = player.countrycode.name
+    country             = player.countrycode.name if player.countrycode is not None else None
     total_runs          = len(main_runs) + len(il_runs)
     
     main_runs           = main_runs.filter(obsolete=False)
@@ -128,13 +128,13 @@ def Leaderboard(request,profile=None,game=None):
 
         elif profile == 2:
             game_id   = games_all.get(abbr=game).id
-            il_runs   = il_runs_all.filter(player_id=player.id,gameid=game_id)
+            il_runs   = il_runs_all.filter(player_id=player.id,game_id=game_id)
             il_wrs    = il_runs.filter(place=1).count() or 0
             il_points = il_runs.aggregate(total_points=Sum("points"))["total_points"] or 0
             
         elif profile == 4:
             game_id = games_all.get(abbr=game,points__gt=0).id
-            il_runs = il_runs_all.filter(gameid=game_id).filter(points__gt=0)
+            il_runs = il_runs_all.filter(game_id=game_id).filter(points__gt=0)
             total_points = il_runs.aggregate(total_points=Sum("points"))["total_points"] or 0
 
             if total_points > 0:
@@ -147,7 +147,7 @@ def Leaderboard(request,profile=None,game=None):
                 })
         elif profile == 5:
             game_id     = games_all.get(abbr=game).id
-            il_runs     = il_runs_all.filter(player_id=player.id,gameid=game_id)
+            il_runs     = il_runs_all.filter(player_id=player.id,game_id=game_id)
             il_wrs      = il_runs.filter(place=1).count() or 0
         
             if il_wrs > 1:
@@ -173,7 +173,7 @@ def Leaderboard(request,profile=None,game=None):
                 "player"        : player.name,
                 "nickname"      : player.nickname,
                 #CountryCodes.objects.get(id=cc) if CountryCodes.objects.filter(id=cc).exists() else None
-                "countrycode"   : player.countrycode.id if player.countrycode is not None else None if player.countrycode is not None else None,
+                "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
                 "total_points"  : total_points
             })
 
@@ -219,7 +219,7 @@ def Leaderboard(request,profile=None,game=None):
         return leaderboard
     elif profile == 5:
         il_wr_counts    = sorted(il_leaderboard, key=lambda x: x["il_wrs"], reverse=True)
-        il_runs_old     = il_runs_all.filter(gameid=game_id,points=100).exclude(levelid="rdnoro6w").order_by("date").values_list("subcategory","time","date")[:10]
+        il_runs_old     = il_runs_all.filter(game_id=game_id,points=100).exclude(level_id="rdnoro6w").order_by("date").values_list("subcategory","time","date")[:10]
 
         return il_wr_counts,il_runs_old
     else:
@@ -241,21 +241,21 @@ def Leaderboard(request,profile=None,game=None):
 def FG_Leaderboard(request):
     leaderboard         = Leaderboard(request,1)
 
-    if isinstance(leaderboard,tuple):
-        paginator           = Paginator(leaderboard, 50)
-        page_number         = request.GET.get("page")
-        leaderboard_page    = paginator.get_page(page_number)
-        rank_start          = leaderboard_page.start_index()
+    #if isinstance(leaderboard,tuple):
+    paginator           = Paginator(leaderboard, 50)
+    page_number         = request.GET.get("page")
+    leaderboard_page    = paginator.get_page(page_number)
+    rank_start          = leaderboard_page.start_index()
 
-        for item in leaderboard_page:
-            item["rank"] = rank_start
-            rank_start += 1
+    for item in leaderboard_page:
+        item["rank"] = rank_start
+        rank_start += 1
 
-        context = {
-            "leaderboard": leaderboard_page
-        }
+    context = {
+        "leaderboard": leaderboard_page
+    }
 
-        return render(request, "srl/leaderboard.html", context)
+    return render(request, "srl/leaderboard.html", context)
 
 def IL_Leaderboard(request,game_abbr):
     try:
@@ -267,23 +267,23 @@ def IL_Leaderboard(request,game_abbr):
     
     leaderboard         = Leaderboard(request,2,game_abbr)
 
-    if isinstance(leaderboard,tuple):
-        paginator           = Paginator(leaderboard, 50)
-        page_number         = request.GET.get("page")
-        leaderboard_page    = paginator.get_page(page_number)
-        rank_start          = leaderboard_page.start_index()
+    #if isinstance(leaderboard,tuple):
+    paginator           = Paginator(leaderboard, 50)
+    page_number         = request.GET.get("page")
+    leaderboard_page    = paginator.get_page(page_number)
+    rank_start          = leaderboard_page.start_index()
 
-        for item in leaderboard_page:
-            item["rank"] = rank_start
-            rank_start += 1
+    for item in leaderboard_page:
+        item["rank"] = rank_start
+        rank_start += 1
 
-        context = {
-            "leaderboard"   : leaderboard_page,
-            "game_name"     : game.name,
-            "game_abbr"     : game_abbr
-        }
+    context = {
+        "leaderboard"   : leaderboard_page,
+        "game_name"     : game.name,
+        "game_abbr"     : game_abbr
+    }
 
-        return render(request, "srl/leaderboard.html", context)
+    return render(request, "srl/leaderboard.html", context)
 
 def search_leaderboard(request):
     search_query        = request.GET.get("search", "")
@@ -441,7 +441,7 @@ def ILGameLeaderboard(request,abbr,category=None):
     try:
         game        = GameOverview.objects.filter(abbr=abbr)
         players     = Players.objects.all()
-        ilruns      = ILRuns.objects.filter(gameid=game[0].id).filter(points__gt=0)
+        ilruns      = ILRuns.objects.filter(game_id=game[0].id).filter(points__gt=0)
     except GameOverview.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
     except:
@@ -461,7 +461,7 @@ def ILGameLeaderboard(request,abbr,category=None):
                         run_add = {
                             "player"        : player.name,
                             "nickname"      : player.nickname,
-                            "countrycode"   : player.countrycode,
+                            "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
                             "place"         : run.place,
                             "defaulttime"   : game[0].defaulttime,
                             "time"          : run.time,
@@ -507,8 +507,8 @@ def GameLeaderboard(request,abbr,category=None):
     try:
         game        = GameOverview.objects.filter(abbr=abbr)
         players     = Players.objects.all()
-        mainruns    = MainRuns.objects.filter(gameid=game[0].id).filter(points__gt=0)
-        hidden_cats = VariableValues.objects.filter(hidden=True).values_list("valueid")
+        mainruns    = MainRuns.objects.filter(game_id=game[0].id).filter(points__gt=0)
+        hidden_cats = VariableValues.objects.filter(hidden=True).values_list("value")
     except GameOverview.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
     except:
@@ -536,7 +536,7 @@ def GameLeaderboard(request,abbr,category=None):
                 run_add = {
                     "player"        : player.name,
                     "nickname"      : player.nickname,
-                    "countrycode"   : player.countrycode,
+                    "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
                     "place"         : run.place,
                     "defaulttime"   : game[0].defaulttime,
                     "time"          : run.time,
@@ -550,7 +550,7 @@ def GameLeaderboard(request,abbr,category=None):
                     if player2 != "Anonymous":
                         run_add.update({"player2":player2.name})
                         run_add.update({"player2nickname":player2.nickname})
-                        run_add.update({"countrycode2":player2.countrycode})
+                        run_add.update({"countrycode2":player2.countrycode.id if player2.countrycode is not None else None})
                     else:
                         run_add.update({"player2":"Anonymous"})
                         run_add.update({"player2nickname":None})

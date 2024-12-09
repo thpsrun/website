@@ -44,19 +44,19 @@
         </form>
         
         <table id="leaderboard-table" class="table table-striped">
-            <thead class="bg-info">
+            <thead>
                 <tr>
-                    <th>Rank</th>
-                    <th>Player</th>
-                    <th>Time 
+                    <th class="bg-info">Rank</th>
+                    <th class="bg-info">Player</th>
+                    <th class="bg-info">Time 
                         {% if runs.0.defaulttime == 'ingame' %} (IGT)
                         {% elif runs.0.defaulttime == 'realtime' %} (RTA)
                         {% elif runs.0.defaulttime == 'realtime_noloads' %} (LRT)
                         {% else %} ({{ runs.0.defaulttime }})
                         {% endif %}
                     </th>
-                    <th>Date</th>
-                    <th>Points</th>
+                    <th class="bg-info">Date</th>
+                    <th class="bg-info">Points</th>
                 </tr>
             </thead>
             <tbody>

@@ -139,3 +139,5 @@ docker-compose.yml
 srlc/srl/migrations-old/
 
 srlc/website/sqlite3.db
+
+srlc/website/static/srl/imgs/awards/

@@ -44,28 +44,28 @@
         {% endif %}
 
         <table id="leaderboardTable" class="table table-striped">
-            <thead class="bg-info">
+            <thead>
                 <tr>
                     {% if "/fullgame" in request.path %}
-                        <th colspan="3">Full Game Leaderboard</th>
+                        <th colspan="3" class="bg-info">Full Game Leaderboard</th>
                     {% elif "/lbs/" in request.path %}
                         {% if game_abbr == "thps12" %}
-                            <th colspan="3">Tony Hawk's Pro Skater 1+2 Overall IL Leaderboard</th>
+                            <th colspan="3" class="bg-info">Tony Hawk's Pro Skater 1+2 Overall IL Leaderboard</th>
                         {% elif game_abbr == "thps12ce" %}
-                            <th colspan="3">THPS1+2 Category Extensions Overall IL Leaderboard</th>
+                            <th colspan="3" class="bg-info">THPS1+2 Category Extensions Overall IL Leaderboard</th>
                         {% else %}
-                            <th colspan="3">{{ game_name }} Overall IL Leaderboard</th>
+                            <th colspan="3" class="bg-info">{{ game_name }} Overall IL Leaderboard</th>
                         {% endif %}
                     {% else %}
-                        <th colspan="3">Overall Leaderboard</th>
+                        <th colspan="3"  class="bg-info">Overall Leaderboard</th>
                     {% endif %}
                 </tr>
             </thead>
-            <thead class="bg-info">
+            <thead>
                 <tr>
-                    <th>Rank</th>
-                    <th>Player</th>
-                    <th>Points</th>
+                    <th class="bg-info">Rank</th>
+                    <th class="bg-info">Player</th>
+                    <th class="bg-info">Points</th>
                 </tr>
             </thead>
             <tbody id="main">

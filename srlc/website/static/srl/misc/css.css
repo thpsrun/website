@@ -76,7 +76,7 @@ td{
     text-align: center;
 }
 .bg-info{
-    background-color: #515151!important;
+    background-color: #515151 !important;
 }
 
 .navbar-nav li:hover > ul.dropdown-menu {
