@@ -1,5 +1,5 @@
 from django.urls import path
-from .complex_views import MainPage,PlayerProfile,Leaderboard,GameLeaderboard,IL_Leaderboard,FG_Leaderboard,RG_Leaderboard,search_leaderboard,ILGameLeaderboard,OL_Leaderboard,MonthlyLeaderboard
+from .complex_views import MainPage,PlayerProfile,Leaderboard,GameLeaderboard,IL_Leaderboard,FG_Leaderboard,search_leaderboard,ILGameLeaderboard,MonthlyLeaderboard
 from .static_views import PrivacyPolicy,Changelog,FAQ
 
 urlpatterns = [
@@ -10,8 +10,6 @@ urlpatterns = [
     path("overall", Leaderboard, name="Leaderboard"),
     path("overall/<int:year>/", MonthlyLeaderboard, name="YearlyLeaderboard"),
     path("overall/<int:year>/<int:month>", MonthlyLeaderboard, name="MonthlyLeaderboard"),
-    path("regional", RG_Leaderboard, name="RegionalLeaderboard"),
-    path("olympics", OL_Leaderboard, name="OlympicLeaderboard"),
     path("fullgame", FG_Leaderboard, name="FullGameLeaderboard"),
     path("player/<str:name>", PlayerProfile, name="PlayerProfile"),
     path("<str:abbr>/", GameLeaderboard, name="CategorySelection"),

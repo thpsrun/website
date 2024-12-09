@@ -29,7 +29,6 @@ def PlayerProfile(request,name):
     categories          = Categories.objects.all()
     main_runs           = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).filter()
     il_runs             = ILRuns.objects.filter(player_id=player.id).filter()
-    country             = player.countrycode.name if player.countrycode is not None else None
     total_runs          = len(main_runs) + len(il_runs)
     
     main_runs           = main_runs.filter(obsolete=False)
@@ -95,7 +94,6 @@ def PlayerProfile(request,name):
             "il_count"          : il_count,
             "unique_game_names" : unique_game_names,
             "awards"            : award_set,
-            "country"           : country
         }
         return render(request, "srl/player_profile.html", context)
 
@@ -320,99 +318,6 @@ def search_leaderboard(request):
 
     return JsonResponse(leaderboard, safe=False)
 
-def OL_Leaderboard(request):
-    countries       = CountryCodes.objects.all()
-    players         = Players.objects.all()
-    p_countries     = players.filter(countrycode__isnull=False).values_list("countrycode",flat=True).distinct()
-    country_filter  = countries.filter(id__in=p_countries).order_by("id")
-    main_runs       = MainRuns.objects.filter(points__gt=0)
-
-    runs_list = []
-
-    for country in country_filter:
-        player_filter   = players.filter(countrycode=country.id).values_list("id",flat=True)
-        run_filter      = main_runs.filter(player_id__in=player_filter).filter(place__in=[1,2,3])
-
-        country_output = {
-            "countrycode"   : country.id,
-            "countryname"   : country.name,
-            "first_places"  : run_filter.filter(place=1).count(),
-            "second_places" : run_filter.filter(place=2).count(),
-            "third_places"  : run_filter.filter(place=3).count()
-        }
-
-        runs_list.append(country_output)
-
-    olympics = sorted(runs_list, key=lambda x: x["first_places"], reverse=True)
-
-    context = {
-        "olympics": olympics
-    }
-
-    return render(request, "srl/ol_leaderboard.html", context)
-    
-def RG_Leaderboard(request):
-    countries       = CountryCodes.objects.all()
-    players         = Players.objects.all()
-    p_countries     = players.filter(countrycode__isnull=False).values_list("countrycode",flat=True).distinct()
-    null_countries  = players.filter(countrycode__isnull=True)
-    country_filter  = countries.filter(id__in=p_countries).order_by("name")
-    main_runs       = MainRuns.objects.filter(points__gt=0)
-    il_runs         = ILRuns.objects.filter(points__gt=0)
-
-    runs_list = []
-
-    for country in p_countries:
-        country_players = players.filter(countrycode=country)
-
-        for player in country_players:
-            main_points     = main_runs.filter(Q(player_id=player.id) | Q(player2_id=player.id)).aggregate(total_points=Sum("points"))["total_points"] or 0
-            il_points       = il_runs.filter(player_id=player.id).aggregate(total_points=Sum("points"))["total_points"] or 0
-            total_points    = main_points + il_points
-
-            try:
-                countrycode = player.countrycode.id if player.countrycode is not None else None
-                countryname = player.countrycode.name
-            except:
-                countrycode = ""
-                countryname = "Unknown"
-
-            leaderboard_item = {
-                "player"        : player.name,
-                "nickname"      : player.nickname,
-                "countrycode"   : countrycode,
-                "countryname"   : countryname,
-                "points"        : total_points
-            }
-
-            runs_list.append(leaderboard_item)
-
-    for player in null_countries:
-        main_points     = main_runs.filter(Q(player_id=player.id) | Q(player2_id=player.id)).aggregate(total_points=Sum("points"))["total_points"] or 0
-        il_points       = il_runs.filter(player_id=player.id).aggregate(total_points=Sum("points"))["total_points"] or 0
-        total_points    = main_points + il_points
-
-        leaderboard_item = {
-            "player"        : player.name,
-            "nickname"      : player.nickname,
-            "countrycode"   : "",
-            "countryname"   : "Unknown",
-            "points"        : total_points
-        }
-
-        runs_list.append(leaderboard_item)
-
-    leaderboard = sorted(runs_list, key=lambda x: x["points"], reverse=True)
-
-    context = {
-        "players"       : players,
-        "countries"     : country_filter,
-        "leaderboard"   : leaderboard
-    }
-
-    return render(request, "srl/rg_leaderboard.html", context)
-
-
 def GameSelection(request):
     games       = GameOverview.objects.all().order_by("name")
     categories  = Categories.objects.all()
@@ -457,14 +362,28 @@ def ILGameLeaderboard(request,abbr,category=None):
                 for player in [run.player.id]:
                     if player != None:
                         player = players.filter(id=player)[0]
-
+                        
                         run_add = {
+                            "player"        : player.name if player else "Anonymous",
+                            "nickname"      : player.nickname if player.nickname else None,
+                            "countrycode"   : player.countrycode.id if player and player.countrycode else None,
+                            "place"         : run.place,
+                            "defaulttime"   : game[0].defaulttime,
+                            "time"          : run.time if run.game.abbr not in ["thps2", "thug1", "thps12", "thps4ce", "thps12ce"] else run.timeigt,
+                            "points"        : run.points,
+                            "date"          : run.date,
+                            "subcategory"   : run.subcategory,
+                            "url"           : run.url
+                        }
+
+
+                        """run_add = {
                             "player"        : player.name,
                             "nickname"      : player.nickname,
                             "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
                             "place"         : run.place,
                             "defaulttime"   : game[0].defaulttime,
-                            "time"          : run.time,
+                            "time"          : run.time if run.game.abbr not in ["thps2", "thug1" "thps12", "thps4ce", "thps12ce"] else run.timeigt,
                             "points"        : run.points,
                             "date"          : run.date,
                             "subcategory"   : run.subcategory,
@@ -477,12 +396,12 @@ def ILGameLeaderboard(request,abbr,category=None):
                             "countrycode"   : None,
                             "place"         : run.place,
                             "defaulttime"   : game[0].defaulttime,
-                            "time"          : run.time,
+                            "time"          : run.time if run.game.abbr not in ["thps2", "thug1", "thps12", "thps4ce", "thps12ce"] else run.timeigt,
                             "points"        : run.points,
                             "date"          : run.date,
                             "subcategory"   : run.subcategory,
                             "url"           : run.url
-                        }
+                        }"""
 
                     runs_list.append(run_add)
 
@@ -585,11 +504,12 @@ def GameLeaderboard(request,abbr,category=None):
 
 def MainPage(request):
     subcategories = ["Any%", "Any% (6th Gen)", "100%", "Any% (No Major Glitches)", "All Goals & Golds (No Major Glitches)", "All Goals & Golds (All Careers)", "All Goals & Golds (6th Gen)", "Any% (Beginner)", "100% (NSR)", "Story (Easy, NG+)", "100% (NG)", "Classic (Normal, NG+)", "Story Mode (Easy, NG+)", "Classic Mode (Normal)", "Any% (360/PS3)", "100% (360/PS3)"]
-    #runs         = MainRuns.objects.filter(place=1,points__gt=0,subcategory__in=subcategories)
 
-    runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by(
-        Case(*[When(subcategory=subcategories, then=Value(pos)) for pos, subcategories in enumerate(subcategories)], output_field=CharField())
-    )
+    #runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by(
+    #    Case(*[When(subcategory=subcategories, then=Value(pos)) for pos, subcategories in enumerate(subcategories)], output_field=CharField())
+    #)
+    
+    runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by("-subcategory")
 
     run_list      = []
     wrs_data      = []
