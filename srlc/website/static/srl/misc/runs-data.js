@@ -19,7 +19,7 @@ function updateLeaderboard(selectedSubcategory) {
         var pointsCell  = row.insertCell();
 
         rankCell.textContent = run.place;
-        if (run.player !== "Anonymous") {
+        /*if (run.player !== "Anonymous") {
             if (run.player2) {
                 if (run.countrycode){
                     if (run.nickname){
@@ -67,10 +67,43 @@ function updateLeaderboard(selectedSubcategory) {
             }
         } else {
             playerCellContent = "Anonymous";
-        }
+        }*/
+
+        if (run.player !== "Anonymous") {
+            if (run.countrycode) {
+                const countryFlag = run.countrycode === "vh" ? '<img src="https://www.speedrun.com/images/flags/vh.png" height="15" />' : `<img src="https://flagcdn.com/h20/${run.countrycode}.png" height="15" />`;
+                playerCellContent = `${countryFlag} <a href="/player/${run.player}">${run.nickname || run.player}</a>`;
+            } else {
+                playerCellContent = `<a href="/player/${run.player}">${run.nickname || run.player}</a>`;
+            }
+            
+            if (run.player2) {
+                playerCellContent += " &";
+                if (run.countrycode2) {
+                const countryFlag = run.countrycode2 === "vh" ? '<img src="https://www.speedrun.com/images/flags/vh.png" height="15" />' : `<img src="https://flagcdn.com/h20/${run.countrycode2}.png" height="15" />`;
+                playerCellContent += ` ${countryFlag} <a href="/player/${run.player2}">${run.player2nickname || run.player2}</a>`;
+                } else {
+                playerCellContent += ` ${run.player2nickname || run.player2}`;
+                }
+            }
+            } else {
+                playerCellContent = "Anonymous";
+            }
 
         playerCell.innerHTML = playerCellContent;
-        timeCell.innerHTML = '<a href="' + run.url + '" target="_blank">' + run.time + '</a>';
+        console.log(run)
+        /*if (run.defaulttime === "ingame") {
+            timeValue = run.timeigt;
+        } else if (run.defaulttime === "realtime_noloads") {
+            timeValue = run.timenl;
+        } else if (run.defaulttime === "realtime") {
+            timeValue = run.time;
+        }*/
+
+        timeValue = run.time;
+          
+        timeCell.innerHTML = '<a href="' + run.url + '" target="_blank">' + timeValue + '</a>';
+        //timeCell.innerHTML = '<a href="' + run.url + '" target="_blank">' + run.time + '</a>'; // Need to change to accept time, timeigt, and timenl through variables.
         pointsCell.textContent = run.points;
 
         var formattedDate = new Date(run.date).toLocaleDateString("en-US", {

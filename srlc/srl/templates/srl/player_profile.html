@@ -36,11 +36,17 @@
                     </div>                    
                     <div class="profile-data">
                         <div class="profile-username">
-                            {% if player.countrycode %}
+                            {% if player.countrycode.id != "vh" %}
                                 {% if player.nickname %}
                                     <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
                                 {% else %}
                                     <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> {{ player.name }}
+                                {% endif %}
+                            {% elif player.countrycode.id == "vh" %}
+                                {% if player.nickname %}
+                                    <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
+                                {% else %}
+                                    <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" /> {{ player.name }}
                                 {% endif %}
                             {% else %}
                                 {% if player.nickname %}

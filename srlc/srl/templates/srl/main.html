@@ -46,7 +46,7 @@
                                     {% if wr.player.countrycode.id == "vh" %}
                                         <td><img src="{% static 'srl/misc/vh.png' %}" title="Valhalla" onerror="this.onerror=null; this.src=''" height="15" />
                                     {% else %}
-                                        <td><img src="https://flagcdn.com/h20/{{ wr.player.countrycode.id }}.png" title="{{ wr.player.countrycode.id|get_country }}" onerror="this.onerror=null; this.src=''" height="15" />
+                                        <td><img src="https://flagcdn.com/h20/{{ wr.player.countrycode.id }}.png" title="{{ wr.player.countrycode.name }}" onerror="this.onerror=null; this.src=''" height="15" />
                                     {% endif %}
                                         {% if wr.player.nickname %}
                                             <a href="/player/{{ wr.player.name }}">{{ wr.player.nickname }}</a></td>
@@ -97,7 +97,7 @@
                                         {% if wr.player.countrycode.id == "vh" %}
                                             <td><img src="{% static 'srl/misc/vh.png'%}" title="Valhalla" onerror="this.onerror=null; this.src=''" height="15" />
                                         {% else %}
-                                            <td><img src="https://flagcdn.com/h20/{{ wr.player.countrycode.id }}.png" title="{{ wr.player.countrycode.id|get_country }}" onerror="this.onerror=null; this.src=''" height="15" />
+                                            <td><img src="https://flagcdn.com/h20/{{ wr.player.countrycode.id }}.png" title="{{ wr.player.countrycode.name }}" onerror="this.onerror=null; this.src=''" height="15" />
                                         {% endif %}
                                             {% if wr.player.nickname %}
                                                 <a href="/player/{{ wr.player.name }}">{{ wr.nickname.name }}</a></td>
@@ -143,7 +143,7 @@
                                     {% endif %}
                                     <td>{{ run.subcategory }}</td>
                                     {% if run.player.countrycode %}
-                                        <td><img src="https://flagcdn.com/h20/{{ run.player.countrycode.id }}.png" title="{{ run.player.countrycode.id|get_country }}" onerror="this.onerror=null; this.src=''" height="15" />
+                                        <td><img src="https://flagcdn.com/h20/{{ run.player.countrycode.id }}.png" title="{{ run.player.countrycode.name }}" onerror="this.onerror=null; this.src=''" height="15" />
                                             {% if run.nickname %}
                                                 <a href="/player/{{ run.player.name }}">{{ run.player.nickname }}</a></td>
                                             {% else %}

@@ -362,46 +362,29 @@ def ILGameLeaderboard(request,abbr,category=None):
                 for player in [run.player.id]:
                     if player != None:
                         player = players.filter(id=player)[0]
+                        time = run.time
+                        defaulttime = "realtime"
                         
+                        if time == "0":
+                            time = run.timenl
+                            defaulttime = "realtime_noloads"
+                        
+                        if time == "0":
+                            time = run.timeigt
+                            defaulttime = "ingame"
+                    
                         run_add = {
                             "player"        : player.name if player else "Anonymous",
                             "nickname"      : player.nickname if player.nickname else None,
                             "countrycode"   : player.countrycode.id if player and player.countrycode else None,
                             "place"         : run.place,
-                            "defaulttime"   : game[0].defaulttime,
-                            "time"          : run.time if run.game.abbr not in ["thps2", "thug1", "thps12", "thps4ce", "thps12ce"] else run.timeigt,
+                            "defaulttime"   : defaulttime,
+                            "time"          : time,
                             "points"        : run.points,
                             "date"          : run.date,
                             "subcategory"   : run.subcategory,
                             "url"           : run.url
                         }
-
-
-                        """run_add = {
-                            "player"        : player.name,
-                            "nickname"      : player.nickname,
-                            "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
-                            "place"         : run.place,
-                            "defaulttime"   : game[0].defaulttime,
-                            "time"          : run.time if run.game.abbr not in ["thps2", "thug1" "thps12", "thps4ce", "thps12ce"] else run.timeigt,
-                            "points"        : run.points,
-                            "date"          : run.date,
-                            "subcategory"   : run.subcategory,
-                            "url"           : run.url
-                        }
-                    else:
-                        run_add = {
-                            "player"        : "Anonymous",
-                            "nickname"      : None,
-                            "countrycode"   : None,
-                            "place"         : run.place,
-                            "defaulttime"   : game[0].defaulttime,
-                            "time"          : run.time if run.game.abbr not in ["thps2", "thug1", "thps12", "thps4ce", "thps12ce"] else run.timeigt,
-                            "points"        : run.points,
-                            "date"          : run.date,
-                            "subcategory"   : run.subcategory,
-                            "url"           : run.url
-                        }"""
 
                     runs_list.append(run_add)
 
@@ -414,7 +397,7 @@ def ILGameLeaderboard(request,abbr,category=None):
         "old_runs"          : old_runs,
         "subcategories"     : il_categories,
         "game_abbr"         : abbr,
-        "selected_category" : category
+        "selected_category" : category,
     }
 
     if "thps4/ils" in request.path_info:

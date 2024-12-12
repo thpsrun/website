@@ -130,6 +130,9 @@ dmypy.json
 .DS_Store
 srlc/srl/static/pfp/*
 srlc/website/static/pfp/*
+srlc/website/static/admin/*
+srlc/website/static/rest_framework/*
+srlc/website/static/srl/*
 bin/
 .vscode/
 include/
@@ -140,4 +143,3 @@ srlc/srl/migrations-old/
 
 srlc/website/sqlite3.db
 
-srlc/website/static/srl/imgs/awards/
