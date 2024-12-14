@@ -1,4 +1,4 @@
-import math
+import math,asyncio
 from django.db import transaction
 from django.db.models import Count
 from asgiref.sync import sync_to_async
@@ -183,6 +183,10 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
             player1 = players[0].get("id")
             player2 = players[1].get("id") if len(players) > 1 and players[1]["rel"] == "user" else None
 
+            asyncio.run(update_player(player1))
+            if player2 is not None:
+                asyncio.run(update_player(player2))
+                            
             default["player"]   = Players.objects.get(id=player1)
             default["player2"]  = Players.objects.get(id=player2) if Players.objects.filter(id=player2).exists() else None
 
@@ -212,6 +216,8 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
                 points = 0
 
             player1 = players[0].get("id")
+            
+            asyncio.run(update_player(player1))
 
             default["player"]   = Players.objects.get(id=player1)
             default["level"]    = Levels.objects.get(id=run["run"]["level"])
@@ -231,9 +237,9 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
                         }
                     )
 
-        for player in players:
-            if player["rel"] != "guest":
-                update_player(player["id"])
+        #for player in players:
+            #if player["rel"] != "guest":
+               # asyncio.run(update_player(player["id"]))
 
         if point_reset == True:
             remove_obsolete(game_id,var_name,players,reset_points)

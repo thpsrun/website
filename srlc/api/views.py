@@ -44,6 +44,7 @@ class API_ProcessRuns(APIView):
                     update_variable(run_info["game"],variable)
 
                 update_category(lb_info["category"]["data"],run_info["game"])
+                finish = 0
                 for run in lb_info["runs"]:
                     if run["run"]["id"] == run_info["id"]:
                         add_run(lb_info["game"]["data"],run,lb_info["category"]["data"],lb_info["level"]["data"],run_info["values"])
@@ -82,11 +83,14 @@ class API_ProcessRuns(APIView):
                                         run.timeadded = run_info["status"]["verify-date"]
                                         run.save()
 
-                        return HttpResponse(status=200)
-                    else:
-                        run_info["place"] = 0
-                        add_run(lb_info["game"]["data"],run_info,lb_info["category"]["data"],lb_info["level"]["data"],run_info["values"],True)
-                        return HttpResponse(status=200)
+                        finish = 1
+                    
+                if finish == 0:
+                    run_info["place"] = 0
+                    add_run(lb_info["game"]["data"],run_info,lb_info["category"]["data"],lb_info["level"]["data"],run_info["values"],True)
+                    return HttpResponse(status=200)
+                else:
+                    return HttpResponse(status=200)
         else:
             return HttpResponse("The run provided is not associated with the Tony Hawk series.")
 

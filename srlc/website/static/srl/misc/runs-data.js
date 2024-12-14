@@ -19,55 +19,6 @@ function updateLeaderboard(selectedSubcategory) {
         var pointsCell  = row.insertCell();
 
         rankCell.textContent = run.place;
-        /*if (run.player !== "Anonymous") {
-            if (run.player2) {
-                if (run.countrycode){
-                    if (run.nickname){
-                        playerCellContent = '<img src="https://flagcdn.com/h20/' + run.countrycode + '.png" height="15" />' + ' ' + '<a href="/player/' + run.player + '">' + run.nickname + '</a>'
-                    } else{
-                        playerCellContent = '<img src="https://flagcdn.com/h20/' + run.countrycode + '.png" height="15" />' + ' ' + '<a href="/player/' + run.player + '">' + run.player + '</a>'
-                    }
-                } else{
-                    if (run.nickname){
-                        playerCellContent = '<a href="/player/' + run.player + '">' + run.nickname + '</a>'
-                    } else{
-                        playerCellContent = '<a href="/player/' + run.player + '">' + run.player + '</a>'
-                    }
-                }
-
-                if (run.countrycode2){
-                    if (run.player2nickname){
-                        playerCellContent = playerCellContent + ' ' + '&' + ' ' + '<img src="https://flagcdn.com/h20/' + run.countrycode2 + '.png" height="15" />' + ' ' + '<a href="/player/' + run.player2 + '">' + run.player2nickname + '</a>'
-                    } else{
-                        playerCellContent = playerCellContent + ' ' + '&' + ' ' + '<img src="https://flagcdn.com/h20/' + run.countrycode2 + '.png" height="15" />' + ' ' + '<a href="/player/' + run.player2 + '">' + run.player2 + '</a>'
-                    }
-                } else{
-                    if (run.player2nickname){
-                        playerCellContent = playerCellContent + ' ' + '&' + ' ' + run.player2nickname
-                    } else{
-                        playerCellContent = playerCellContent + ' ' + '&' + ' ' + run.player2
-                    }
-                }
-            } else {
-                if (run.countrycode){
-                    if (run.nickname){
-                        playerCellContent = '<img src="https://flagcdn.com/h20/' + run.countrycode + '.png" height="15" />' + ' ' + '<a href="/player/' + run.player + '">' + run.nickname + '</a>';
-                    }
-                    else{
-                        playerCellContent = '<img src="https://flagcdn.com/h20/' + run.countrycode + '.png" height="15" />' + ' ' + '<a href="/player/' + run.player + '">' + run.player + '</a>';
-                    }
-                } else{
-                    if (run.nickname){
-                        playerCellContent = '<a href="/player/' + run.player + '">' + run.nickname + '</a>'
-                    }
-                    else{
-                        playerCellContent = '<a href="/player/' + run.player + '">' + run.player + '</a>'
-                    }
-                }
-            }
-        } else {
-            playerCellContent = "Anonymous";
-        }*/
 
         if (run.player !== "Anonymous") {
             if (run.countrycode) {
@@ -90,20 +41,8 @@ function updateLeaderboard(selectedSubcategory) {
                 playerCellContent = "Anonymous";
             }
 
-        playerCell.innerHTML = playerCellContent;
-        console.log(run)
-        /*if (run.defaulttime === "ingame") {
-            timeValue = run.timeigt;
-        } else if (run.defaulttime === "realtime_noloads") {
-            timeValue = run.timenl;
-        } else if (run.defaulttime === "realtime") {
-            timeValue = run.time;
-        }*/
-
-        timeValue = run.time;
-          
-        timeCell.innerHTML = '<a href="' + run.url + '" target="_blank">' + timeValue + '</a>';
-        //timeCell.innerHTML = '<a href="' + run.url + '" target="_blank">' + run.time + '</a>'; // Need to change to accept time, timeigt, and timenl through variables.
+        playerCell.innerHTML = playerCellContent;          
+        timeCell.innerHTML = '<a href="' + run.url + '" target="_blank">' + run.time + '</a>';
         pointsCell.textContent = run.points;
 
         var formattedDate = new Date(run.date).toLocaleDateString("en-US", {

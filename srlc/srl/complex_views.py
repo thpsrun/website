@@ -488,6 +488,12 @@ def GameLeaderboard(request,abbr,category=None):
 def MainPage(request):
     subcategories = ["Any%", "Any% (6th Gen)", "100%", "Any% (No Major Glitches)", "All Goals & Golds (No Major Glitches)", "All Goals & Golds (All Careers)", "All Goals & Golds (6th Gen)", "Any% (Beginner)", "100% (NSR)", "Story (Easy, NG+)", "100% (NG)", "Classic (Normal, NG+)", "Story Mode (Easy, NG+)", "Classic Mode (Normal)", "Any% (360/PS3)", "100% (360/PS3)"]
 
+
+    #runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by(
+    #    Case(*[When(subcategory=subcategories, then=Value(pos)) for pos, subcategories in enumerate(subcategories)], output_field=CharField())
+    #)
+    
+    
     #runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by(
     #    Case(*[When(subcategory=subcategories, then=Value(pos)) for pos, subcategories in enumerate(subcategories)], output_field=CharField())
     #)
