@@ -50,6 +50,7 @@
                         <li>Added the "Exceptions" field to the Players Model.
                             <ul>
                                 <li>When a Player is marked with this new field, this will show they do not want their stream to appear in places like THPSBot or an upcoming Livestream page.</li>
+                                <li>This feature will make more of an impact with the next version of THPSBot, sometime before the heat death of the universe.</li>
                             </ul>
                         </li>
                         <li>Added the "Nickname" field to the Players Model.
@@ -87,9 +88,9 @@
                                 <li>This change will reduce on the number of overall requests a bit, while also making it easier to manage for future releases.</li>
                             </ul>
                         </li>
-                        <li>Updated necessary libraries; Django updated to 5.0.</li>
                     </ul>
                     <ul>
+                        <li>Fixed an issue where obsolete runs would fail to be added.</li>
                         <li>Fixed an issue where country codes were being set as the profile picture for users.</li>
                         <li>Fixed an issue where the profile pictures of users weren't being saved properly in some cases, causing errors.</li>
                         <li>Fixed an issue where, in some cases, new categories or levels would not be properly added to the database.</li>

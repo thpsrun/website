@@ -535,7 +535,7 @@ def invoke_players(players_data,player=None):
                     }
                 )
 
-@sync_to_async
+#@sync_to_async
 def import_obsolete(player):
     from api.tasks import add_run
 
@@ -573,7 +573,8 @@ def import_obsolete(player):
 
                             print(f"-- DEBUG: Added {run['id']} without issue...")
                     except Exception as e:
-                        print(e,lb_info["game"]["data"]["name"])
+                        print(e,lb_info["game"]["data"])
+                        f
 
 @sync_to_async
 def import_srltimes(run):

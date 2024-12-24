@@ -15,6 +15,7 @@ from .models import GameOverview,Categories,Levels,Variables,VariableValues,Main
 def init_series(series_id):
     ## Removes all objects from all of the listed models below.
     ## Initialize Series should only be performed by the superadmin.
+    ## If you want to re-enable this, just uncomment the lines.
     """GameOverview.objects.all().delete()
     Categories.objects.all().delete()
     Levels.objects.all().delete()

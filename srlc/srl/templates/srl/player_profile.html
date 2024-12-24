@@ -87,12 +87,10 @@
             {% if awards %}
             <div>
                 <h6 style="text-decoration:underline;">Awards</h6>
-                <ul>
-                    {% for award in awards %}
-                        {% comment %}<img src="{% static 'srl/imgs/awards/'|add:award.1 %}" title="{{ award.0 }}" />{% endcomment %}
-                        <li>{{ award.0 }}</li>
-                    {% endfor %}
-                </ul>
+                {% for award in awards %}
+                    {% comment %}<img src="{% static 'srl/imgs/awards/'|add:award.1 %}" title="{{ award.0 }}" />{% endcomment %}
+                    {{ award.0 }}<br />
+                {% endfor %}
             </div>
             {% endif %}
         </div>
