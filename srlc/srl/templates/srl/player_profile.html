@@ -84,17 +84,18 @@
                     </div>
                 </div>
             </div>
-        </div>
-        {% if awards %}
-            <div class="super-container">
-                <div class="profile-container">
-                    <h6 style="text-decoration:underline;">Awards</h6>
+            {% if awards %}
+            <div>
+                <h6 style="text-decoration:underline;">Awards</h6>
+                <ul>
                     {% for award in awards %}
-                        <img src="{% static 'srl/imgs/awards/'|add:award.1 %}" title="{{ award.0 }}" />
+                        {% comment %}<img src="{% static 'srl/imgs/awards/'|add:award.1 %}" title="{{ award.0 }}" />{% endcomment %}
+                        <li>{{ award.0 }}</li>
                     {% endfor %}
-                </div>
+                </ul>
             </div>
-        {% endif %}
+            {% endif %}
+        </div>
         <div class="main-page-container">
             {% if main_runs.count > 0 %}
             {% if il_runs.count > 0 %}

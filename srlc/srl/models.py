@@ -129,6 +129,7 @@ class Awards(models.Model):
                 verbose_name="Image",
                 validators=[validate_image],
                 null=True,
+                blank=True,
                 help_text="Note: Images must be at least 64px in size, must be a square (height and width must match), and the max filesize is 3MB.")
     description = models.CharField(max_length=500,verbose_name="Award Description",blank=True,null=True)
     unique      = models.BooleanField(

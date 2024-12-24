@@ -1,18 +1,8 @@
-import os,sentry_sdk,environ
+import os,environ
 from pathlib import Path
-from sentry_sdk.integrations.django import DjangoIntegration
+from dotenv import load_dotenv
 
-## REMOVE OR COMMENT OUT THESE LINES IF YOU WANT TO DISABLE SENTRY/GLITCHTIP.
-sentry_sdk.init(
-    dsn                     = os.getenv("SENTRY_DSN"),
-    integrations            = [DjangoIntegration()],
-    auto_session_tracking   = False,
-    traces_sample_rate      = 1.0,
-    profiles_sample_rate    = 1.0,
-    release                 = "2.2.0",
-    environment             = "development",
-)
-
+load_dotenv() 
 # Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -95,7 +85,7 @@ REST_FRAMEWORK = {
 
 WSGI_APPLICATION = "website.wsgi.application"
 
-if os.getenv("DEBUG_MODE") or True:
+if os.getenv("DEBUG_MODE"):
     print("DEBUG ENABLED!!!!! MAKE SURE YOU AREN'T IN PRODUCTION!!!!!")
     DEBUG = True
     
