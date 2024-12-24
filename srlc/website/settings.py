@@ -90,12 +90,6 @@ if os.getenv("DEBUG_MODE"):
     DEBUG = True
     
     PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": os.path.join(PROJECT_DIR, "sqlite3.db"),
-        }
-    }
 else:
     # Security Setttings
     CSRF_COOKIE_SECURE              = True
@@ -110,15 +104,15 @@ else:
     X_FRAME_OPTIONS                 = "DENY"
     SECURE_PROXY_SSL_HEADER         = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-    DATABASES = {
-        "default": {
-            "ENGINE"    : "django.db.backends.postgresql",
-            "NAME"      : os.getenv("POSTGRES_NAME"),
-            "USER"      : os.getenv("POSTGRES_USER"),
-            "PASSWORD"  : os.getenv("POSTGRES_PASSWORD"),
-            "HOST"      : "postgres",
-        }
+DATABASES = {
+    "default": {
+        "ENGINE"    : "django.db.backends.postgresql",
+        "NAME"      : os.getenv("POSTGRES_NAME"),
+        "USER"      : os.getenv("POSTGRES_USER"),
+        "PASSWORD"  : os.getenv("POSTGRES_PASSWORD"),
+        "HOST"      : "postgres",
     }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
