@@ -85,7 +85,7 @@ REST_FRAMEWORK = {
 
 WSGI_APPLICATION = "website.wsgi.application"
 
-if os.getenv("DEBUG_MODE"):
+if os.getenv("DEBUG_MODE") == "True":
     print("DEBUG ENABLED!!!!! MAKE SURE YOU AREN'T IN PRODUCTION!!!!!")
     DEBUG = True
     
