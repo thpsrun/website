@@ -35,7 +35,6 @@
                         <div class="accordion-body">
                             <h3>Known Issues</h3>
                             <ul>
-                                <li>Games imported from the SRC API that have LRT as their default timing method, but who do not submit any RTA time alongside the run incorrectly have their times as RTA in the SRC API.</li>
                                 <li>Tied speedruns should be displayed better on the front page.</li>
                                 <li>Extra features from the SRC API are not available in their v1 endpoint. When v2 is more stable/usable/not hidden, website will be refactored.
                                     <ul>
@@ -75,10 +74,27 @@
                     </div>
                     <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="currentversions" data-bs-parent="#accordionversions">
                         <div class="accordion-body">
-                            | <a href="#v22">v2.2 - The BIG Update</a> | <a href="#v221">v2.2.1 (current)</a> |
+                            | <a href="#v22">v2.2 - The BIG Update</a> | <a href="#v221">v2.2.1</a> | <a href="#v2211">v2.2.1.1 (current)</a> |
                             <hr />
-                            <h3 id="v221">v2.2.1 (current)</h3>
+                            <h3 id="v2211">v2.2.1.1 (current)</h3>
                             <h6>March 24, 2025</h6>
+                            <ul>
+                                <li>Added THPS1+2 Any% Tour Mode (All Tours, New Game) and All Goals & Golds (All Tours, New Game) to the main page.</li>
+                                <li>Added additional logic to properly handle speedruns that have only LRT submitted but not RTA.
+                                    <ul>
+                                        <li>An example speedrun is <a href="https://www.speedrun.com/api/v1/runs/8m78g0z0" target="_blank">neskamikaze's THPS3 Any% - 6th Gen</a> run. As of writing, the link will give you the raw JSON of the run from the SRC API with incorrect data. Even though the front-end has their LRT set properly, the API has their LRT time set to "realtime" and "realtime_t".</li>
+                                        <li>This logic is temporary and will be removed if the v1 endpoint is fixed or (more likely) when this site uses the v2 endpoint.</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                            <ul>
+                                <li>Fixed an issue where world records sent through the API could produce errors with point calculations</li>
+                            </ul>
+                            <a href="#top">Back to Top</a>
+                            <hr />
+
+                            <h3 id="v221">v2.2.1</h3>
+                            <h6>March 23, 2025</h6>
                             <ul>
                                 <li>Added <code>idefaulttime</code> (IL Default Time) attribute to the <code>GameOverview</code> model.
                                     <ul>

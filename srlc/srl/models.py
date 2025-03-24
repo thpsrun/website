@@ -245,13 +245,6 @@ class MainRuns(models.Model):
     points      = models.IntegerField(verbose_name="Packle Points",default=0)
     platform    = models.ForeignKey(Platforms,verbose_name="Platform",blank=True,null=True,on_delete=models.SET_NULL)
     emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
-    timeframes  = models.ManyToManyField(
-                MainRunTimeframe,
-                verbose_name="Run Timeframes",
-                default=False,
-                blank=True,
-                help_text="This is a list of all the timeframes this run held certain point values; upon being beaten by that player or another, this is updated."
-    )
     obsolete    = models.BooleanField(
                 verbose_name="Obsolete?",
                 default=False,

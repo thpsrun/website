@@ -55,3 +55,8 @@ def src_api(url,paginate=False):
         response = response.json()
 
     return response
+
+### points_formula is the formula used to determine the points for a run.
+### It is used a couple of times throughout the app, so this is to consolidate it in one place to make it easier to modify.
+def points_formula(wr,run,max_points):
+    return math.floor((0.008 * math.pow(math.e, (4.8284 * (wr / run)))) * max_points)

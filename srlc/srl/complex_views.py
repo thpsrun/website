@@ -520,7 +520,10 @@ def GameLeaderboard(request,abbr,category=None):
     return render(request, "srl/il_leaderboard.html", context)
 
 def MainPage(request):
-    subcategories = ["Any%", "Any% (6th Gen)", "100%", "Any% (No Major Glitches)", "All Goals & Golds (No Major Glitches)", "All Goals & Golds (All Careers)", "All Goals & Golds (6th Gen)", "Any% (Beginner)", "100% (NSR)", "Story (Easy, NG+)", "100% (NG)", "Classic (Normal, NG+)", "Story Mode (Easy, NG+)", "Classic Mode (Normal)", "Any% (360/PS3)", "100% (360/PS3)"]
+    ### These subcategories are what is queried to have them appear as World Records on the main page. It is kinda clunky, I will eventually have a better solution.
+    ### To get these values, look up the ID of the WR in a category and copy + paste the "Subcategory Name" field here.
+    subcategories = ["Any%", "Any% (6th Gen)", "100%", "Any% (No Major Glitches)", "All Goals & Golds (No Major Glitches)", "All Goals & Golds (All Careers)", "All Goals & Golds (6th Gen)", "Any% (Beginner)", "100% (NSR)",\
+                     "Story (Easy, NG+)", "100% (NG)", "Classic (Normal, NG+)", "Story Mode (Easy, NG+)", "Classic Mode (Normal)", "Any% (360/PS3)", "100% (360/PS3)","Any% Tour Mode (All Tours, New Game)","All Goals & Golds (All Tours, New Game)"]
     
     runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by("-subcategory").annotate(o_date=TruncDate("date"))
 

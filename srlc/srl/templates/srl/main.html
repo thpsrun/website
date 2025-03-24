@@ -40,7 +40,11 @@
                     <tbody>
                         {% for wr in runs %}
                             <tr>
-                                <td>{{ wr.game.abbr|upper }}</td>
+                                {% if wr.game.abbr == "thps12" %}
+                                    <td>THPS1+2</td>
+                                {% else %}
+                                    <td>{{ wr.game.abbr|upper }}</td>
+                                {% endif %}
                                 <td>{{ wr.subcategory }}</td>
                                 {% if wr.player.countrycode %}
                                     {% if wr.player.countrycode.id == "vh" %}

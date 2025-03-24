@@ -12,7 +12,7 @@ from django.db import transaction
 from celery import shared_task
 from langcodes import standardize_tag
 from .models import GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,CountryCodes,Platforms,MainRunTimeframe
-from .m_tasks import src_api,convert_time
+from .m_tasks import src_api,convert_time,points_formula
 
 @shared_task
 def update_game(src_game):
@@ -366,18 +366,19 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
         wr_records = leaderboard["runs"][0]
         pb_records = leaderboard["runs"][1:]
         wr_players = wr_records["run"]["players"]
+        maingame   = GameOverview.objects.get(id=game_id)
 
-        if wr_records["run"]["game"] in ["o6glkk8d","o1yjk541","9d38jey1"]:
-            run_type = 25
+        if "category extension" in wr_records["run"]["game"].lower():
+            run_type = maingame.pointsmax
         elif wr_records["run"]["level"] != None:
-            run_type = 100
+            run_type = maingame.ipointsmax
         else:
-            run_type = 1000
+            run_type = maingame.pointsmax
 
         if wr_players != None:
             run_id     = wr_records["run"]["id"]
             wr_secs    = wr_records["run"]["times"]["primary_t"]
-            points     = 25 if run_type == 25 else 100 if run_type == 100 else 1000
+            points     = run_type
 
             try: wr_video = wr_records.get("run").get("videos").get("links")[0].get("uri") if wr_records.get("run").get("videos") is not None or wr_records.get("run").get("videos").get("text") != "N/A" else None
             except: wr_video = None
@@ -387,7 +388,7 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
 
             default = {
                 "player"        : Players.objects.get(id=player1) if Players.objects.filter(id=player1).exists() else None,
-                "game"          : GameOverview.objects.get(id=game_id),
+                "game"          : maingame,
                 "category"      : Categories.objects.get(id=category["id"]),
                 "subcategory"   : var_name,
                 "values"        : var_string,
@@ -408,9 +409,21 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                 "obsolete"      : False
             }
 
+            lrt_fix = False
             if category["type"] == "per-game":
                 if player2:
                     default["player2"] = Players.objects.get(id=player2) if Players.objects.filter(id=player2).exists() else None
+
+                if maingame.defaulttime == "realtime_noloads": lrt_fix = True
+
+                ### LRT_TEMP_FIX
+                ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
+                ### LRT set to RTA instead. Really dumb.
+                if lrt_fix and default["time_secs"] > 0 and default["timenl_secs"] == 0:
+                    default["time"]         = "0"
+                    default["time_secs"]    = 0.0
+                    default["timenl"]       = convert_time(wr_records["run"]["times"]["realtime_t"])
+                    default["timenl_secs"]  = wr_records["run"]["times"]["realtime_t"]
 
                 with transaction.atomic():
                     MainRuns.objects.update_or_create(
@@ -419,6 +432,17 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                     )
             else:
                 default["level"] = Levels.objects.get(id=wr_records["run"]["level"])
+
+                if maingame.idefaulttime == "realtime_noloads": lrt_fix = True
+
+                ### LRT_TEMP_FIX
+                ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
+                ### LRT set to RTA instead. Really dumb.
+                if lrt_fix and default["time_secs"] > 0 and default["timenl_secs"] == 0:
+                    default["time"]         = "0"
+                    default["time_secs"]    = 0.0
+                    default["timenl"]       = convert_time(wr_records["run"]["times"]["realtime_t"])
+                    default["timenl_secs"]  = wr_records["run"]["times"]["realtime_t"]
 
                 with transaction.atomic():
                     ILRuns.objects.update_or_create(
@@ -439,19 +463,19 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                         if player["rel"] != "guest":
                             invoke_players.delay(leaderboard["players"]["data"],player["id"])
 
-                    run_id = pb["run"]["id"]
+                    run_id  = pb["run"]["id"]
                     player1 = pb_players[0].get("id")
                     player2 = pb_players[1]["id"] if len(pb_players) > 1 and pb_players[1]["rel"] == "user" else None
 
-                    pb_secs   = pb["run"]["times"]["primary_t"]
-                    points    = math.floor((0.008 * math.pow(math.e, (4.8284 * (wr_secs/pb_secs)))) * run_type)
+                    pb_secs = pb["run"]["times"]["primary_t"]
+                    points  = points_formula(wr_secs,pb_secs,run_type)
 
                     videos = pb.get("run").get("videos")
                     pb_video = videos["links"][0]["uri"] if videos and videos.get("text") != "N/A" else None
                     
                     default = {
                         "player"        : Players.objects.get(id=player1) if Players.objects.filter(id=player1).exists() else None,
-                        "game"          : GameOverview.objects.get(id=game_id),
+                        "game"          : maingame,
                         "category"      : Categories.objects.get(id=category["id"]),
                         "subcategory"   : var_name,
                         "values"        : var_string,
@@ -475,6 +499,17 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                     if category["type"] == "per-game":
                         default["player2"] = Players.objects.get(id=player2) if Players.objects.filter(id=player2).exists() else None
 
+                        if maingame.defaulttime == "realtime_noloads": lrt_fix = True
+
+                        ### LRT_TEMP_FIX
+                        ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
+                        ### LRT set to RTA instead. Really dumb.
+                        if default["time_secs"] > 0 and default["timenl_secs"] == 0:
+                            default["time"]         = "0"
+                            default["time_secs"]    = 0.0
+                            default["timenl"]       = convert_time(pb["run"]["times"]["realtime_t"])
+                            default["timenl_secs"]  = pb["run"]["times"]["realtime_t"]
+
                         with transaction.atomic():
                             MainRuns.objects.update_or_create(
                                 id=run_id,
@@ -482,6 +517,17 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                             )
                     else:
                         default["level"] = Levels.objects.get(id=pb["run"]["level"])
+
+                        if maingame.idefaulttime == "realtime_noloads": lrt_fix = True
+
+                        ### LRT_TEMP_FIX
+                        ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
+                        ### LRT set to RTA instead. Really dumb.
+                        if default["time_secs"] > 0 and default["timenl_secs"] == 0:
+                            default["time"]         = "0"
+                            default["time_secs"]    = 0.0
+                            default["timenl"]       = convert_time(pb["run"]["times"]["realtime_t"])
+                            default["timenl_secs"]  = pb["run"]["times"]["realtime_t"]
 
                         with transaction.atomic():
                             ILRuns.objects.update_or_create(
@@ -583,7 +629,10 @@ def import_obsolete(player):
                             add_run.delay(lb_info["game"]["data"],run,lb_info["category"]["data"],lb_info["level"]["data"],run["values"],True,False)
                             print(f"-- DEBUG: Added {run['id']} without issue...")
 
-#NOTE: This is for the upcoming "Historical Points" update.
+
+
+
+### TODO: This is for the upcoming "Historical Points" update.
 def import_srltimes(run):
     print(run)
     run_info = src_api(f"https://speedrun.com/api/v1/runs/{run}")
@@ -643,7 +692,7 @@ def invoke_timereview():
                                 MainRunTimeframe.objects.create(
                                     run_id      = run.id,
                                     start_date  = run.date,
-                                    points      = math.floor((0.008 * math.pow(math.e, (4.8284 * (wr_time / run_time)))) * run_type),
+                                    points      = points_formula(wr_time,run_time,run_type),
                                 )
 
                     else:
@@ -667,7 +716,7 @@ def invoke_timereview():
                                 wr_time, run_time= wr_run.timeigt_secs, archived_run.timeigt_secs
 
                             MainRunTimeframe.objects.create(
-                                run_id        = archived_run.id,
-                                start_date    = wr_run.date,
-                                points        = math.floor((0.008 * math.pow(math.e, (4.8284 * (wr_time / run_time)))) * run_type),
+                                run_id      = archived_run.id,
+                                start_date  = wr_run.date,
+                                points      = points_formula(wr_time,run_time,run_type)
                             )

@@ -10,8 +10,9 @@ from django.db.models import Count
 from celery import shared_task
 from srl.models import Variables,Categories,VariableValues,MainRuns,ILRuns,GameOverview,Players,Levels,Platforms
 from srl.tasks import convert_time,update_player
+from srl.m_tasks import points_formula
 
-### add_run starts to gather information about the approved run from the SRC API.
+### add_run starts to gathesr information about the approved run from the SRC API.
 ### The biggest thing here is that it will normalize the data so it can be properly stored in your API.
 ### Part of the normalization is taking the categories and sub-categories and sub-sub-categories and properly formatting them before handing them to invoke_run.
 @shared_task
@@ -144,10 +145,15 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
 
         place = 0
 
+    lrt_fix = False
     if run["run"]["level"] != None:
         max_points = GameOverview.objects.get(id=game_id).ipointsmax
+
+        if GameOverview.objects.get(id=game_id).idefaulttime == "realtime_noloads": lrt_fix = True
     else:
         max_points = GameOverview.objects.get(id=game_id).pointsmax
+
+        if GameOverview.objects.get(id=game_id).defaulttime == "realtime_noloads": lrt_fix = True
 
     if players != None:
         run_id       = run["run"]["id"]
@@ -178,11 +184,23 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
             "obsolete"      : obsolete
         }
 
+        ### LRT_TEMP_FIX
+        ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
+        ### LRT set to RTA instead. Really dumb.
+        if lrt_fix and default["time_secs"] > 0 and default["timenl_secs"] == 0:
+            default["time"]         = "0"
+            default["time_secs"]    = 0.0
+            default["timenl"]       = convert_time(run["run"]["times"]["realtime_t"])
+            default["timenl_secs"]  = run["run"]["times"]["realtime_t"]
+
         if category["type"] == "per-game":
             reset_points = "Game"
 
             if obsolete == False:
-                if run["place"] > 1:
+                ### Some runs in the SRC API (runs that are on separate platforms, for example, but there is one faster) are seen as Place 0. This skips that.
+                if run["place"] == 1:
+                    points = max_points
+                elif run["place"] > 1:
                     wr_pull     = MainRuns.objects.filter(game=game_id,subcategory=var_name,obsolete=False,place=1)[0]
                     defaulttime = wr_pull.game.defaulttime
 
@@ -199,9 +217,7 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
                         else:
                             wrecord = wr_pull.timeigt_secs
 
-                    points = math.floor((0.008 * math.pow(math.e, (4.8284 * (wrecord/secs)))) * max_points)
-            else:
-                points = 0
+                    points = points_formula(wrecord,secs,max_points)
 
             player1 = players[0].get("id")
             player2 = players[1].get("id") if len(players) > 1 and players[1]["rel"] == "user" else None
@@ -217,24 +233,38 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
                     defaults = default
                 )
 
-            if point_reset == True:
+            if point_reset:
                 with transaction.atomic():
                     MainRuns.objects.update_or_create(
                         id = run_id,
                         defaults = {
-                            "points" : max_points
+                            "points" : points
                         }
                     )
                 
         else:
             reset_points = "IL"
-            
             if obsolete == False:
-                if run["place"] > 1:
-                    wrecord = ILRuns.objects.filter(game=game_id,subcategory=var_name,obsolete=False,place=1).values("time_secs")[0]["time_secs"]
-                    points = math.floor((0.008 * math.pow(math.e, (4.8284 * (wrecord/secs)))) * max_points)
-            else:
-                points = 0
+                if run["place"] == 1:
+                    points = max_points
+                elif run["place"] > 1:
+                    wr_pull = ILRuns.objects.filter(game=game_id,subcategory=var_name,obsolete=False,place=1)[0]
+                    defaulttime = wr_pull.game.idefaulttime
+                    
+                    if defaulttime == "realtime":
+                        if wr_pull.time_secs == 0:
+                            wrecord = wr_pull.timeigt_secs
+                        else:
+                            wrecord = wr_pull.time_secs
+                    elif defaulttime == "realtime_noloads":
+                        wrecord = wr_pull.timenl_secs
+                    elif defaulttime == "ingame":
+                        if wr_pull.timeigt_secs == 0:
+                            wrecord = wr_pull.time_secs
+                        else:
+                            wrecord = wr_pull.timeigt_secs
+                    
+                    points = points_formula(wrecord,secs,max_points)
 
             player1 = players[0].get("id")
             
@@ -251,7 +281,7 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
                     defaults = default
                 )
 
-            if point_reset == True:
+            if point_reset:
                 with transaction.atomic():
                     ILRuns.objects.update_or_create(
                         id = run_id,
@@ -260,7 +290,7 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
                         }
                     )
 
-        if point_reset == True:
+        if point_reset:
             remove_obsolete.delay(game_id,var_name,players,reset_points)
             update_points.delay(game_id,var_name,max_points,reset_points)
 
@@ -313,7 +343,7 @@ def update_points(game_id,subcategory,max_points,reset_points):
 
             rank_count += 1
         else:
-            points     = math.floor((0.008 * math.pow(math.e, (4.8284 * (wr_time/run_time)))) * max_points)
+            points     = points_formula(wr_time,run_time,max_points)
             run.points = points
 
             if rank_count > 0:
