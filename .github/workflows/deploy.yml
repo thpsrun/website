@@ -17,7 +17,7 @@ jobs:
 
       - name: Pull Latest Changes
         run: |
-          cd deploy
+          cd ~/deploy
           git pull origin main
 
       - name: Build and Restart Docker Containers
