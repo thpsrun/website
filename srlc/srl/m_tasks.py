@@ -1,5 +1,13 @@
+######################################################################################################################################################
+### File Name: srl/m_tasks.py
+### Author: ThePackle
+### Description: Includes functions (mini tasks) that are called throughout other tasks.py or views.py files.
+### Dependencies: None.
+######################################################################################################################################################
 import time,math,requests
 
+### convert_time is used a few times through the project, mainly to take integer seconds and convert them to a string to call on the website.
+### For example: time_secs of a run is 69.420; this will take the float and conver it to say "1m 09s 420ms"
 def convert_time(secs):
     hours, remainder = divmod(secs, 3600)
     minutes, seconds = divmod(remainder, 60)
@@ -12,7 +20,8 @@ def convert_time(secs):
     if hours >= 1: final_time = f"{int(hours)}h "
     else: final_time = ""
 
-    if minutes < 10: final_time += f"0{int(minutes)}m "
+    if minutes == 0: final_time += "0m "
+    elif minutes < 10: final_time += f"{int(minutes)}m "
     else: final_time += f"{int(minutes)}m "
 
     if seconds < 10: final_time += f"0{int(seconds)}s "
@@ -23,6 +32,9 @@ def convert_time(secs):
 
     return final_time
 
+### src_api is a custom function that is called a LOT through the project.
+### Since this project currently uses the v1 endpoint and not a library like speedruncompy, this just provides a consistent function.
+### If a 402 or 503 status code is given, then it is rate limited and will need to wait.
 def src_api(url,paginate=False):
     response = requests.get(url)
 

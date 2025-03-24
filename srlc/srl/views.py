@@ -3,7 +3,7 @@
 ### File Name: srl/views.py
 ### Author: ThePackle
 ### Description: Views that are loaded upon someone going to a specific webpage.
-### Dependencies: asyncio, Django, srl/tasks.py, srl/init_series.py
+### Dependencies: srl/tasks.py, srl/init_series.py
 ######################################################################################################################################################
 """
 
@@ -28,7 +28,7 @@ class UpdateGameView(ListView):
     def get(self,request):
         game_ids = self.request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
-            asyncio.run(update_game(game_id))
+            update_game.delay(game_id)
             
         return redirect("/admin/srl/gameoverview/")
     
@@ -36,7 +36,7 @@ class RefreshGameRunsView(ListView):
     def get(self,request):
         game_ids = self.request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
-            asyncio.run(update_game_runs(game_id,1))
+            update_game_runs.delay(game_id,1)
         
         return redirect("/admin/srl/gameoverview/")
 
@@ -44,7 +44,7 @@ class UpdateGameRunsView(ListView):
     def get(self,request):
         game_ids = self.request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
-            asyncio.run(update_game_runs(game_id,0))
+            update_game_runs.delay(game_id,0)
         
         return redirect("/admin/srl/gameoverview/")
     
@@ -52,7 +52,7 @@ class UpdatePlayerView(ListView):
     def get(self, request):
         player_ids = self.request.GET.get("player_ids", "").split(",")
         for player in player_ids:
-            asyncio.run(update_player(player))
+            update_player.delay(player)
 
         return redirect("/admin/srl/players/")
     
@@ -60,14 +60,17 @@ class ImportObsoleteView(ListView):
     def get(self, request):
         player_ids = self.request.GET.get("player_ids", "").split(",")
         for player in player_ids:
-            asyncio.run(import_obsolete(player))
+            #asyncio.run(import_obsolete(player))
+            import_obsolete.delay(player)
 
         return redirect("/admin/srl/players/")
 
 class ImportSRLTimes(ListView):
     def get(self, request):
         run_ids = self.request.GET.get("run_ids", "").split(",")
+        
         for run in run_ids:
             asyncio.run(import_srltimes(run))
+            
         
         return redirect("/admin/srl/")

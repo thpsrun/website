@@ -1,0 +1,56 @@
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:latest
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: ${POSTGRES_NAME}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    networks:
+      - srlc
+
+  django:
+    container_name: django
+    restart: unless-stopped
+    build: .
+    ports:
+      - "8000:8001"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./srlc:/srlc
+      - ./static:/srlc/static
+    networks:
+      - srlc
+
+  nginx:
+    container_name: nginx
+    restart: unless-stopped
+    build: ./nginx
+    ports:
+      - "8001:80"
+    depends_on:
+      - django
+      - postgres
+    networks:
+      - srlc
+  
+  redis:
+    container_name: redis
+    image: redis:alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - srlc
+
+networks:
+  srlc:
+    driver: bridge

@@ -92,7 +92,7 @@
                             {% for item in wr_count %}
                                 <tr>
                                     {% if item.countrycode %}
-                                        <td><img src="https://flagcdn.com/h20/{{ item.countrycode }}.png" onerror="this.onerror=null; this.src=''" height="15" />
+                                        <td><img src="https://flagcdn.com/h20/{{ item.countrycode }}.png" alt="{{ item.countryname }}" title="{{ item.countryname }}" onerror="this.onerror=null; this.src=''" height="15" />
                                             {% if item.nickname %}
                                                 <a href="/player/{{ item.player }}">{{ item.nickname }}</a></td>
                                             {% else %}

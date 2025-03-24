@@ -1,5 +1,5 @@
 # thps.run - Speedrun Leaderboard Creator (SRLC)
-## Version 2.0
+## Version 2.2.1
 
 ### What the heck is this??
 This has been the pet project of [ThePackle](https://twitch.tv/thepackle) for a few years now. In short, it is a highly-customizable, easy-to-use, and interesting way to create a website that mimics a lot of the leaderboard functionality seen from [HaloRuns](https://haloruns.com). Built entirely in Django 5.1 (Python), this is the open-source files used for websites like [THPS.RUN](https://thps.run).
@@ -13,7 +13,7 @@ In short, there are a few different services built-in to this project:
   - Django usually utilizes a SQLite3 database, but larger communities will require a better database. Plus, this allows me to more easily tie in the database into future projects (e.g., THPS Twitch bot, more powerful Discord bot, etc.).
 3. Custom REST API
   - With the database is a custom API backend that can be called upon for various functions. It is still a work-in-progress, but there is a decent amount you can do with it already!
-4. Discord Python Bot
+4. Discord Python Bot [coming soon]
   - While the Discord posting is optional, the Python bot included has a special function. Since Speedrun.com's REST API does not provide webhooks currently, the bot is tasked with continual checks (~1 minute default) to see if any new speedruns are posted in a series. If a new one is found, it is posted to the Discord channel of the user's choice. If approved, the speedrun is given to the API so it can process the new data dynamically!
 
 ### Requirements

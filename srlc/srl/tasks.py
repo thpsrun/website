@@ -1,21 +1,20 @@
-"""
 ######################################################################################################################################################
-### File Name: tasks.py
+### File Name: srl/tasks.py
 ### Author: ThePackle
 ### Description: Script that holds a lot of the tasks utilized by Django to perform operations.
 ### Dependencies: srl/m_tasks, srl/models
 ######################################################################################################################################################
-"""
 
-import time,math,requests,os
+import time,math,requests,os,re
 from django.db import transaction
 from django.db.models import Q
 from django.db import transaction
-from asgiref.sync import sync_to_async
+from celery import shared_task
 from langcodes import standardize_tag
 from .models import GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,CountryCodes,Platforms,MainRunTimeframe
 from .m_tasks import src_api,convert_time
 
+@shared_task
 def update_game(src_game):
     src_game = src_api(f"https://www.speedrun.com/api/v1/games/{src_game['id']}?embed=platforms")
 
@@ -28,7 +27,10 @@ def update_game(src_game):
                     "abbr"          : src_game["abbreviation"],
                     "release"       : src_game["release-date"],
                     "defaulttime"   : src_game["ruleset"]["default-time"],
+                    "idefaulttime"  : src_game["ruleset"]["default-time"],
                     "boxart"        : src_game["assets"]["cover-large"]["uri"],
+                    "pointsmax"     : 1000 if not "category extension" in src_game["names"]["international"].lower() else 25,
+                    "ipointsmax"    : 100 if not "category extension" in src_game["names"]["international"].lower() else 25
                 }
             )
 
@@ -37,11 +39,13 @@ def update_game(src_game):
             for plat in plat_names:
                 game.platforms.add(plat)
 
+@shared_task
 def update_game_runs(game_id,reset):
     if reset == 1:
         Categories.objects.filter(game=game_id).delete()
         Levels.objects.filter(game=game_id).delete()
         Variables.objects.filter(game=game_id).delete()
+        VariableValues.objects.filter(var__game__id=game_id).delete()
         MainRuns.objects.filter(game=game_id).delete()
         ILRuns.objects.filter(game=game_id).delete()
 
@@ -50,21 +54,22 @@ def update_game_runs(game_id,reset):
     if isinstance(game_check,dict):
         cat_check = game_check["categories"]["data"]
         for check in cat_check:
-            update_category(check,game_id)
+            update_category.delay(check,game_id)
 
         il_check = game_check["levels"]["data"]
         if len(il_check) > 0:
             for level in il_check:
-                update_level(level,game_id)
+                update_level.delay(level,game_id)
         
         var_check = game_check["variables"]["data"]
         if len(var_check) > 0:
             for variable in var_check:
-                update_variable(game_id,variable)
+                update_variable.delay(game_id,variable)
 
         for category in cat_check:
-            update_category_runs(game_id,category,il_check)
+            update_category_runs.delay(game_id,category,il_check)
 
+@shared_task
 def update_category(category,game_id):
     with transaction.atomic():
         Categories.objects.update_or_create(
@@ -77,6 +82,7 @@ def update_category(category,game_id):
             }
         )
 
+@shared_task
 def update_platform(platform):
     with transaction.atomic():
         Platforms.objects.update_or_create(
@@ -86,6 +92,7 @@ def update_platform(platform):
             }
         )
 
+@shared_task
 def update_level(level,game_id):
     with transaction.atomic():
         Levels.objects.update_or_create(
@@ -97,6 +104,7 @@ def update_level(level,game_id):
             }
         )
 
+@shared_task
 def update_variable(gameid,variable):
     with transaction.atomic():
         Variables.objects.update_or_create(
@@ -112,8 +120,9 @@ def update_variable(gameid,variable):
 
     if variable["is-subcategory"]:
         for value in variable["values"]["values"]:
-            update_variable_value(variable,value)
+            update_variable_value.delay(variable,value)
 
+@shared_task
 def update_variable_value(variable,value):
     with transaction.atomic():
         VariableValues.objects.update_or_create(
@@ -122,6 +131,7 @@ def update_variable_value(variable,value):
             name    = variable["values"]["values"][value]["label"],
         )
 
+@shared_task
 def update_category_runs(game_id,category,il_check):
     var_ids        = Variables.objects.filter(cat=category["id"])
     global_cats    = Variables.objects.filter(all_cats=True,game=game_id)
@@ -135,9 +145,9 @@ def update_category_runs(game_id,category,il_check):
 
             if len(per_level_check) > 1:
                 var_name = il["name"] + " (" + category["name"] + ")"
-                invoke_runs(game_id,category,leaderboard,var_name)
+                invoke_runs.delay(game_id,category,leaderboard,var_name)
             else:
-                invoke_runs(game_id,category,leaderboard,il["name"])
+                invoke_runs.delay(game_id,category,leaderboard,il["name"])
 
     elif len(global_fg_cats) > 1:
         cat_list      = []
@@ -169,7 +179,7 @@ def update_category_runs(game_id,category,il_check):
         for index, lb_string in enumerate(cat_list):
             leaderboard = src_api(f"https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category['id']}?{lb_string}&embed=players,game,category")
             if leaderboard != 400:
-                invoke_runs(game_id,category,leaderboard,var_name_list[index],var_str_list[index])
+                invoke_runs.delay(game_id,category,leaderboard,var_name_list[index],var_str_list[index])
 
     elif len(var_ids) == 1:
         var_value = VariableValues.objects.filter(var=var_ids[0].id)
@@ -215,7 +225,7 @@ def update_category_runs(game_id,category,il_check):
             for index, lb_string in enumerate(cat_list):
                 leaderboard = src_api(f"https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category['id']}?{lb_string}&embed=players,game,category")
                 if leaderboard != 400:
-                    invoke_runs(game_id,category,leaderboard,var_name_list[index],var_str_list[index])
+                    invoke_runs.delay(game_id,category,leaderboard,var_name_list[index],var_str_list[index])
 
     elif len(var_ids) > 1:
         var_value_one = VariableValues.objects.filter(var=var_ids[0].id)
@@ -267,7 +277,7 @@ def update_category_runs(game_id,category,il_check):
             for index, lb_string in enumerate(cat_list):
                 leaderboard = src_api(f"https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category['id']}?{lb_string}&embed=players,game,category")
                 if leaderboard != 400:
-                    invoke_runs(game_id,category,leaderboard,var_name_list[index],var_str_list[index])
+                    invoke_runs.delay(game_id,category,leaderboard,var_name_list[index],var_str_list[index])
 
     elif category["type"] == "per-game" and len(var_ids) == 0:
         if len(global_cats) > 0:
@@ -290,14 +300,14 @@ def update_category_runs(game_id,category,il_check):
                 for index, lb_string in enumerate(cat_list):
                     leaderboard = src_api(f"https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category['id']}?{lb_string}&embed=players,game,category")
                     if leaderboard != 400:
-                        invoke_runs(game_id,category,leaderboard,var_name_list[index])
+                        invoke_runs.delay(game_id,category,leaderboard,var_name_list[index])
 
         else:
             leaderboard = src_api(f"https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category['id']}?embed=players,game,category")
             if leaderboard != 400:
-                invoke_runs(game_id,category,leaderboard,category["name"])
+                invoke_runs.delay(game_id,category,leaderboard,category["name"])
 
-@sync_to_async
+@shared_task
 def update_player(player):
     player_data = src_api(f"https://www.speedrun.com/api/v1/users/{player}")
 
@@ -350,6 +360,7 @@ def update_player(player):
                 }
             )
 
+@shared_task
 def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
     if len(leaderboard["runs"]) > 0:
         wr_records = leaderboard["runs"][0]
@@ -383,7 +394,8 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                 "place"         : 1,
                 "url"           : wr_records["run"]["weblink"],
                 "video"         : wr_video,
-                "date"          : wr_records["run"]["date"],
+                "date"          : wr_records["run"]["submitted"] if wr_records["run"]["submitted"] else wr_records["run"]["date"],
+                "v_date"        : wr_records["run"]["status"]["verify-date"],
                 "time"          : convert_time(wr_records["run"]["times"]["realtime_t"]) if wr_records["run"]["times"]["realtime_t"] > 0 else 0,
                 "time_secs"     : wr_records["run"]["times"]["realtime_t"],
                 "timenl"        : convert_time(wr_records["run"]["times"]["realtime_noloads_t"]) if wr_records["run"]["times"]["realtime_noloads_t"] > 0 else 0,
@@ -397,7 +409,8 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
             }
 
             if category["type"] == "per-game":
-                default["player2"] = Players.objects.get(id=player2) if Players.objects.filter(id=player2).exists() else None
+                if player2:
+                    default["player2"] = Players.objects.get(id=player2) if Players.objects.filter(id=player2).exists() else None
 
                 with transaction.atomic():
                     MainRuns.objects.update_or_create(
@@ -415,7 +428,7 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
 
             for player in wr_players:
                 if player["rel"] != "guest":
-                    invoke_players(leaderboard["players"]["data"],player["id"])
+                    invoke_players.delay(leaderboard["players"]["data"],player["id"])
 
         for pb in pb_records:
             if pb["place"] > 0:
@@ -424,7 +437,7 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                 if pb_players != None:
                     for player in pb_players:
                         if player["rel"] != "guest":
-                            invoke_players(leaderboard["players"]["data"],player["id"])
+                            invoke_players.delay(leaderboard["players"]["data"],player["id"])
 
                     run_id = pb["run"]["id"]
                     player1 = pb_players[0].get("id")
@@ -435,10 +448,7 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
 
                     videos = pb.get("run").get("videos")
                     pb_video = videos["links"][0]["uri"] if videos and videos.get("text") != "N/A" else None
-
-                    #try: pb_video  = pb.get("run").get("videos").get("links")[0].get("uri") if pb.get("run").get("videos") is not None or pb.get("run").get("videos").get("text") != "N/A" else None
-                    #except: pb_video = None
-
+                    
                     default = {
                         "player"        : Players.objects.get(id=player1) if Players.objects.filter(id=player1).exists() else None,
                         "game"          : GameOverview.objects.get(id=game_id),
@@ -448,7 +458,8 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                         "place"         : pb["place"],
                         "url"           : pb["run"]["weblink"],
                         "video"         : pb_video,
-                        "date"          : pb["run"]["date"],
+                        "date"          : pb["run"]["submitted"] if pb["run"]["submitted"] else pb["run"]["date"],
+                        "v_date"        : pb["run"]["status"]["verify-date"],
                         "time"          : convert_time(pb["run"]["times"]["realtime_t"]) if pb["run"]["times"]["realtime_t"] > 0 else 0,
                         "time_secs"     : pb["run"]["times"]["realtime_t"],
                         "timenl"        : convert_time(pb["run"]["times"]["realtime_noloads_t"]) if pb["run"]["times"]["realtime_noloads_t"] > 0 else 0,
@@ -478,12 +489,13 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                                 defaults=default
                             )
 
+@shared_task
 def invoke_players(players_data,player=None):
     for player_data in players_data:
         player_id = player_data.get("id")
         if player_id == player:
             if player_data["assets"]["image"]["uri"] != None:
-                file_name = player_data["assets"]["image"]["uri"].split("v=")[1] + ".jpg"
+                file_name = (re.search(r"/user/([a-zA-Z0-9]+)", player_data["assets"]["image"]["uri"])).group(1) + ".jpg"
 
                 if not os.path.exists("srl/static/pfp/" + file_name):
                     response = requests.get(player_data["assets"]["image"]["uri"])
@@ -535,13 +547,13 @@ def invoke_players(players_data,player=None):
                     }
                 )
 
-#@sync_to_async
+@shared_task
 def import_obsolete(player):
     from api.tasks import add_run
 
     run_data = src_api(f"https://www.speedrun.com/api/v1/runs?user={player}&max=200",True)
 
-    if isinstance(run_data,dict):
+    if isinstance(run_data,dict) and run_data is not None:
         all_runs = run_data["data"]
         offset   = 0
 
@@ -550,11 +562,10 @@ def import_obsolete(player):
             run_data = src_api(f"https://www.speedrun.com/api/v1/runs?user={player}&max=200&offset={offset}?embed=players",True)
             all_runs.extend(run_data["data"])
 
-        i = 0
         for run in all_runs:
-            if GameOverview.objects.filter(id=run["game"]).exists():
-                if len(MainRuns.objects.filter(id=run["id"])) == 0 and len(ILRuns.objects.filter(id=run["id"])) == 0:
-                    try:
+            if run["status"]["status"] == "verified":
+                if GameOverview.objects.filter(id=run["game"]).exists():
+                    if not MainRuns.objects.filter(id=run["id"]).exists() and not ILRuns.objects.filter(id=run["id"]).exists():
                         if run["level"]:
                             lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run['game']}/level/{run['level']}/{run['category']}?embed=game,category,level,players,variables")
                         elif len(run["values"]) > 0:
@@ -569,20 +580,13 @@ def import_obsolete(player):
                             lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run['game']}/category/{run['category']}?embed=game,category,level,players,variables")
                         
                         if isinstance(lb_info,dict):
-                            add_run(lb_info["game"]["data"],run,lb_info["category"]["data"],lb_info["level"]["data"],run["values"],True,False)
-
+                            add_run.delay(lb_info["game"]["data"],run,lb_info["category"]["data"],lb_info["level"]["data"],run["values"],True,False)
                             print(f"-- DEBUG: Added {run['id']} without issue...")
-                    except Exception as e:
-                        print(e,lb_info["game"]["data"])
-                        f
 
-@sync_to_async
+#NOTE: This is for the upcoming "Historical Points" update.
 def import_srltimes(run):
     print(run)
     run_info = src_api(f"https://speedrun.com/api/v1/runs/{run}")
-
-    #try: run_video = run_info.get("videos").get("links")[0].get("uri") if run_info.get("videos") is not None or run_info.get("videos").get("text") != "N/A" else None
-    #except: run_video = None
 
     if isinstance(run_info,dict):
         videos = run_info.get("run").get("videos")

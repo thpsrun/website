@@ -3,8 +3,7 @@ from django.http import HttpResponseForbidden,HttpResponseBadRequest,HttpRespons
 from rest_framework.response import Response
 from .serializers import APIProcessRunsSerializer,APIPlayersSerializer,APIGamesSerializer,APICategoriesSerializer,APIVariablesSerializer,APIValuesSerializer,APILevelsSerializer,APINewRunsSerializer,APINewWRsSerializer
 from srl.tasks import *
-from srl.models import GameOverview,MainRuns,ILRuns,NewRuns,NewWRs
-from srl.models import *
+from srl.models import GameOverview,MainRuns,ILRuns
 from api.tasks import *
 from django.db.models import Count,F,Subquery,OuterRef, Q
 
@@ -23,74 +22,44 @@ class API_ProcessRuns(APIView):
 
         if "speedrun.com/th" in run_info["weblink"]:
             if not GameOverview.objects.filter(id=run_info["game"]).exists():
-                update_game_runs(run_info["game"])
+                update_game_runs.delay(run_info["game"])
+
+            for player in run_info["players"]["data"]:
+                if player["rel"] != "guest":
+                    if not Players.objects.filter(id=player["id"]).exists():
+                        update_player.delay(player["id"])
+
+            if run_info["level"]:
+                lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run_info['game']}/level/{run_info['level']}/{run_info['category']}?embed=game,category,level,players,variables")
+
+                update_level.delay(lb_info["level"]["data"],run_info["game"])
+            elif len(run_info["values"]) > 0:
+                lb_variables = ""
+                for key, value in run_info["values"].items():
+                    lb_variables += f"var-{key}={value}&"
+
+                lb_variables = lb_variables.rstrip("&")
+
+                lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run_info['game']}/category/{run_info['category']}?{lb_variables}&embed=game,category,level,players,variables")
             else:
-                if run_info["level"]:
-                    lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run_info['game']}/level/{run_info['level']}/{run_info['category']}?embed=game,category,level,players,variables")
+                lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run_info['game']}/category/{run_info['category']}?embed=game,category,level,players,variables")
+            
+            for variable in lb_info["variables"]["data"]:
+                update_variable.delay(run_info["game"],variable)
 
-                    update_level(lb_info["level"]["data"],run_info["game"])
-                elif len(run_info["values"]) > 0:
-                    lb_variables = ""
-                    for key, value in run_info["values"].items():
-                        lb_variables += f"var-{key}={value}&"
-
-                    lb_variables = lb_variables.rstrip("&")
-
-                    lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run_info['game']}/category/{run_info['category']}?{lb_variables}&embed=game,category,level,players,variables")
-                else:
-                    lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run_info['game']}/category/{run_info['category']}?embed=game,category,level,players,variables")
+            update_category.delay(lb_info["category"]["data"],run_info["game"])
+            finish = 0
+            for run in lb_info["runs"]:
+                if run["run"]["id"] == run_info["id"]:
+                    add_run.delay(lb_info["game"]["data"],run,lb_info["category"]["data"],lb_info["level"]["data"],run_info["values"])
+                    finish = 1
                 
-                for variable in lb_info["variables"]["data"]:
-                    update_variable(run_info["game"],variable)
-
-                update_category(lb_info["category"]["data"],run_info["game"])
-                finish = 0
-                for run in lb_info["runs"]:
-                    if run["run"]["id"] == run_info["id"]:
-                        add_run(lb_info["game"]["data"],run,lb_info["category"]["data"],lb_info["level"]["data"],run_info["values"])
-
-                        player_check = run_info.get("players").get("data")[0].get("rel") if run_info.get("players").get("data") else run_info.get("players")[0].get("rel")
-                        if player_check != "guest":
-                            if run_info["level"]:
-                                try: rank = ILRuns.objects.filter(id=run_info["id"]).values("place")[0]["place"]
-                                except: rank = 1
-                            else:
-                                try: rank = MainRuns.objects.filter(id=run_info["id"]).values("place")[0]["place"]
-                                except: rank = 1
-
-                            if rank == 1:
-                                with transaction.atomic():
-                                    run, created = NewWRs.objects.update_or_create(
-                                        id=run_info["id"],
-                                        defaults={
-                                            "timeadded": run_info["status"]["verify-date"],
-                                        }
-                                    )
-                                    if not created:
-                                        run.id = run_info["id"]
-                                        run.timeadded = run_info["status"]["verify-date"]
-                                        run.save()
-                            else:
-                                with transaction.atomic():
-                                    run, created = NewRuns.objects.update_or_create(
-                                        id=run_info["id"],
-                                        defaults={
-                                            "timeadded": run_info["status"]["verify-date"],
-                                        }
-                                    )
-                                    if not created:
-                                        run.id = run_info["id"]
-                                        run.timeadded = run_info["status"]["verify-date"]
-                                        run.save()
-
-                        finish = 1
-                    
-                if finish == 0:
-                    run_info["place"] = 0
-                    add_run(lb_info["game"]["data"],run_info,lb_info["category"]["data"],lb_info["level"]["data"],run_info["values"],True)
-                    return HttpResponse(status=200)
-                else:
-                    return HttpResponse(status=200)
+            if finish == 0:
+                run_info["place"] = 0
+                add_run.delay(lb_info["game"]["data"],run_info,lb_info["category"]["data"],lb_info["level"]["data"],run_info["values"],True)
+                return HttpResponse(status=200)
+            else:
+                return HttpResponse(status=200)
         else:
             return HttpResponse("The run provided is not associated with the Tony Hawk series.")
 
@@ -296,8 +265,8 @@ class API_NewRuns(APIView):
             return HttpResponseNotFound(f"newrun id {newruns_data} does not exist.")
         else:
             return Response({
-                "id":        newruns_data[0].id,
-                "timeadded": newruns_data[0].timeadded,
+                #"id":        newruns_data[0].id,
+                #"timeadded": newruns_data[0].timeadded,
             })
             
 class API_NewWRs(APIView):
@@ -314,6 +283,6 @@ class API_NewWRs(APIView):
             return HttpResponseNotFound(f"newwrs id {newwrs_data} does not exist.")
         else:
             return Response({
-                "id":        newwrs_data[0].id,
-                "timeadded": newwrs_data[0].timeadded,
+                #"id":        newwrs_data[0].id,
+                #"timeadded": newwrs_data[0].timeadded,
             })

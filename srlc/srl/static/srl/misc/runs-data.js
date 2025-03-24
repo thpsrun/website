@@ -20,38 +20,58 @@ function updateLeaderboard(selectedSubcategory) {
 
         rankCell.textContent = run.place;
 
+        let playerCellContent = '';
         if (run.player !== "Anonymous") {
-            if (run.countrycode) {
-                const countryFlag = run.countrycode === "vh" ? '<img src="https://www.speedrun.com/images/flags/vh.png" height="15" />' : `<img src="https://flagcdn.com/h20/${run.countrycode}.png" height="15" />`;
-                playerCellContent = `${countryFlag} <a href="/player/${run.player}">${run.nickname || run.player}</a>`;
-            } else {
-                playerCellContent = `<a href="/player/${run.player}">${run.nickname || run.player}</a>`;
-            }
+            const getPlayerLink = (player, nickname) => {
+                const linkText = nickname || player;
+                return '<a href="/player/' + player + '">' + linkText + '</a>';
+            };
+        
+            const getCountryFlag = (countrycode) => {
+                if (!countrycode) {
+                    return "";
+                }
+              
+                const countryFlag = countrycode === "vh" ? 
+                    `<img src="https://www.speedrun.com/images/flags/vh.png" alt="${run.countryname}" title="${run.countryname}" height="15" />` : 
+                    `<img src="https://flagcdn.com/h20/${countrycode}.png" alt="${run.countryname}" title="${run.countryname}" height="15" />`;
+              
+                return countryFlag;
+              };
             
+            const player1Link = getPlayerLink(run.player, run.nickname);
+            const player1Content = getCountryFlag(run.countrycode) + ' ' + player1Link;
+
+            playerCellContent = player1Content;
+
             if (run.player2) {
-                playerCellContent += " &";
-                if (run.countrycode2) {
-                const countryFlag = run.countrycode2 === "vh" ? '<img src="https://www.speedrun.com/images/flags/vh.png" height="15" />' : `<img src="https://flagcdn.com/h20/${run.countrycode2}.png" height="15" />`;
-                playerCellContent += ` ${countryFlag} <a href="/player/${run.player2}">${run.player2nickname || run.player2}</a>`;
+                if (run.player2 !== "Anonymous") {
+                    const player2Link = getPlayerLink(run.player2, run.player2nickname);
+                    const player2Content = ' & ' + getCountryFlag(run.countrycode2) + ' ' + player2Link;
+                    playerCellContent += ' ' + player2Content;
                 } else {
-                playerCellContent += ` ${run.player2nickname || run.player2}`;
+                    playerCellContent += ' & ' + "Anonymous";
                 }
             }
-            } else {
-                playerCellContent = "Anonymous";
-            }
+        } else {
+            playerCellContent = "Anonymous";
+        }
 
-        playerCell.innerHTML = playerCellContent;          
+        playerCell.innerHTML = playerCellContent;
         timeCell.innerHTML = '<a href="' + run.url + '" target="_blank">' + run.time + '</a>';
         pointsCell.textContent = run.points;
 
-        var formattedDate = new Date(run.date).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            timeZone: "UTC"
-        });
-        dateCell.textContent = formattedDate;
+        if (run.date) {
+            var formattedDate = new Date(run.date).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                timeZone: "UTC"
+            });
+            dateCell.textContent = formattedDate;
+        } else {
+            dateCell.innerHTML = ' --- ';
+        }
     });
 }
 

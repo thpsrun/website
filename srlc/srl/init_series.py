@@ -8,14 +8,14 @@
 ######################################################################################################################################################
 """
 
-import asyncio
-from .tasks import src_api,update_game,update_category,update_level,update_variable,update_category_runs,update_platform,import_obsolete
-from .models import GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,NewRuns,NewWRs,MainRunTimeframe
+from .tasks import *
+from .models import *
 
 def init_series(series_id):
     ## Removes all objects from all of the listed models below.
     ## Initialize Series should only be performed by the superadmin.
-    ## If you want to re-enable this, just uncomment the lines.
+    ## It also removes all objects in all models, then re-creates them. If the following lines are commented, the removal won't happen.
+    ## If you want the removal to still occur, uncomment these lines.
     """GameOverview.objects.all().delete()
     Categories.objects.all().delete()
     Levels.objects.all().delete()
@@ -24,8 +24,6 @@ def init_series(series_id):
     MainRuns.objects.all().delete()
     ILRuns.objects.all().delete()
     Players.objects.all().delete()
-    NewRuns.objects.all().delete()
-    NewWRs.objects.all().delete()
     MainRunTimeframe.objects.all().delete()"""
 
     ## Iterates through the series ID provided to find all of the games associated. Max is set to 50, but can be increased.
@@ -43,23 +41,23 @@ def init_series(series_id):
                 print("CHECKING: " + game_check["names"]["international"])
 
                 for plat in game_check["platforms"]["data"]:
-                    update_platform(plat)
+                    update_platform.delay(plat)
 
-                update_game(game_check)
+                update_game.delay(game_check)
 
                 for category in game_check["categories"]["data"]:
-                    update_category(category,game["id"])
+                    update_category.delay(category,game["id"])
 
                 if len(game_check["levels"]["data"]) > 0:
                     for level in game_check["levels"]["data"]:
-                        update_level(level,game["id"])
+                        update_level.delay(level,game["id"])
 
                 if len(game_check["variables"]["data"]) > 0:
                     for variable in game_check["variables"]["data"]:
-                        update_variable(game['id'],variable)
+                        update_variable.delay(game['id'],variable)
 
                 for category in game_check["categories"]["data"]:
-                    update_category_runs(game_check["id"],category,game_check["levels"]["data"])
+                    update_category_runs.delay(game_check["id"],category,game_check["levels"]["data"])
     
     ## Speedrun.com API sucks sometimes and will miss some runs; this reiterates to add runs it
     ## somehow missed the first time. Good website.
@@ -69,7 +67,7 @@ def init_series(series_id):
     while redo < 3:
         for player in Players.objects.values_list("id", flat=True):
             print(f"IMPORTING {player} OBSOLETE RUNS...")
-            asyncio.run(import_obsolete(player))
+            import_obsolete.delay(player)
             
             redo = redo + 1
 

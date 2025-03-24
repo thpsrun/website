@@ -45,13 +45,37 @@ class GameOverview(models.Model):
     class Meta:
         verbose_name_plural = "Game Overview"
 
+    LeaderboardChoices = [
+        ("realtime", "RTA"),
+        ("realtime_noloads", "LRT"),
+        ("ingame","IGT"),
+    ]
+
     id          = models.CharField(max_length=10,primary_key=True,verbose_name="SRL Game ID")
     name        = models.CharField(max_length=35,verbose_name="Name")
     abbr        = models.CharField(max_length=20,verbose_name="Abbreviation")
     release     = models.DateField(verbose_name="Release Date")
     boxart      = models.URLField(verbose_name="Box Art URL")
-    defaulttime = models.CharField(max_length=20,verbose_name="Default Time")
+    defaulttime = models.CharField(verbose_name="Default Time",choices=LeaderboardChoices,default="realtime")
+    idefaulttime= models.CharField(
+                verbose_name="ILs Default Time",
+                choices=LeaderboardChoices,
+                default="realtime",
+                help_text="Sometimes leaderboards have one timing standard for full game speedruns and another standard for ILs. This setting lets you change the game-specific IL timing method.<br />NOTE: This defaults to RTA upon a game being created and must be set manually."
+    )
     platforms   = models.ManyToManyField(Platforms,verbose_name="Platforms")
+    pointsmax   = models.IntegerField(
+                verbose_name="Full Game WR Point Maximum",
+                default=1000,
+                help_text="Default is 1000; 25 if this game contains the name \"Category Extension\". This is the maximum total of points a full-game speedrun receives if it is the world record. All lower-ranked speedruns recieve less based upon an algorithmic formula.<br />\
+                        NOTE: Changing this value will ONLY affect new runs. If you change this value, you will need to reset runs for this game from the admin panel."
+    )
+    ipointsmax  = models.IntegerField(
+                verbose_name="IL WR Point Maximum",
+                default=100,
+                help_text="Default is 100; 25 if this game contains the name \"Category Extension\". This is the maximum total of points an IL speedrun receives if it is the world record. All lower-ranked speedruns recieve less based upon an algorithmic formula.<br />\
+                        NOTE: Changing this value will ONLY affect new runs. If you change this value, you will need to reset runs for this game from the admin panel."
+    )
 
 class Categories(models.Model):
     def __str__(self):
@@ -87,7 +111,6 @@ class Variables(models.Model):
     name        = models.CharField(max_length=50,verbose_name="Name")
     game        = models.ForeignKey(GameOverview,verbose_name="Linked Game",null=True,on_delete=models.SET_NULL)
     cat         = models.ForeignKey(Categories,verbose_name="Category",null=True,blank=True,on_delete=models.SET_NULL)
-    #cat         = models.CharField(max_length=10,verbose_name="Category ID")
     all_cats    = models.BooleanField(
                 verbose_name="All Categories",
                 default=False,
@@ -211,7 +234,8 @@ class MainRuns(models.Model):
     place       = models.IntegerField(verbose_name="Placing")
     url         = models.URLField(verbose_name="URL")
     video       = models.URLField(verbose_name="Video",blank=True,null=True)
-    date        = models.DateField (verbose_name="Submitted Date",blank=True,null=True)
+    date        = models.DateTimeField(verbose_name="Submitted Date",blank=True,null=True)
+    v_date      = models.DateTimeField(verbose_name="Verified Date",blank=True,null=True)
     time        = models.CharField(max_length=25,verbose_name="RTA Time",blank=True,null=True)
     time_secs   = models.FloatField(verbose_name="RTA Time (Seconds)",blank=True,null=True)
     timenl      = models.CharField(max_length=25,verbose_name="LRT Time",blank=True,null=True)
@@ -250,7 +274,8 @@ class ILRuns(models.Model):
     place       = models.IntegerField(verbose_name="Placing")
     url         = models.URLField(verbose_name="URL")
     video       = models.URLField(verbose_name="Video",blank=True,null=True)
-    date        = models.DateField(verbose_name="Submitted Date",blank=True,null=True)
+    date        = models.DateTimeField(verbose_name="Submitted Date",blank=True,null=True)
+    v_date      = models.DateTimeField(verbose_name="Verified Date",blank=True,null=True)
     time        = models.CharField(max_length=25,verbose_name="RTA Time",blank=True,null=True)
     time_secs   = models.FloatField(verbose_name="RTA Time (Seconds)",blank=True,null=True)
     timenl      = models.CharField(max_length=25,verbose_name="LRT Time",blank=True,null=True)
@@ -259,34 +284,9 @@ class ILRuns(models.Model):
     timeigt_secs= models.FloatField(verbose_name="IGT Time (Seconds)",blank=True,null=True)
     points      = models.IntegerField(verbose_name="Packle Points",default=0)
     platform    = models.ForeignKey(Platforms,verbose_name="Platform",blank=True,null=True,on_delete=models.SET_NULL)
-    timeframes  = models.ManyToManyField(
-                MainRunTimeframe,
-                verbose_name="Run Timeframes",
-                default=False,
-                blank=True,
-                help_text="This is a list of all the timeframes this run held certain point values; upon being beaten by that player or another, this is updated."
-    )
     emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
     obsolete    = models.BooleanField(
                 verbose_name="Obsolete?",
                 default=False,
                 help_text="When True, the run will be considered obsolete. Points will not count towards the player's total."
     )
-
-class NewRuns(models.Model):
-    def __str__(self):
-        return "Run ID: " + self.id
-    class Meta:
-        verbose_name_plural = "Latest Runs"
-
-    id          = models.CharField(max_length=10,primary_key=True,verbose_name="Run ID")
-    timeadded   = models.DateTimeField(verbose_name="Time Added")
-
-class NewWRs(models.Model):
-    def __str__(self):
-        return "Run ID: " + self.id
-    class Meta:
-        verbose_name_plural = "Latest WRs"
-    
-    id          = models.CharField(max_length=10,primary_key=True,verbose_name="Run ID")
-    timeadded   = models.DateTimeField(verbose_name="Time Added")

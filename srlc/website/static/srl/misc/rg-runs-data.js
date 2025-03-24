@@ -24,18 +24,23 @@ function updateLeaderboard(selectedSubcategory) {
             };
         
             const getCountryFlag = (countrycode) => {
-                return countrycode ? '<img src="https://flagcdn.com/h20/' + countrycode + '.png" height="15" />' : '';
+                const countryFlag = countrycode === "vh" ? '<img src="https://www.speedrun.com/images/flags/vh.png" alt="${run.countryname}" title="${run.countryname}" height="15" />' : `<img src="https://flagcdn.com/h20/${run.countrycode}.png" alt="${run.countryname}" title="${run.countryname} height="15" />`;
+                return countryFlag;
             };
-        
+            
             const player1Link = getPlayerLink(run.player, run.nickname);
             const player1Content = getCountryFlag(run.countrycode) + ' ' + player1Link;
         
             let playerCellContent = player1Content;
         
             if (run.player2) {
-                const player2Link = getPlayerLink(run.player2, run.player2nickname);
-                const player2Content = getCountryFlag(run.countrycode2) + ' & ' + player2Link;
-                playerCellContent += ' ' + player2Content;
+                if (run.player2 !== "Anonymous") {
+                    const player2Link = getPlayerLink(run.player2, run.player2nickname);
+                    const player2Content = ' & ' + getCountryFlag(run.countrycode2) + player2Link;
+                    playerCellContent += ' ' + player2Content;
+                } else {
+                    playerCellContent += ' & ' + "Anonymous";
+                }
             }
         } else {
             playerCellContent = "Anonymous";

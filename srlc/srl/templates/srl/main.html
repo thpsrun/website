@@ -44,9 +44,9 @@
                                 <td>{{ wr.subcategory }}</td>
                                 {% if wr.player.countrycode %}
                                     {% if wr.player.countrycode.id == "vh" %}
-                                        <td><img src="{% static 'srl/misc/vh.png' %}" title="Valhalla" onerror="this.onerror=null; this.src=''" height="15" />
+                                        <td><img src="{% static 'srl/misc/vh.png' %}" title="{{ wr.player.countrycode.name }}" alt="{{ wr.player.countrycode.name }}" onerror="this.onerror=null; this.src=''" height="15" />
                                     {% else %}
-                                        <td><img src="https://flagcdn.com/h20/{{ wr.player.countrycode.id }}.png" title="{{ wr.player.countrycode.name }}" onerror="this.onerror=null; this.src=''" height="15" />
+                                        <td><img src="https://flagcdn.com/h20/{{ wr.player.countrycode.id }}.png" title="{{ wr.player.countrycode.name }}" alt="{{ wr.player.countrycode.name }}" onerror="this.onerror=null; this.src=''" height="15" />
                                     {% endif %}
                                         {% if wr.player.nickname %}
                                             <a href="/player/{{ wr.player.name }}">{{ wr.player.nickname }}</a></td>
@@ -61,7 +61,7 @@
                                     {% endif %}
                                 {% endif %}
                                 <td><a href="{{ wr.url }}" target="_blank">{{ wr.time }}</a></td>
-                                <td>{{ wr.date }}</td>
+                                <td>{{ wr.o_date }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -100,7 +100,7 @@
                                             <td><img src="https://flagcdn.com/h20/{{ wr.player.countrycode.id }}.png" title="{{ wr.player.countrycode.name }}" onerror="this.onerror=null; this.src=''" height="15" />
                                         {% endif %}
                                             {% if wr.player.nickname %}
-                                                <a href="/player/{{ wr.player.name }}">{{ wr.nickname.name }}</a></td>
+                                                <a href="/player/{{ wr.player.name }}">{{ wr.player.nickname }}</a></td>
                                             {% else %}
                                                 <a href="/player/{{ wr.player.name }}">{{ wr.player.name }}</a></td>
                                             {% endif %}
@@ -111,7 +111,15 @@
                                             <a href="/player/{{ wr.player.name }}">{{ wr.player.name }}</a></td>
                                         {% endif %}
                                     {% endif %}
-                                    <td><a href="{{ wr.url}}" target="_blank">{{ wr.time }}</a></td>
+                                    <td>
+                                        {% if wr.time_secs > 0 %}
+                                            <a href="{{ wr.url }}" target="_blank">{{ wr.time }}</a>
+                                        {% elif wr.timenl_secs > 0 %}
+                                            <a href="{{ wr.url }}" target="_blank">{{ wr.timenl }}</a>
+                                        {% elif wr.timeigt_secs > 0 %}
+                                            <a href="{{ wr.url }}" target="_blank">{{ wr.timeigt }}</a>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -157,7 +165,15 @@
                                             <a href="/player/{{ run.player.name }}">{{ run.player.name }}</a></td>
                                         {% endif %}
                                     {% endif %}
-                                    <td><a href="{{ run.url }}">{{ run.time }}</a></td>
+                                    <td>
+                                        {% if run.time_secs > 0 %}
+                                            <a href="{{ run.url }}" target="_blank">{{ run.time }}</a>
+                                        {% elif run.timenl_secs > 0 %}
+                                            <a href="{{ run.url }}" target="_blank">{{ run.timenl }}</a>
+                                        {% elif run.timeigt_secs > 0 %}
+                                            <a href="{{ run.url }}" target="_blank">{{ run.timeigt }}</a>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>

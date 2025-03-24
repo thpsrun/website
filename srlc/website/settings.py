@@ -3,18 +3,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv() 
-# Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 ALLOWED_HOSTS = ["localhost","127.0.0.1","django"]
 #ALLOWED_IPS = ["127.0.0.1"]
-
-# Application definition
 
 INSTALLED_APPS = [
     # PRE-INSTALLED
@@ -88,6 +83,7 @@ WSGI_APPLICATION = "website.wsgi.application"
 if os.getenv("DEBUG_MODE") == "True":
     print("DEBUG ENABLED!!!!! MAKE SURE YOU AREN'T IN PRODUCTION!!!!!")
     DEBUG = True
+    CSRF_TRUSTED_ORIGINS = ["http://localhost:8001"]
     
     PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
 else:
@@ -154,3 +150,14 @@ STATIC_ROOT     = os.path.join(PROJECT_DIR, 'static')
 STATIC_URL      = "website/static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# CELERY SETTINGS
+CELERY_BROKER_URL = "redis://redis:6379/0"
+CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_RESULT_EXTENDED = True
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60

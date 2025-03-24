@@ -1,17 +1,15 @@
-"""
 ######################################################################################################################################################
 ### File Name: complex_views.py
 ### Author: ThePackle
 ### Description: Script that holds a lot of the complex views (webpages) for the project.
 ### Dependencies: srl/models
 ######################################################################################################################################################
-"""
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.db.models import Sum,Q,Case,When,Value,CharField,Max,F
-from .models import GameOverview,Players,Categories,MainRuns,ILRuns,NewRuns,NewWRs,CountryCodes,VariableValues
-
+from django.db.models import Sum,Q,Max,F
+from django.db.models.functions import TruncDate
+from .models import GameOverview,Players,Categories,MainRuns,ILRuns,VariableValues
 
 ## PlayerProfile grabs all of the unique information for a single user
 ## (e.g., username, nickname, main runs, individual level runs, etc.) and context's them
@@ -27,8 +25,8 @@ def PlayerProfile(request,name):
     unique_game_names   = set()
     games               = GameOverview.objects.all().order_by("name")
     categories          = Categories.objects.all()
-    main_runs           = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).filter()
-    il_runs             = ILRuns.objects.filter(player_id=player.id).filter()
+    main_runs           = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("date"))
+    il_runs             = ILRuns.objects.filter(player_id=player.id).annotate(o_date=TruncDate("date"))
     total_runs          = len(main_runs) + len(il_runs)
     
     main_runs           = main_runs.filter(obsolete=False)
@@ -100,8 +98,8 @@ def PlayerProfile(request,name):
 def Leaderboard(request,profile=None,game=None):
     players_all     = Players.objects.all()
     games_all       = GameOverview.objects.all()
-    main_runs_all   = MainRuns.objects.exclude(place=0)
-    il_runs_all     = ILRuns.objects.exclude(place=0)
+    main_runs_all   = MainRuns.objects.exclude(place=0).filter(obsolete=False)
+    il_runs_all     = ILRuns.objects.exclude(place=0).filter(obsolete=False)
 
     leaderboard     = []
     fg_leaderboard  = []
@@ -121,6 +119,7 @@ def Leaderboard(request,profile=None,game=None):
                 "player"        : player.name,
                 "nickname"      : player.nickname,
                 "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
+                "countryname"   : player.countrycode.name if player.countrycode is not None else None,
                 "total_points"  : main_points
             })
 
@@ -140,12 +139,13 @@ def Leaderboard(request,profile=None,game=None):
                     "player"        : player.name,
                     "nickname"      : player.nickname,
                     "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
+                    "countryname"   : player.countrycode.name if player.countrycode is not None else None,
                     "game"          : game,
                     "total_points"  : total_points
                 })
         elif profile == 5:
             game_id     = games_all.get(abbr=game).id
-            il_runs     = il_runs_all.filter(player_id=player.id,game_id=game_id)
+            il_runs     = il_runs_all.filter(player_id=player.id,game_id=game_id).order_by("subcategory")
             il_wrs      = il_runs.filter(place=1).count() or 0
         
             if il_wrs > 1:
@@ -153,6 +153,7 @@ def Leaderboard(request,profile=None,game=None):
                     "player"        : player.name,
                     "nickname"      : player.nickname,
                     "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
+                    "countryname"   : player.countrycode.name if player.countrycode is not None else None,
                     "il_wrs"        : il_wrs
                 })     
         else:
@@ -170,8 +171,8 @@ def Leaderboard(request,profile=None,game=None):
             leaderboard.append({
                 "player"        : player.name,
                 "nickname"      : player.nickname,
-                #CountryCodes.objects.get(id=cc) if CountryCodes.objects.filter(id=cc).exists() else None
                 "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
+                "countryname"   : player.countrycode.name if player.countrycode is not None else None,
                 "total_points"  : total_points
             })
 
@@ -182,6 +183,7 @@ def Leaderboard(request,profile=None,game=None):
                         "player"        : player.name,
                         "nickname"      : player.nickname,
                         "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
+                        "countryname"   : player.countrycode.name if player.countrycode is not None else None,
                         "total_points"  : main_points
                     })
             if profile in [2,3]:
@@ -190,10 +192,11 @@ def Leaderboard(request,profile=None,game=None):
                         "player"        : player.name,
                         "nickname"      : player.nickname,
                         "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
+                        "countryname"   : player.countrycode.name if player.countrycode is not None else None,
                         "total_points"  : il_points
                     })            
 
-    leaderboard         = sorted(leaderboard, key=lambda x: x["total_points"], reverse=True)
+    leaderboard = sorted(leaderboard, key=lambda x: x["total_points"], reverse=True)
     if profile == 1:
         fg_leaderboard  = sorted(leaderboard, key=lambda x: x["total_points"], reverse=True)
 
@@ -217,7 +220,7 @@ def Leaderboard(request,profile=None,game=None):
         return leaderboard
     elif profile == 5:
         il_wr_counts    = sorted(il_leaderboard, key=lambda x: x["il_wrs"], reverse=True)
-        il_runs_old     = il_runs_all.filter(game_id=game_id,points=100).exclude(level_id="rdnoro6w").order_by("date").values_list("subcategory","time","date")[:10]
+        il_runs_old     = il_runs_all.filter(game_id=game_id,points=100).exclude(level_id="rdnoro6w").order_by("date").annotate(o_date=TruncDate("date")).values_list("subcategory","time","o_date")[:10]
 
         return il_wr_counts,il_runs_old
     else:
@@ -239,7 +242,6 @@ def Leaderboard(request,profile=None,game=None):
 def FG_Leaderboard(request):
     leaderboard         = Leaderboard(request,1)
 
-    #if isinstance(leaderboard,tuple):
     paginator           = Paginator(leaderboard, 50)
     page_number         = request.GET.get("page")
     leaderboard_page    = paginator.get_page(page_number)
@@ -265,7 +267,6 @@ def IL_Leaderboard(request,game_abbr):
     
     leaderboard         = Leaderboard(request,2,game_abbr)
 
-    #if isinstance(leaderboard,tuple):
     paginator           = Paginator(leaderboard, 50)
     page_number         = request.GET.get("page")
     leaderboard_page    = paginator.get_page(page_number)
@@ -292,8 +293,8 @@ def search_leaderboard(request):
     leaderboard         = []
     
     for player in players_all:
-        main_points     = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).filter(points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
-        il_points       = ILRuns.objects.filter(player_id=player.id).filter(points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
+        main_points     = MainRuns.objects.filter(obsolete=False).filter(Q(player_id=player.id) | Q(player2_id=player.id)).filter(points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
+        il_points       = ILRuns.objects.filter(obsolete=False,player_id=player.id,points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
         total_points    = main_points + il_points
 
         leaderboard_all.append({
@@ -346,7 +347,7 @@ def ILGameLeaderboard(request,abbr,category=None):
     try:
         game        = GameOverview.objects.filter(abbr=abbr)
         players     = Players.objects.all()
-        ilruns      = ILRuns.objects.filter(game_id=game[0].id).filter(points__gt=0)
+        ilruns      = ILRuns.objects.filter(game_id=game[0].id).filter(points__gt=0,obsolete=False)
     except GameOverview.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
     except:
@@ -355,31 +356,40 @@ def ILGameLeaderboard(request,abbr,category=None):
     runs_list    = []
     
     if category == None:
-        il_categories = [subcategory[0] for subcategory in ilruns.values_list("subcategory").distinct()]
+        il_categories = sorted([subcategory[0] for subcategory in ilruns.values_list("subcategory").distinct()])
 
         for run in ilruns:
             if run.player is not None:
                 for player in [run.player.id]:
                     if player != None:
                         player = players.filter(id=player)[0]
-                        time = run.time
-                        defaulttime = "realtime"
-                        
-                        if time == "0":
-                            time = run.timenl
-                            defaulttime = "realtime_noloads"
-                        
-                        if time == "0":
-                            time = run.timeigt
-                            defaulttime = "ingame"
+                        defaulttime = run.game.idefaulttime
+
+                        if defaulttime == "realtime":
+                            run_time = run.time
+                        elif defaulttime == "realtime_noloads":
+                            run_time = run.timenl
+                        elif defaulttime == "ingame":
+                            run_time = run.timeigt
+
+                        ### Sometimes the defaulttime of a game does not line up with a speedrun.
+                        ### This code will iterate through the time, timenl and timeigt variables to find one that does not equal "0".
+                        ### Obviously there will be niche scenarios where one is more preferred over the other, but will revist this
+                        if run_time == "0":
+                            times = [(run.time, "realtime"), (run.timenl, "realtime_noloads"), (run.timeigt, "ingame")]
+                            run_time, defaulttime = next(
+                                ((time, label) for time, label in times if time != "0"),
+                                ("0", None)
+                            )
                     
                         run_add = {
                             "player"        : player.name if player else "Anonymous",
                             "nickname"      : player.nickname if player.nickname else None,
                             "countrycode"   : player.countrycode.id if player and player.countrycode else None,
+                            "countryname"   : player.countrycode.name if player and player.countrycode else None,
                             "place"         : run.place,
                             "defaulttime"   : defaulttime,
-                            "time"          : time,
+                            "time"          : run_time,
                             "points"        : run.points,
                             "date"          : run.date,
                             "subcategory"   : run.subcategory,
@@ -388,7 +398,7 @@ def ILGameLeaderboard(request,abbr,category=None):
 
                     runs_list.append(run_add)
 
-            leaderboard = sorted(runs_list, key=lambda x: x["points"], reverse=True)
+            leaderboard = sorted(runs_list, key=lambda x: x["place"], reverse=False)
 
     context = {
         "players"           : players,
@@ -405,11 +415,13 @@ def ILGameLeaderboard(request,abbr,category=None):
     else:
         return render(request, "srl/il_leaderboard.html", context)
 
+### GameLeaderboard is the def used for full-game leaderboards.
 def GameLeaderboard(request,abbr,category=None):
+    ### Basic check to see if the game exists. If it doesn't work, returns a no exist; if it breaks, 500.
     try:
-        game        = GameOverview.objects.filter(abbr=abbr)
+        game        = GameOverview.objects.get(abbr=abbr)
         players     = Players.objects.all()
-        mainruns    = MainRuns.objects.filter(game_id=game[0].id).filter(points__gt=0)
+        mainruns    = MainRuns.objects.filter(game_id=game.id).filter(points__gt=0,obsolete=False)
         hidden_cats = VariableValues.objects.filter(hidden=True).values_list("value")
     except GameOverview.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
@@ -420,28 +432,47 @@ def GameLeaderboard(request,abbr,category=None):
 
     if category == None:
         mainruns    = mainruns.exclude(values__in=hidden_cats)
+        categories  = sorted([subcategory[0] for subcategory in mainruns.values_list("subcategory").distinct()])
 
-        categories  = [subcategory[0] for subcategory in mainruns.values_list("subcategory").distinct()]
-
-        for run in mainruns:    
+        for run in mainruns:
+            defaulttime = game.defaulttime
+            
             if run.player is not None and run.player.id:
-                player = players.filter(id=run.player.id)[0]
+                player = players.get(id=run.player.id)
             else:
                 player = "Anonymous"
 
             if run.player2 is not None and run.player2.id:
-                player2 = players.filter(id=run.player2.id)[0]
+                player2 = players.get(id=run.player2.id)
             else:
                 player2 = "Anonymous"
+
+            if defaulttime == "realtime":
+                run_time = run.time
+            elif defaulttime == "realtime_noloads":
+                run_time = run.timenl
+            elif defaulttime == "ingame":
+                run_time = run.timeigt
+
+            ### Sometimes the defaulttime of a game does not line up with a speedrun.
+            ### This code will iterate through the time, timenl and timeigt variables to find one that does not equal "0".
+            ### Obviously there will be niche scenarios where one is more preferred over the other, but will revist this
+            if run_time == "0":
+                times = [(run.time, "realtime"), (run.timenl, "realtime_noloads"), (run.timeigt, "ingame")]
+                run_time, defaulttime = next(
+                    ((time, label) for time, label in times if time != "0"),
+                    ("0", None)
+                )
 
             if player != "Anonymous":
                 run_add = {
                     "player"        : player.name,
                     "nickname"      : player.nickname,
                     "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
+                    "countryname"   : player.countrycode.name if player.countrycode is not None else None,
                     "place"         : run.place,
-                    "defaulttime"   : game[0].defaulttime,
-                    "time"          : run.time,
+                    "defaulttime"   : defaulttime,
+                    "time"          : run_time,
                     "points"        : run.points,
                     "date"          : run.date,
                     "subcategory"   : run.subcategory,
@@ -453,17 +484,20 @@ def GameLeaderboard(request,abbr,category=None):
                         run_add.update({"player2":player2.name})
                         run_add.update({"player2nickname":player2.nickname})
                         run_add.update({"countrycode2":player2.countrycode.id if player2.countrycode is not None else None})
+                        run_add.update({"countryname2":player2.countrycode.name if player2.countrycode is not None else None})
                     else:
                         run_add.update({"player2":"Anonymous"})
                         run_add.update({"player2nickname":None})
                         run_add.update({"countrycode2":None})
+                        run_add.update({"countryname2":None})
             else:
                 run_add = {
                     "player"        : player,
                     "countrycode"   : None,
+                    "countryname"   : None,
                     "place"         : run.place,
-                    "defaulttime"   : game[0].defaulttime,
-                    "time"          : run.time,
+                    "defaulttime"   : defaulttime,
+                    "time"          : run_time,
                     "points"        : run.points,
                     "date"          : run.date,
                     "subcategory"   : run.subcategory,
@@ -473,7 +507,7 @@ def GameLeaderboard(request,abbr,category=None):
             runs_list.append(run_add)
 
         
-        leaderboard = sorted(runs_list, key=lambda x: x["points"], reverse=True)
+        leaderboard = sorted(runs_list, key=lambda x: x["place"], reverse=False)
 
     context = {
         "players"               : players,
@@ -487,18 +521,8 @@ def GameLeaderboard(request,abbr,category=None):
 
 def MainPage(request):
     subcategories = ["Any%", "Any% (6th Gen)", "100%", "Any% (No Major Glitches)", "All Goals & Golds (No Major Glitches)", "All Goals & Golds (All Careers)", "All Goals & Golds (6th Gen)", "Any% (Beginner)", "100% (NSR)", "Story (Easy, NG+)", "100% (NG)", "Classic (Normal, NG+)", "Story Mode (Easy, NG+)", "Classic Mode (Normal)", "Any% (360/PS3)", "100% (360/PS3)"]
-
-
-    #runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by(
-    #    Case(*[When(subcategory=subcategories, then=Value(pos)) for pos, subcategories in enumerate(subcategories)], output_field=CharField())
-    #)
     
-    
-    #runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by(
-    #    Case(*[When(subcategory=subcategories, then=Value(pos)) for pos, subcategories in enumerate(subcategories)], output_field=CharField())
-    #)
-    
-    runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by("-subcategory")
+    runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by("-subcategory").annotate(o_date=TruncDate("date"))
 
     run_list      = []
     wrs_data      = []
@@ -514,9 +538,12 @@ def MainPage(request):
 
     run_list = sorted(run_list, key=lambda x: x.game.release, reverse=False)
 
-    pbs = NewRuns.objects.order_by("-timeadded")[:5]
-    wrs = NewWRs.objects.order_by("-timeadded")[:5]
-    
+    ### Sometimes v_date (verify_date) is null; this can happen if the runs on a leaderboard are super old.
+    ### And since MainRuns and ILRuns are separate models, this code will exclude v_dates that are null, order by v_date, and get the latest 5 for each model.
+    ### wrs does the same, but filters based on place=1 in the model.
+    pbs = (MainRuns.objects.exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
+    wrs = (MainRuns.objects.filter(place=1).exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.filter(place=1).exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
+
     for pb in pbs:
         try: run = MainRuns.objects.get(id=pb.id)
         except: run = ILRuns.objects.get(id=pb.id)

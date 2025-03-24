@@ -38,15 +38,15 @@
                         <div class="profile-username">
                             {% if player.countrycode.id != "vh" %}
                                 {% if player.nickname %}
-                                    <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
+                                    <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
                                 {% else %}
-                                    <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> {{ player.name }}
+                                    <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> {{ player.name }}
                                 {% endif %}
                             {% elif player.countrycode.id == "vh" %}
                                 {% if player.nickname %}
-                                    <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
+                                    <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
                                 {% else %}
-                                    <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" /> {{ player.name }}
+                                    <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" /> {{ player.name }}
                                 {% endif %}
                             {% else %}
                                 {% if player.nickname %}
@@ -88,7 +88,6 @@
             <div>
                 <h6 style="text-decoration:underline;">Awards</h6>
                 {% for award in awards %}
-                    {% comment %}<img src="{% static 'srl/imgs/awards/'|add:award.1 %}" title="{{ award.0 }}" />{% endcomment %}
                     {{ award.0 }}<br />
                 {% endfor %}
             </div>
@@ -128,7 +127,7 @@
                                                 </div>
                                             </td>
                                             <td>
-                                                <div class="date">{{ game.date }}</div>
+                                                <div class="date">{{ game.o_date }}</div>
                                             </td>
                                             <td>
                                                 <div class="points">{{ game.points }}</div>
@@ -190,7 +189,7 @@
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <div class="date">{{ game.date }}</div>
+                                                    <div class="date">{{ game.o_date }}</div>
                                                 </td>
                                                 <td>
                                                     <div class="points">{{ game.points }}</div>

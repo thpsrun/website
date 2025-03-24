@@ -28,6 +28,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+db (copy)/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -138,11 +139,9 @@ bin/
 include/
 share/man/man1/
 pyvenv.cfg
-docker-compose.yml
-srlc/srl/migrations-old/
+typescript
 
 srlc/website/sqlite3.db
-
 
 srlc/srl/static/srl/imgs/awards/
 

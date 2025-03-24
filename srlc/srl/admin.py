@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import reverse
 from django.shortcuts import redirect
 from django.urls import path
-from .models import Series,GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,NewRuns,NewWRs,CountryCodes,Awards,Platforms
+from .models import Series,GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,CountryCodes,Awards,Platforms
 from .views import UpdateSeriesView,UpdateGameView,UpdateGameRunsView,UpdatePlayerView,RefreshGameRunsView,ImportObsoleteView,ImportSRLTimes
 
 class SeriesAdmin(admin.ModelAdmin):
@@ -67,7 +67,7 @@ class SpeedrunAdmin(admin.ModelAdmin):
     list_display        = ["id"]
     search_fields       = ["id"]
     list_filter         = ["obsolete","game","platform"]
-    actions             = ["update_runs"]
+    """ actions             = ["update_runs"]
 
     def update_runs(self, request, queryset):
         run_ids = [obj.id for obj in queryset]
@@ -81,8 +81,7 @@ class SpeedrunAdmin(admin.ModelAdmin):
         custom_urls = [
             path("update-runs/", self.admin_site.admin_view(ImportSRLTimes.as_view()), name="update_runs"),
         ]
-        return custom_urls + urls
-    
+        return custom_urls + urls """
 
 class PlayersAdmin(admin.ModelAdmin):
     list_display        = ["name"]
@@ -120,5 +119,3 @@ admin.site.register(MainRuns, SpeedrunAdmin)
 admin.site.register(ILRuns, SpeedrunAdmin)
 admin.site.register(Players, PlayersAdmin)
 admin.site.register(Platforms, DefaultAdmin)
-admin.site.register(NewRuns)
-admin.site.register(NewWRs)
