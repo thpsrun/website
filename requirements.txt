@@ -26,7 +26,7 @@ requests==2.32.3
 rsa==4.9
 tzdata==2025.2
 uritemplate==4.1.1
-urllib3==2.2.2
+urllib3==2.3.0
 wheel==0.45.1
 whitenoise==6.9.0
 yarl==1.18.3
