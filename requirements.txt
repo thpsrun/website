@@ -24,7 +24,7 @@ pytz==2025.1
 redis==5.2.1
 requests==2.32.3
 rsa==4.9
-tzdata==2024.1
+tzdata==2025.2
 uritemplate==4.1.1
 urllib3==2.2.2
 wheel==0.45.1
