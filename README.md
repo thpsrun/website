@@ -1,5 +1,7 @@
 # thps.run - Speedrun Leaderboard Creator (SRLC)
-## Version 2.2.1
+## Version 2.2.1.1
+
+### NOTE: OUT OF DATE; NEED TO UPDATE SOMETIME BEFORE OPEN-SOURCE RELEASE
 
 ### What the heck is this??
 This has been the pet project of [ThePackle](https://twitch.tv/thepackle) for a few years now. In short, it is a highly-customizable, easy-to-use, and interesting way to create a website that mimics a lot of the leaderboard functionality seen from [HaloRuns](https://haloruns.com). Built entirely in Django 5.1 (Python), this is the open-source files used for websites like [THPS.RUN](https://thps.run).

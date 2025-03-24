@@ -12,7 +12,7 @@ from srl.models import Variables,Categories,VariableValues,MainRuns,ILRuns,GameO
 from srl.tasks import convert_time,update_player
 from srl.m_tasks import points_formula
 
-### add_run starts to gathesr information about the approved run from the SRC API.
+### add_run starts to gathers information about the approved run from the SRC API.
 ### The biggest thing here is that it will normalize the data so it can be properly stored in your API.
 ### Part of the normalization is taking the categories and sub-categories and sub-sub-categories and properly formatting them before handing them to invoke_run.
 @shared_task
