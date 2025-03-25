@@ -142,6 +142,7 @@ share/man/man1/
 pyvenv.cfg
 typescript
 
+npm/*
 srlc/website/sqlite3.db
 
 srlc/srl/static/srl/imgs/awards/

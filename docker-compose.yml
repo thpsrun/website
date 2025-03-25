@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
     build: .
     ports:
-      - "8000:8001"
+      - "8001:8001"
     env_file:
       - .env
     depends_on:
@@ -30,18 +30,23 @@ services:
     networks:
       - srlc
 
-  nginx:
-    container_name: nginx
+  npm:
+    container_name: nginx-proxy-manager
     restart: unless-stopped
-    build: ./nginx
+    image: "jc21/nginx-proxy-manager:latest"
     ports:
-      - "8001:80"
+      - "80:80"
+      - "443:443"
+      - "81:81"
     depends_on:
       - django
       - postgres
+    volumes:
+      - ./npm/data:/data
+      - ./npm/letsencrypt:/etc/letsencrypt
     networks:
       - srlc
-  
+
   redis:
     container_name: redis
     image: redis:alpine
