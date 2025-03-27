@@ -123,7 +123,13 @@
                                             <td>
                                                 <div class="placing">{{ game.place }}
                                                     <br />
-                                                    <a href="{{ game.url }}">{{ game.time }}</a>
+                                                    {% if game.game.defaulttime == "realtime" %}
+                                                            <a href="{{ game.url }}">{{ game.time }}</a>
+                                                    {% elif game.game.defaulttime == "realtime_noloads" %}
+                                                        <a href="{{ game.url }}">{{ game.timenl }}</a>
+                                                    {% else %}
+                                                        <a href="{{ game.url }}">{{ game.timeigt }}</a>
+                                                    {% endif %}
                                                 </div>
                                             </td>
                                             <td>
@@ -173,7 +179,15 @@
                                                 <td>
                                                     <div class="placing">{{ game.place }}
                                                         <br />
-                                                        {% if game.game.abbr == "thps2" %}
+                                                        {% if game.game.idefaulttime == "realtime" %}
+                                                            <a href="{{ game.url }}">{{ game.time }}</a>
+                                                        {% elif game.game.idefaulttime == "realtime_noloads" %}
+                                                            <a href="{{ game.url }}">{{ game.timenl }}</a>
+                                                        {% else %}
+                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
+                                                        {% endif %}
+
+                                                        {% comment %} {% if game.game.abbr == "thps2" %}
                                                             <a href="{{ game.url }}">{{ game.timeigt }}</a>
                                                         {% elif game.game.abbr == "thps12" %}
                                                             <a href="{{ game.url }}">{{ game.timeigt }}</a>
@@ -185,7 +199,7 @@
                                                             <a href="{{ game.url }}">{{ game.timeigt }}</a>
                                                         {% else %}
                                                             <a href="{{ game.url }}">{{ game.time }}</a>
-                                                        {% endif %}
+                                                        {% endif %} {% endcomment %}
                                                     </div>
                                                 </td>
                                                 <td>
