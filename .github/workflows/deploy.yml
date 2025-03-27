@@ -28,4 +28,5 @@ jobs:
           docker compose up -d --build
 
       - name: Cleanup Unused Docker Resources
-        run: docker system prune -f
+        run:
+          docker system prune -f
