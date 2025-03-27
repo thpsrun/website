@@ -11,22 +11,31 @@ admin.site.site_title  = "thps.run"
 admin.site.index_title = "Admin Panel"
 
 def discord_redirect(request):
-    return redirect(env("DISCORD_URL"))
+    if(env("DISCORD_URL")):
+        return redirect(env("DISCORD_URL"))
 
 def twitch_redirect(request):
-    return redirect(env("TWITCH_URL"))
+    if(env("TWITCH_URL")):
+        return redirect(env("TWITCH_URL"))
 
 def twitter_redirect(request):
-    return redirect(env("TWITTER_URL"))
+    if(env("TWITTER_URL")):
+        return redirect(env("TWITTER_URL"))
   
 def youtube_redirect(request):
-    return redirect(env("YOUTUBE_URL"))
+    if(env("YOUTUBE_URL")):
+        return redirect(env("YOUTUBE_URL"))
+
+def bluesky_redirect(request):
+    if(env("BLUESKY_URL")):
+        return redirect(env("BLUESKY_URL"))
 
 def src_redirect(request):
     return redirect(env("SRC_URL"))
 
 def trigger_error(request):
-    division_by_zero = 1 / 0
+    if(env("DEBUG_MODE")):
+        division_by_zero = 1 / 0
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -36,6 +45,7 @@ urlpatterns = [
     path("discord",discord_redirect,name="discord_redirect"),
     path("twitch",twitch_redirect,name="twitch_redirect"),
     path("twitter",twitter_redirect,name="twitter_redirect"),
+    path("bluesky",bluesky_redirect,name="bluesky_redirect"),
     path("youtube",youtube_redirect,name="youtube_redirect"),
     path("src",src_redirect,name="src_redirect"),
     path('debug', trigger_error),

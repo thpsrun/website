@@ -55,19 +55,3 @@ class APILevelsSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("level id is required")
         return value
-    
-class APINewRunsSerializer(serializers.Serializer):
-    newruns = serializers.CharField(max_length=10)
-
-    def validate_newruns(self, value):
-        if not value:
-            raise serializers.ValidationError("newrun id is required")
-        return value
-    
-class APINewWRsSerializer(serializers.Serializer):
-    newwrs = serializers.CharField(max_length=10)
-
-    def validate_newwrs(self, value):
-        if not value:
-            raise serializers.ValidationError("newwr id is required")
-        return value

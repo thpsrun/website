@@ -1,11 +1,12 @@
 from rest_framework.views import APIView
 from django.http import HttpResponseForbidden,HttpResponseBadRequest,HttpResponseServerError,HttpResponseNotFound,HttpResponse
 from rest_framework.response import Response
-from .serializers import APIProcessRunsSerializer,APIPlayersSerializer,APIGamesSerializer,APICategoriesSerializer,APIVariablesSerializer,APIValuesSerializer,APILevelsSerializer,APINewRunsSerializer,APINewWRsSerializer
+from .serializers import APIProcessRunsSerializer,APIPlayersSerializer,APIGamesSerializer,APICategoriesSerializer,APIVariablesSerializer,APIValuesSerializer,APILevelsSerializer
 from srl.tasks import *
 from srl.models import GameOverview,MainRuns,ILRuns
 from api.tasks import *
 from django.db.models import Count,F,Subquery,OuterRef, Q
+from django.http import JsonResponse
 
 class API_ProcessRuns(APIView):
     def get(self,request,runid=None):
@@ -155,23 +156,59 @@ class API_Games(APIView):
     def get(self, request, game):
         serializer = APIGamesSerializer(data={"game": game})
         serializer.is_valid(raise_exception=True)
+        embed = request.GET.get('embed', None)
 
         validated_data = serializer.validated_data
         validated_game = validated_data["game"]
 
         game_data = GameOverview.objects.filter(Q(id=validated_game) | Q(abbr=validated_game))
-
+        
         if len(game_data) == 0:
             return HttpResponseNotFound(f"game abbreviation or id {game_data} does not exist.")
+        elif len(game_data) == 1:
+            game_data = game_data[0]
+
+            json_output = {
+                "id"            : game_data.id,
+                "name"          : game_data.name,
+                "abbr"          : game_data.abbr,
+                "release"       : game_data.release,
+                "defaulttime"   : game_data.defaulttime,
+                "idefaulttime"  : game_data.idefaulttime,
+                "platforms"     : game_data.platforms,
+                "pointsmax"     : game_data.pointsmax,
+                "ipointsmax"    : game_data.ipointsmax
+            }
+
+            if embed:
+                embed_list = embed.split(",")
+                if "categories" in embed_list:
+                    categories_data = []
+                    for category in Categories.objects.filter(game_id=game_data.id):
+                        categories_data.append({
+                            "id"    : category.id,
+                            "name"  : category.name,
+                            "type"  : category.type,
+                            "url"   : category.url,
+                            "misc"  : category.hidden
+                        })
+                    
+                    json_output["categories"] = categories_data
+                if "level" in embed_list:
+                    level_data = []
+                    for level in Levels.objects.filter(game_id=game_data.id):
+                        categories_data.append({
+                            "id"    : level.id,
+                            "name"  : level.name,
+                            "url"   : level.url
+                        })
+                    
+                    json_output["levels"] = level_data
+
+            return JsonResponse(json_output, safe=False)
         else:
-            return Response({
-                "id":           game_data[0].id,
-                "name":         game_data[0].name,
-                "abbr":         game_data[0].abbr,
-                "release":      game_data[0].release,
-                "defaulttime":  game_data[0].defaulttime
-            })
-            
+            return HttpResponseBadRequest(f"game abbreviation or id {game_data} returned too many results.")
+
 class API_Categories(APIView):
     def get(self, request, cat):
         serializer = APICategoriesSerializer(data={"category": cat})

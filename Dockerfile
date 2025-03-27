@@ -12,6 +12,6 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /srlc
 COPY requirements.txt /srlc/
 RUN pip install --no-cache-dir -r requirements.txt
-COPY . /srlc/
+#COPY . /srlc/
 USER celeryuser
 ENTRYPOINT ["sh", "entrypoint.sh"]

@@ -1,7 +1,7 @@
 services:
   postgres:
     container_name: postgres
-    image: postgres:latest
+    image: postgres:17.4-bookworm
     restart: unless-stopped
     shm_size: 128mb
     environment:
@@ -27,23 +27,6 @@ services:
     volumes:
       - ./srlc:/srlc
       - ./static:/srlc/static
-    networks:
-      - srlc
-
-  npm:
-    container_name: nginx-proxy-manager
-    restart: unless-stopped
-    image: "jc21/nginx-proxy-manager:latest"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "81:81"
-    depends_on:
-      - django
-      - postgres
-    volumes:
-      - ./npm/data:/data
-      - ./npm/letsencrypt:/etc/letsencrypt
     networks:
       - srlc
 
