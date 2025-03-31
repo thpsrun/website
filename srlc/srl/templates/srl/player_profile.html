@@ -124,7 +124,7 @@
                                                 <div class="placing">{{ game.place }}
                                                     <br />
                                                     {% if game.game.defaulttime == "realtime" %}
-                                                            <a href="{{ game.url }}">{{ game.time }}</a>
+                                                        <a href="{{ game.url }}">{{ game.time }}</a>
                                                     {% elif game.game.defaulttime == "realtime_noloads" %}
                                                         <a href="{{ game.url }}">{{ game.timenl }}</a>
                                                     {% else %}
@@ -186,20 +186,6 @@
                                                         {% else %}
                                                             <a href="{{ game.url }}">{{ game.timeigt }}</a>
                                                         {% endif %}
-
-                                                        {% comment %} {% if game.game.abbr == "thps2" %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
-                                                        {% elif game.game.abbr == "thps12" %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
-                                                        {% elif game.game.abbr == "thug1" %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
-                                                        {% elif game.game.abbr == "thps12ce" %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
-                                                        {% elif game.game.abbr == "thps4ce" %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
-                                                        {% else %}
-                                                            <a href="{{ game.url }}">{{ game.time }}</a>
-                                                        {% endif %} {% endcomment %}
                                                     </div>
                                                 </td>
                                                 <td>

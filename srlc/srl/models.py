@@ -1,3 +1,11 @@
+"""
+######################################################################################################################################################
+### File Name: srl/models.py
+### Author: ThePackle
+### Description: Models used throughout the entire SRLC project. Speedrun.com runs are converted into these formats.
+######################################################################################################################################################
+"""
+
 from django.db import models
 from django_resized import ResizedImageField
 from django.core.exceptions import ValidationError
@@ -188,7 +196,6 @@ class Players(models.Model):
     countrycode = models.ForeignKey(CountryCodes,verbose_name="Country Code",blank=True,null=True,on_delete=models.SET_NULL)
     pfp         = models.CharField(max_length=50,verbose_name="Profile Picture URL",blank=True,null=True)
     pronouns    = models.CharField(max_length=20,verbose_name="Pronouns",blank=True,null=True)
-    location    = models.CharField(max_length=30,verbose_name="Location",blank=True,null=True)
     twitch      = models.CharField(max_length=75,verbose_name="Twitch",blank=True,null=True)
     youtube     = models.CharField(max_length=100,verbose_name="YouTube",blank=True,null=True)
     twitter     = models.CharField(max_length=40,verbose_name="Twitter",blank=True,null=True)
@@ -223,6 +230,12 @@ class MainRuns(models.Model):
         return "Run ID: " + self.id
     class Meta:
         verbose_name_plural = "Main Runs"
+
+    LeaderboardChoices = [
+        ("verified", "Verified"),
+        ("new", "Unverified"),
+        ("rejected","Rejected"),
+    ]
     
     id          = models.CharField(max_length=10,primary_key=True,verbose_name="Run ID")
     game        = models.ForeignKey(GameOverview,verbose_name="Game ID",null=True,on_delete=models.SET_NULL)
@@ -245,10 +258,21 @@ class MainRuns(models.Model):
     points      = models.IntegerField(verbose_name="Packle Points",default=0)
     platform    = models.ForeignKey(Platforms,verbose_name="Platform",blank=True,null=True,on_delete=models.SET_NULL)
     emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
+    vid_status  = models.CharField(
+                verbose_name="SRC Status",
+                default="verified",
+                help_text="This is the current status of the run, according to Speedrun.com. It should be updated whenever the run is approved. Runs set as \"Unverified\" do not appear anywhere on this site."
+    )
     obsolete    = models.BooleanField(
                 verbose_name="Obsolete?",
                 default=False,
                 help_text="When True, the run will be considered obsolete. Points will not count towards the player's total."
+    )
+    arch_video  = models.URLField(
+                verbose_name="Archived Video URL",
+                blank=True,
+                null=True,
+                help_text="Optional field. If you have a mirrored link to a video, you can input it here."
     )
 
 class ILRuns(models.Model):
@@ -256,6 +280,12 @@ class ILRuns(models.Model):
         return "Run ID: " + self.id
     class Meta:
         verbose_name_plural = "IL Runs"
+
+    LeaderboardChoices = [
+        ("verified", "Verified"),
+        ("new", "Unverified"),
+        ("rejected","Rejected"),
+    ]
 
     id          = models.CharField(max_length=10,primary_key=True,verbose_name="Run ID")
     game        = models.ForeignKey(GameOverview,verbose_name="Game ID",null=True,on_delete=models.SET_NULL)
@@ -278,8 +308,19 @@ class ILRuns(models.Model):
     points      = models.IntegerField(verbose_name="Packle Points",default=0)
     platform    = models.ForeignKey(Platforms,verbose_name="Platform",blank=True,null=True,on_delete=models.SET_NULL)
     emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
+    vid_status  = models.CharField(
+                verbose_name="SRC Status",
+                default="verified",
+                help_text="This is the current status of the run, according to Speedrun.com. It should be updated whenever the run is approved. Runs set as \"Unverified\" do not appear anywhere on this site."
+    )
     obsolete    = models.BooleanField(
                 verbose_name="Obsolete?",
                 default=False,
                 help_text="When True, the run will be considered obsolete. Points will not count towards the player's total."
+    )
+    arch_video  = models.URLField(
+                verbose_name="Archived Video URL",
+                blank=True,
+                null=True,
+                help_text="Optional field. If you have a mirrored link to a video, you can input it here."
     )

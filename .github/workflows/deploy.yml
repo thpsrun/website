@@ -22,9 +22,11 @@ jobs:
 
       - name: Build and Restart Docker Containers
         run: |
+          cd ~/deploy
           docker compose down
           docker compose pull
           docker compose up -d --build
 
       - name: Cleanup Unused Docker Resources
-        run: docker system prune -f
+        run: 
+          docker system prune -f

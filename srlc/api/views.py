@@ -1,7 +1,8 @@
+from rest_framework import status
 from rest_framework.views import APIView
-from django.http import HttpResponseForbidden,HttpResponseBadRequest,HttpResponseServerError,HttpResponseNotFound,HttpResponse
 from rest_framework.response import Response
-from .serializers import APIProcessRunsSerializer,APIPlayersSerializer,APIGamesSerializer,APICategoriesSerializer,APIVariablesSerializer,APIValuesSerializer,APILevelsSerializer
+from django.http import HttpResponseForbidden,HttpResponseBadRequest,HttpResponseServerError,HttpResponseNotFound,HttpResponse
+from .serializers import *
 from srl.tasks import *
 from srl.models import GameOverview,MainRuns,ILRuns
 from api.tasks import *
@@ -13,7 +14,7 @@ class API_ProcessRuns(APIView):
         return HttpResponseBadRequest("GET Requests are not allowed")
 
     def post(self, request, runid):
-        serializer = APIProcessRunsSerializer(data={"runid": runid})
+        serializer = ImportRunSerializer(data={"runid": runid})
         serializer.is_valid(raise_exception=True)
 
         validated_data = serializer.validated_data
@@ -66,7 +67,7 @@ class API_ProcessRuns(APIView):
 
 class API_Runs(APIView):
     def get(self, request, runid):
-        serializer = APIProcessRunsSerializer(data={"runid": runid})
+        serializer = ImportRunSerializer(data={"runid": runid})
         serializer.is_valid(raise_exception=True)
 
         validated_data = serializer.validated_data
@@ -107,152 +108,121 @@ class API_Runs(APIView):
         return HttpResponseBadRequest("POST Requests are not allowed")
     
 class API_Players(APIView):
-    def get(self, request, player):
-        serializer = APIPlayersSerializer(data={"player": player})
-        serializer.is_valid(raise_exception=True)
+    ALLOWED_QUERIES = {"streamexceptions"}
+    def get(self,request,id):
+        query_fields    = request.GET.get("query","").split(",")
+        query_fields    = [field.strip() for field in query_fields if field.strip()] 
+        invalid_queries = [field for field in query_fields if field not in self.ALLOWED_QUERIES]
 
-        validated_data = serializer.validated_data
-        validated_player = validated_data["player"]
+        if invalid_queries:
+            return Response({"ERROR": f"Invalid queries: {', '.join(invalid_queries)}"},status=status.HTTP_400_BAD_REQUEST)
 
-        if validated_player != "all":
-            try:
-                player_data = Players.objects.filter(Q(id__iexact=validated_player) | Q(name__iexact=validated_player))[0]
-            except:
-                player_data = None
+        if id == "all":
+            players = Players.objects.all()
 
-        if validated_player == "all":
-            players = Players.objects.filter().values_list("id","name","pronouns","twitch","youtube")
+            if "streamexceptions" in query_fields:
+                players = players.filter(ex_stream=True)
 
-            return Response({
-                "players":              players,
-            })
-        elif not player_data:
-            return HttpResponseNotFound(f"player name or id {validated_player} does not exist.")
+            return Response(PlayerSerializer(players,many=True).data)
+
+        player = Players.objects.filter(id__iexact=id).first() or Players.objects.filter(name__iexact=id).first()
+        if player:
+            return Response(PlayerSerializer(player).data)
         else:
-            main_runs    = MainRuns.objects.filter(Q(playerid=player_data.id) | Q(playerid2=player_data.id)).filter(points__gt=0)
-            il_runs      = ILRuns.objects.filter(playerid=player_data.id).filter(points__gt=0)
+            return Response({"ERROR": "Player ID or Name does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
-            main_points  = sum(run.points for run in main_runs)
-            il_points    = sum(run.points for run in il_runs)
-            total_points =  main_points + il_points
+class API_PlayerRecords(APIView):
+    ALLOWED_EMBEDS = {"categories","levels","games","platforms"}
+    def get(self,request,id):
+        embed_fields   = request.GET.get("embed","").split(",")
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
-            total_runs = len(main_runs) + len(il_runs)
-            
+        if invalid_embeds:
+            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},status=status.HTTP_400_BAD_REQUEST)
+
+        player = Players.objects.filter(id__iexact=id).first() or Players.objects.filter(name__iexact=id).first()
+        if player:
+            player_data = PlayerSerializer(player).data
+
+            main_runs = MainRuns.objects.filter(player=player).filter(obsolete=False)
+            il_runs   = ILRuns.objects.filter(player=player).filter(obsolete=False)
+
+            main_data = MainRunSerializer(main_runs,many=True,context={"embed": embed_fields}).data
+            il_data   = ILRunSerializer(il_runs,many=True,context={"embed": embed_fields}).data
+
             return Response({
-                "id":                   player_data.id,
-                "name":                 player_data.name,
-                "url":                  player_data.url,
-                "total_packlepoints":   total_points,
-                "fg_packlepoints":      main_points,
-                "il_packlepoints":      il_points,
-                "total_runs":           total_runs,
-                "pronouns":             player_data.pronouns,
-                "twitch":               player_data.twitch,
-                "youtube":              player_data.youtube,
-                "twitter":              player_data.twitter,
+                **player_data,
+                "main_runs" : main_data,
+                "il_runs"   : il_data
             })
+        else:
+            return Response({"ERROR": "Player ID or Name does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
 class API_Games(APIView):
-    def get(self, request, game):
-        serializer = APIGamesSerializer(data={"game": game})
-        serializer.is_valid(raise_exception=True)
-        embed = request.GET.get('embed', None)
+    ALLOWED_EMBEDS = {"categories","levels","platforms"}
+    def get(self,request,id):
+        if len(id) > 15:
+            return Response({"ERROR": f"Game ID exceeds maximum length."},status=status.HTTP_400_BAD_REQUEST)
 
-        validated_data = serializer.validated_data
-        validated_game = validated_data["game"]
+        embed_fields   = request.GET.get("embed","").split(",")
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
-        game_data = GameOverview.objects.filter(Q(id=validated_game) | Q(abbr=validated_game))
+        if invalid_embeds:
+            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},status=status.HTTP_400_BAD_REQUEST)
+
+        if id == "all":
+            games = GameOverview.objects.all().order_by("release")
+            return Response(GameSerializer(games,many=True,context={"embed": embed_fields}).data)
         
-        if len(game_data) == 0:
-            return HttpResponseNotFound(f"game abbreviation or id {game_data} does not exist.")
-        elif len(game_data) == 1:
-            game_data = game_data[0]
-
-            json_output = {
-                "id"            : game_data.id,
-                "name"          : game_data.name,
-                "abbr"          : game_data.abbr,
-                "release"       : game_data.release,
-                "defaulttime"   : game_data.defaulttime,
-                "idefaulttime"  : game_data.idefaulttime,
-                "platforms"     : game_data.platforms,
-                "pointsmax"     : game_data.pointsmax,
-                "ipointsmax"    : game_data.ipointsmax
-            }
-
-            if embed:
-                embed_list = embed.split(",")
-                if "categories" in embed_list:
-                    categories_data = []
-                    for category in Categories.objects.filter(game_id=game_data.id):
-                        categories_data.append({
-                            "id"    : category.id,
-                            "name"  : category.name,
-                            "type"  : category.type,
-                            "url"   : category.url,
-                            "misc"  : category.hidden
-                        })
-                    
-                    json_output["categories"] = categories_data
-                if "level" in embed_list:
-                    level_data = []
-                    for level in Levels.objects.filter(game_id=game_data.id):
-                        categories_data.append({
-                            "id"    : level.id,
-                            "name"  : level.name,
-                            "url"   : level.url
-                        })
-                    
-                    json_output["levels"] = level_data
-
-            return JsonResponse(json_output, safe=False)
+        game = GameOverview.objects.filter(id__iexact=id).first() or GameOverview.objects.filter(abbr__iexact=id).first()
+        if game:
+            return Response(GameSerializer(game,context={"embed": embed_fields}).data)
         else:
-            return HttpResponseBadRequest(f"game abbreviation or id {game_data} returned too many results.")
+            return Response({"ERROR": "Game ID or Abbreviation does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
 class API_Categories(APIView):
-    def get(self, request, cat):
-        serializer = APICategoriesSerializer(data={"category": cat})
-        serializer.is_valid(raise_exception=True)
+    ALLOWED_EMBEDS = {"games","variables"}
+    def get(self,request,id):
+        if len(id) > 15:
+            return Response({"ERROR": f"Category ID exceeds maximum length."},status=status.HTTP_400_BAD_REQUEST)
+        
+        embed_fields   = request.GET.get("embed","").split(",")
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
-        validated_data = serializer.validated_data
-        validated_cat  = validated_data["category"]
-
-        category_data = Categories.objects.filter(Q(id=validated_cat) | Q(name=validated_cat))
-
-        if len(category_data) == 0:
-            return HttpResponseNotFound(f"category name or id {category_data} does not exist.")
+        if invalid_embeds:
+            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},status=status.HTTP_400_BAD_REQUEST)
+    
+        category = Categories.objects.filter(id__iexact=id).first()
+        if category:
+            return Response(CategorySerializer(category,context={"embed": embed_fields}).data) 
         else:
-            return Response({
-                "id":       category_data[0].id,
-                "gameid":   category_data[0].game,
-                "name":     category_data[0].name,
-                "type":     category_data[0].type,
-            })
+            return Response({"ERROR": "Category ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
             
 class API_Variables(APIView):
-    def get(self, request, variable):
-        serializer = APIVariablesSerializer(data={"variable": variable})
-        serializer.is_valid(raise_exception=True)
+    ALLOWED_EMBEDS = {"games","values"}
+    def get(self,request,id):
+        if len(id) > 15:
+            return Response({"ERROR": f"Variable ID exceeds maximum length."},status=status.HTTP_400_BAD_REQUEST)
+        
+        embed_fields   = request.GET.get("embed","").split(",")
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
-        validated_data = serializer.validated_data
-        validated_var  = validated_data["variable"]
-
-        variable_data = Variables.objects.filter(Q(id=validated_var) | Q(name=validated_var))
-
-        if len(variable_data) == 0:
-            return HttpResponseNotFound(f"variable name or id {variable_data} does not exist.")
+        if invalid_embeds:
+            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},status=status.HTTP_400_BAD_REQUEST)
+    
+        variables = Variables.objects.filter(id__iexact=id).first()
+        if variables:
+            return Response(VariableSerializer(variables,context={"embed": embed_fields}).data) 
         else:
-            return Response({
-                "id":       variable_data[0].id,
-                "gameid":   variable_data[0].game,
-                "name":     variable_data[0].name,
-                "category": variable_data[0].cat,
-                "scope":    variable_data[0].scope,
-            })
+            return Response({"ERROR": "Variable ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
 class API_Values(APIView):
     def get(self, request, value):
-        serializer = APIValuesSerializer(data={"value": value})
+        serializer = ValueSerializer(data={"value": value})
         serializer.is_valid(raise_exception=True)
 
         validated_data = serializer.validated_data
@@ -270,56 +240,20 @@ class API_Values(APIView):
             })
             
 class API_Levels(APIView):
-     def get(self, request, level):
-        serializer = APILevelsSerializer(data={"level": level})
-        serializer.is_valid(raise_exception=True)
+    ALLOWED_EMBEDS = {"games"}
+    def get(self,request,id):
+        if len(id) > 15:
+            return Response({"ERROR": f"Level ID exceeds maximum length."},status=status.HTTP_400_BAD_REQUEST)
+        
+        embed_fields   = request.GET.get("embed","").split(",")
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
-        validated_data = serializer.validated_data
-        validate_level = validated_data["level"]
-
-        levels_data = Levels.objects.filter(id=validate_level)
-
-        if len(levels_data) == 0:
-            return HttpResponseNotFound(f"level id {validate_level} does not exist.")
+        if invalid_embeds:
+            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},status=status.HTTP_400_BAD_REQUEST)
+    
+        levels = Levels.objects.filter(id__iexact=id).first()
+        if levels:
+            return Response(LevelSerializer(levels,context={"embed": embed_fields}).data) 
         else:
-            return Response({
-                "id":       levels_data[0].id,
-                "gameid":   levels_data[0].game,
-                "name":     levels_data[0].name,
-            })
-
-class API_NewRuns(APIView):
-    def get(self, request, newruns):
-        serializer = APINewRunsSerializer(data={"newruns": newruns})
-        serializer.is_valid(raise_exception=True)
-
-        validated_data   = serializer.validated_data
-        validate_newruns = validated_data["newruns"]
-
-        newruns_data = NewRuns.objects.filter(id=validate_newruns)
-
-        if len(newruns_data) == 0:
-            return HttpResponseNotFound(f"newrun id {newruns_data} does not exist.")
-        else:
-            return Response({
-                #"id":        newruns_data[0].id,
-                #"timeadded": newruns_data[0].timeadded,
-            })
-            
-class API_NewWRs(APIView):
-    def get(self, request, newwrs):
-        serializer = APINewWRsSerializer(data={"newwrs": newwrs})
-        serializer.is_valid(raise_exception=True)
-
-        validated_data   = serializer.validated_data
-        validate_newwrs  = validated_data["newwrs"]
-
-        newwrs_data = NewWRs.objects.filter(id=validate_newwrs)
-
-        if len(newwrs_data) == 0:
-            return HttpResponseNotFound(f"newwrs id {newwrs_data} does not exist.")
-        else:
-            return Response({
-                #"id":        newwrs_data[0].id,
-                #"timeadded": newwrs_data[0].timeadded,
-            })
+            return Response({"ERROR": "Level ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
