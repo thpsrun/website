@@ -559,8 +559,8 @@ def MainPage(request):
     ### Sometimes v_date (verify_date) is null; this can happen if the runs on a leaderboard are super old.
     ### And since MainRuns and ILRuns are separate models, this code will exclude v_dates that are null, order by v_date, and get the latest 5 for each model.
     ### wrs does the same, but filters based on place=1 in the model.
-    pbs = (MainRuns.objects.exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
-    wrs = (MainRuns.objects.filter(place=1).exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.filter(place=1).exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
+    pbs = (MainRuns.objects.exclude(platform__name="PC").exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.exclude(platform__name="PC").exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
+    wrs = (MainRuns.objects.filter(place=1).exclude(platform__name="PC").exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.filter(place=1).exclude(platform__name="PC").exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
 
     for pb in pbs:
         try: run = MainRuns.objects.get(id=pb.id)

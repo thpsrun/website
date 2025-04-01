@@ -147,3 +147,7 @@ srlc/website/sqlite3.db
 srlc/srl/static/srl/imgs/awards/
 
 srlc/db.json
+
+npm/data/*
+npm/letsencrypt/*
+NOTES.yaml
