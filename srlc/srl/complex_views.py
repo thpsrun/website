@@ -7,7 +7,7 @@
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.db.models import Sum,Q,Max,F
+from django.db.models import Sum,Q,Max,F,OuterRef,Subquery
 from django.db.models.functions import TruncDate
 from .models import GameOverview,Players,Categories,MainRuns,ILRuns,VariableValues
 
@@ -525,7 +525,22 @@ def MainPage(request):
     subcategories = ["Any%", "Any% (6th Gen)", "100%", "Any% (No Major Glitches)", "All Goals & Golds (No Major Glitches)", "All Goals & Golds (All Careers)", "All Goals & Golds (6th Gen)", "Any% (Beginner)", "100% (NSR)",\
                      "Story (Easy, NG+)", "100% (NG)", "Classic (Normal, NG+)", "Story Mode (Easy, NG+)", "Classic Mode (Normal)", "Any% (360/PS3)", "100% (360/PS3)","Any% Tour Mode (All Tours, New Game)","All Goals & Golds (All Tours, New Game)"]
     
-    runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by("-subcategory").annotate(o_date=TruncDate("date"))
+    #runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by("-subcategory").annotate(o_date=TruncDate("date"))
+
+    runs = []
+    games = GameOverview.objects.all()
+
+    for game in games:
+        for subcat in subcategories:
+            if game.defaulttime == "realtime":
+                not_wr = MainRuns.objects.filter(game=game.id,subcategory=subcat).exclude(platform__name="PC").exclude(emulated=True).order_by("time_secs").annotate(o_date=TruncDate("date")).first()
+            elif game.defaulttime == "realtime_noloads":
+                not_wr = MainRuns.objects.filter(game=game.id,subcategory=subcat).exclude(platform__name="PC").exclude(emulated=True).order_by("timenl_secs").annotate(o_date=TruncDate("date")).first()
+            elif game.defaulttime == "ingame":
+                not_wr = MainRuns.objects.filter(game=game.id,subcategory=subcat).exclude(platform__name="PC").exclude(emulated=True).order_by("timeigt_secs").annotate(o_date=TruncDate("date")).first()
+            
+            if not_wr:
+                runs.append(not_wr)
 
     run_list      = []
     wrs_data      = []
