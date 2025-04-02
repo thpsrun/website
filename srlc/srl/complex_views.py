@@ -525,22 +525,7 @@ def MainPage(request):
     subcategories = ["Any%", "Any% (6th Gen)", "100%", "Any% (No Major Glitches)", "All Goals & Golds (No Major Glitches)", "All Goals & Golds (All Careers)", "All Goals & Golds (6th Gen)", "Any% (Beginner)", "100% (NSR)",\
                      "Story (Easy, NG+)", "100% (NG)", "Classic (Normal, NG+)", "Story Mode (Easy, NG+)", "Classic Mode (Normal)", "Any% (360/PS3)", "100% (360/PS3)","Any% Tour Mode (All Tours, New Game)","All Goals & Golds (All Tours, New Game)"]
     
-    #runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by("-subcategory").annotate(o_date=TruncDate("date"))
-
-    runs = []
-    games = GameOverview.objects.all()
-
-    for game in games:
-        for subcat in subcategories:
-            if game.defaulttime == "realtime":
-                not_wr = MainRuns.objects.filter(game=game.id,subcategory=subcat).exclude(platform__name="PC").exclude(emulated=True).order_by("time_secs").annotate(o_date=TruncDate("date")).first()
-            elif game.defaulttime == "realtime_noloads":
-                not_wr = MainRuns.objects.filter(game=game.id,subcategory=subcat).exclude(platform__name="PC").exclude(emulated=True).order_by("timenl_secs").annotate(o_date=TruncDate("date")).first()
-            elif game.defaulttime == "ingame":
-                not_wr = MainRuns.objects.filter(game=game.id,subcategory=subcat).exclude(platform__name="PC").exclude(emulated=True).order_by("timeigt_secs").annotate(o_date=TruncDate("date")).first()
-            
-            if not_wr:
-                runs.append(not_wr)
+    runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by("-subcategory").annotate(o_date=TruncDate("date"))
 
     run_list      = []
     wrs_data      = []
@@ -559,8 +544,8 @@ def MainPage(request):
     ### Sometimes v_date (verify_date) is null; this can happen if the runs on a leaderboard are super old.
     ### And since MainRuns and ILRuns are separate models, this code will exclude v_dates that are null, order by v_date, and get the latest 5 for each model.
     ### wrs does the same, but filters based on place=1 in the model.
-    pbs = (MainRuns.objects.exclude(platform__name="PC").exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.exclude(platform__name="PC").exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
-    wrs = (MainRuns.objects.filter(place=1).exclude(platform__name="PC").exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.filter(place=1).exclude(platform__name="PC").exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
+    pbs = (MainRuns.objects.exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.exclude(platform__name="PC").exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
+    wrs = (MainRuns.objects.filter(place=1).exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.filter(place=1).exclude(platform__name="PC").exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
 
     for pb in pbs:
         try: run = MainRuns.objects.get(id=pb.id)

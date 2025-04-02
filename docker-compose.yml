@@ -30,15 +30,20 @@ services:
     networks:
       - srlc
 
-  nginx:
-    container_name: nginx
+  npm:
+    container_name: nginx-proxy-manager
     restart: unless-stopped
-    build: ./nginx
+    image: "jc21/nginx-proxy-manager:latest"
     ports:
-      - "8001:80"
+      - "80:80"
+      - "443:443"
+      - "81:81"
     depends_on:
       - django
       - postgres
+    volumes:
+      - ./npm/data:/data
+      - ./npm/letsencrypt:/etc/letsencrypt
     networks:
       - srlc
   
