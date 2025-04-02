@@ -16,14 +16,12 @@
         {% endif %}
         
         <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
-
-    
+        
         {% load django_bootstrap5 %}
         {% bootstrap_css %}
         {% bootstrap_javascript %}
 
         <link rel="stylesheet" type="text/css" href="{% static 'srl/misc/css.css' %}">
-        
     </head>
     <body>
         {% include 'srl/navbar.html' %}
@@ -65,15 +63,42 @@
                         <div class="profile-socials">
                             <p class="socialicons">
                                 {% if player.twitch %}
-                                    <a href="{{ player.twitch }}" target="_blank"><i class="fab fa-twitch fa-lg"></i></a>
+                                    {% if player.nickname %}
+                                        <a href="{{ player.twitch }}" target="_blank"><i class="fab fa-twitch fa-lg" alt="{{ player.nickname }}'s Twitch" title="{{ player.nickname }}'s Twitch"></i></a>
+                                    {% else %}
+                                        <a href="{{ player.twitch }}" target="_blank"><i class="fab fa-twitch fa-lg" alt="{{ player.name }}'s Twitch" title="{{ player.name }}'s Twitch"></i></a>
+                                    {% endif %}
                                 {% endif %}
-                                {% if player.twitter %}
-                                    <a href="{{ player.twitter }}" target="_blank"><i class="fab fa-twitter fa-lg"></i></a>
-                                {% endif %}
+
                                 {% if player.youtube %}
-                                    <a href="{{ player.youtube }}" target="_blank"><i class="fab fa-youtube fa-lg"></i></a>
+                                    {% if player.nickname %}
+                                        <a href="{{ player.youtube }}" target="_blank"><i class="fab fa-youtube fa-lg" alt="{{ player.nickname }}'s YouTube" title="{{ player.nickname }}'s YouTube"></i></a>
+                                    {% else %}
+                                        <a href="{{ player.youtube }}" target="_blank"><i class="fab fa-youtube fa-lg" alt="{{ player.name }}'s YouTube" title="{{ player.name }}'s YouTube"></i></a>
+                                    {% endif %}
                                 {% endif %}
-                                <a href="https://speedrun.com/user/{{ player.name }}" target="_blank"><i class="fas fa-trophy fa-lg"></i></a>
+
+                                {% if player.twitter %}
+                                    {% if player.nickname %}
+                                        <a href="{{ player.twitter }}" target="_blank"><i class="fab fa-twitter fa-lg" alt="{{ player.nickname }}'s Twitter" title="{{ player.nickname }}'s Twitter"></i></a>
+                                    {% else %}
+                                        <a href="{{ player.twitter }}" target="_blank"><i class="fab fa-twitter fa-lg" alt="{{ player.name }}'s Twitter" title="{{ player.name }}'s Twitter"></i></a>
+                                    {% endif %}
+                                {% endif %}
+
+                                {% if player.bluesky %}
+                                    {% if player.nickname %}
+                                        <a href="{{ player.bluesky }}" target="_blank"><i class="fab fa-bluesky fa-lg" alt="{{ player.nickname}}'s Bluesky" title="{{ player.nickname}}'s Bluesky"></i></a>
+                                    {% else %}
+                                        <a href="{{ player.bluesky }}" target="_blank"><i class="fab fa-bluesky fa-lg" alt="{{ player.name }}'s Bluesky" title="{{ player.name}}'s Bluesky"></i></a>
+                                    {% endif %}
+                                {% endif %}
+                                
+                                {% if player.nickname %}
+                                    <a href="https://speedrun.com/user/{{ player.name }}" target="_blank"><i class="fas fa-trophy fa-lg" alt="{{ player.nickname }}'s Speedrun.com Profile" title="{{ player.nickname }}'s Speedrun.com Profile"></i></a>
+                                {% else %}
+                                    <a href="https://speedrun.com/user/{{ player.name }}" target="_blank"><i class="fas fa-trophy fa-lg" alt="{{ player.name }}'s Speedrun.com Profile" title="{{ player.name }}'s Speedrun.com Profile"></i></a>
+                                {% endif %}
                             </p>
                         </div>
                     </div>
@@ -120,23 +145,40 @@
                                             <td>
                                                 <div class="subcategory">{% if game.subcategory %} {{ game.subcategory }} {% endif %}</div>
                                             </td>
+                                            {% if game.obsolete == False %}
+                                                <td>
+                                                    <div class="placing">{{ game.place }}
+                                                        <br />
+                                                        {% if game.game.defaulttime == "realtime" %}
+                                                            <a href="{{ game.url }}">{{ game.time }}</a>
+                                                        {% elif game.game.defaulttime == "realtime_noloads" %}
+                                                            <a href="{{ game.url }}">{{ game.timenl }}</a>
+                                                        {% else %}
+                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="date">{{ game.o_date }}</div>
+                                                </td>
+                                                <td>
+                                                    <div class="points">{{ game.points }}</div>
+                                                </td>
+                                            {% else %}
+                                                <td>
+                                                    <div class="date">{{ game.o_date }}</div>
+                                                </td>
+                                            {% endif %}
                                             <td>
-                                                <div class="placing">{{ game.place }}
-                                                    <br />
-                                                    {% if game.game.defaulttime == "realtime" %}
-                                                        <a href="{{ game.url }}">{{ game.time }}</a>
-                                                    {% elif game.game.defaulttime == "realtime_noloads" %}
-                                                        <a href="{{ game.url }}">{{ game.timenl }}</a>
-                                                    {% else %}
-                                                        <a href="{{ game.url }}">{{ game.timeigt }}</a>
-                                                    {% endif %}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="date">{{ game.o_date }}</div>
-                                            </td>
-                                            <td>
-                                                <div class="points">{{ game.points }}</div>
+                                                {% if game.arch_video %}
+                                                    <div class="videos"><a href="{{ game.arch_video }}" target="_blank"><i class="fa-solid fa-cloud" alt="Archived Video" title="Archived Video"></i></a><br />
+                                                {% endif %}
+                                                {% if "yout" in game.video %}
+                                                    <div class="videos"><a href="{{ game.video }}" target="_blank"><i class="fab fa-youtube fa-lg" alt="YouTube Video" title="YouTube Video"></i></a><br />
+                                                {% endif %}
+                                                {% if "twitch" in game.video %}
+                                                    <div class="videos"><a href="{{ game.video }}" target="_blank"><i class="fab fa-twitch fa-lg" alt="Twitch Video" title="Twitch Video"></i></a>
+                                                {% endif %}
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -193,6 +235,17 @@
                                                 </td>
                                                 <td>
                                                     <div class="points">{{ game.points }}</div>
+                                                </td>
+                                                <td>
+                                                    {% if game.arch_video %}
+                                                        <div class="videos"><a href="{{ game.arch_video }}" target="_blank"><i class="fa-solid fa-cloud"></i></a><br />
+                                                    {% endif %}
+                                                    {% if "yout" in game.video %}
+                                                        <div class="videos"><a href="{{ game.video }}" target="_blank"><i class="fab fa-youtube fa-lg"></i></a><br />
+                                                    {% endif %}
+                                                    {% if "twitch" in game.video %}
+                                                        <div class="videos"><a href="{{ game.video }}" target="_blank"><i class="fab fa-twitch fa-lg"></i></a>
+                                                    {% endif %}
                                                 </td>
                                             </tr>
                                         {% endfor %}

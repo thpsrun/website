@@ -6,8 +6,8 @@ from django.urls import path, include
 env = environ.Env()
 environ.Env.read_env()
 
-admin.site.site_header = "thps.run"
-admin.site.site_title  = "thps.run"
+#admin.site.site_header = "thps.run"
+#admin.site.site_title  = "thps.run"
 admin.site.index_title = "Admin Panel"
 
 def discord_redirect(request):
@@ -43,7 +43,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
     path("", include("srl.urls")),
-    path("martor/", include("martor.urls")),
     # REDIRECTS
     path("discord",discord_redirect,name="discord_redirect"),
     path("twitch",twitch_redirect,name="twitch_redirect"),

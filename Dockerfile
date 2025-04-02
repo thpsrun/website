@@ -6,12 +6,11 @@ RUN apt-get update && apt-get install -y \
     libffi-dev \
     && pip install --upgrade pip setuptools wheel \
     && rm -rf /var/lib/apt/lists/*
-RUN addgroup --system celerygroup && adduser --system --ingroup celerygroup celeryuser
+#RUN addgroup --system celerygroup && adduser --system --ingroup celerygroup celeryuser
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 WORKDIR /srlc
 COPY requirements.txt /srlc/
 RUN pip install --no-cache-dir -r requirements.txt
-#COPY . /srlc/
-USER celeryuser
+#USER celeryuser
 ENTRYPOINT ["sh", "entrypoint.sh"]

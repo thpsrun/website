@@ -199,7 +199,7 @@ class Players(models.Model):
     twitch      = models.CharField(max_length=75,verbose_name="Twitch",blank=True,null=True)
     youtube     = models.CharField(max_length=100,verbose_name="YouTube",blank=True,null=True)
     twitter     = models.CharField(max_length=40,verbose_name="Twitter",blank=True,null=True)
-    bluesky     = models.CharField(max_length=40,verbose_name="Bluesky",blank=True,null=True)
+    bluesky     = models.CharField(max_length=75,verbose_name="Bluesky",blank=True,null=True)
     ex_stream   = models.BooleanField(
                 verbose_name="Stream Exception",
                 default=False,
@@ -261,6 +261,7 @@ class MainRuns(models.Model):
     emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
     vid_status  = models.CharField(
                 verbose_name="SRC Status",
+                choices=LeaderboardChoices,
                 default="verified",
                 help_text="This is the current status of the run, according to Speedrun.com. It should be updated whenever the run is approved. Runs set as \"Unverified\" do not appear anywhere on this site."
     )
@@ -311,6 +312,7 @@ class ILRuns(models.Model):
     emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
     vid_status  = models.CharField(
                 verbose_name="SRC Status",
+                choices=LeaderboardChoices,
                 default="verified",
                 help_text="This is the current status of the run, according to Speedrun.com. It should be updated whenever the run is approved. Runs set as \"Unverified\" do not appear anywhere on this site."
     )

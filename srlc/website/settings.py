@@ -84,8 +84,6 @@ if os.getenv("DEBUG_MODE") == "True":
     print("DEBUG ENABLED!!!!! MAKE SURE YOU AREN'T IN PRODUCTION!!!!!")
     DEBUG = True
     CSRF_TRUSTED_ORIGINS = ["http://localhost:8001"]
-    
-    PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
 else:
     # Security Setttings
     CSRF_COOKIE_SECURE              = True

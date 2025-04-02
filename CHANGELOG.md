@@ -14,15 +14,40 @@
 *   v2.3 - Admin panel confirmations
 *   v2.3 - Adding "Guides" to allow approved users the ability to upload user-created guides.
     *   Would also open up registration on this site to other users. Need to work on authentication and stuff.
-*   v2.3 - Fixing API endpoints, adding embeds, and opening it up to integrate with THPSBot.
 *   v2.3 - Page that displays currently live streams.
     *   `Livestreams` model and `/live/` endpoint would be added so they can be called correctly in the API.
 
+### v2.3 - The Open Source Update
+###### April ??, 2025
+*   [!!!!] This project - dubbed the Speedrun Leaderboard Creator (SRLC) - is now open source! For more information on this, please check out the project's github here: [https://github.com/ThePackle/SRLC/](https://github.com/ThePackle/SRLC/)
+  
+*   Added support for Bluesky to player profiles.
+    *   As a note, this is minor change. If you want your Bluesky account added to your profile, contact Packle. A later update will move to SRC's v2 endpoint, which can return Bluesky links.
+*   Added Bluesky as an environmental variable to the project that can display on the navbar.
+*   Added support for a run's current run verification status from SRC.
+    *   Runs will be cached from now on when they are awaiting approval. They will be removed if rejected.
+*   Added support for an optional archived videos field to `MainRuns` and `ILRuns` models.
+*   [#19](https://github.com/ThePackle/SRLC/issues/19) Added quick-links to Twitch, YouTube, and/or Archived Video to player profiles, leaderboards, and the main page.
+*   Added more alt and title tags through the site for accessibility.
+  
+  
+*   [#12](https://github.com/ThePackle/SRLC/issues/12) Changed the front page to display tied world records on the same table row.
+*   Changed all of the API endpoints so they properly return information. Embed and query support has been added where applicable.
+    *   This was broken for a few releases, since a lot of code was refactored.
+  
+  
+*   [#17](https://github.com/ThePackle/SRLC/issues/17) Fixed an issue where the nickname of players
+*   [#18](https://github.com/ThePackle/SRLC/issues/18) Fixed an issue where world records were also appearing on the "Latest Runs" portion of the main page.
+    *   Also added additional logic to remove obsolete runs, in cases that a player gets multiple WRs in a row in the same game and category.
+  
+
+*   Removed `Location` field from the Players model.
+    *   `CountryCode` does a similar thing. `Location` was a remnant from the refactor.
+*   Removed the website's changelog to appear on this GitHub repo.
 
 * * *
 
-### v2.2.1.1 (current)
-
+### v2.2.1.1
 ###### March 24, 2025
 
 *   Added THPS1+2 Any% Tour Mode (All Tours, New Game) and All Goals & Golds (All Tours, New Game) to the main page.
@@ -35,7 +60,6 @@
 * * *
 
 ### v2.2.1
-
 ###### March 23, 2025
 
 *   Added `idefaulttime` (IL Default Time) attribute to the `GameOverview` model.
@@ -75,7 +99,6 @@
 * * *
 
 ### v2.2 - The BIG Update
-
 ###### December 25, 2024
 
 *   Added the `Awards` model.
@@ -113,7 +136,6 @@
 * * *
 
 ### v2.1.7
-
 ###### January 29, 2024
 
 *   Added support for the THPG "100% (360/PS3)" category on the main page.
@@ -121,7 +143,6 @@
 * * *
 
 ### v2.1.6
-
 ###### January 15, 2023
 
 *   Fixed an issue where unknown country names would crash [the regional leaderboard](/regional).
@@ -130,7 +151,6 @@
 * * *
 
 ### v2.1.5
-
 ###### December 21, 2023
 
 *   Fixed an issue where the THPS1+2 full game categories names were not properly associated with newly approved speedruns.
@@ -138,7 +158,6 @@
 * * *
 
 ### v2.1.4
-
 ###### December 2, 2023
 
 *   Removed the overall Individual Level rankings on player profiles; load times for player profiles have been cut roughly in half.
@@ -150,7 +169,6 @@
 * * *
 
 ### v2.1.3
-
 ###### November 26, 2023
 
 *   Fixed an issue where obsolete world records would show up on the website's home page.
@@ -158,7 +176,6 @@
 * * *
 
 ### v2.1.2
-
 ###### November 2, 2023
 
 *   Added dates for when updates were applied from v2 to current day.
@@ -169,7 +186,6 @@
 * * *
 
 ### v2.1.1
-
 ###### October 30, 2023
 
 *   Added the THPS4CE Overall IL Leaderboard to the navigation bar.
@@ -192,7 +208,6 @@
 * * *
 
 ### v2.1.0.1
-
 ###### October 27, 2023
 
 *   Added a filter in the Regional Leaderboard that shows you all runners who have no country association known.
@@ -204,7 +219,6 @@
 * * *
 
 ### v2.1 - The API Update
-
 ###### October 26, 2023
 
 *   Added Sentry.io for troubleshooting purposes.
@@ -247,7 +261,6 @@
 * * *
 
 ### v2.0.5.1
-
 ###### August 18, 2023
 
 *   Fixed an issue where new sub-categories would not be automatically added to the website, resulting in a desync error.
@@ -256,7 +269,6 @@
 * * *
 
 ### v2.0.5
-
 ###### August 14, 2023
 
 *   Added an additional ability for administrators to completely refresh a leaderboard from scratch.
@@ -271,7 +283,6 @@
 * * *
 
 ### v2.0.4
-
 ###### August 10, 2023
 
 *   Added automation in the background to check for new static images every 5 minutes in Django.
@@ -281,12 +292,11 @@
     *   Before: the earliest runs held tiebreakers and all subsequent runs were incremented by 1.
     *   Now: the earliest runs are shown towards the top, first, and placings are properly displayed.
     *   Fixed an associated bug where some placings were incorrect.
-*   \[#1\] Fixed an issue where certain categories were combining with others if there were more than one global category.
+*   Fixed an issue where certain categories were combining with others if there were more than one global category.
 
 * * *
 
 ### v2.0.3
-
 ###### August 5, 2023
 
 *   Fixed an issue where non-World Records would somehow appear on the Latest WRs leaderboard.
@@ -294,7 +304,6 @@
 * * *
 
 ### v2.0.2
-
 ###### July 13, 2023
 
 *   Fixed an issue where non-World Record speedruns would not properly be added to the Latest Runs leaderboard.
@@ -303,7 +312,6 @@
 * * *
 
 ### v2.0.1
-
 ###### July 12, 2023
 
 *   Fixed an issue where the wrong category would be assigned to runs imported from the thps.run API.
@@ -314,8 +322,7 @@
 
 * * *
 
-### The "Fucking Finally" Update
-
+### v2.0 - The "Fucking Finally" Update
 ###### July 2, 2023
 
 *   Reworked the entire website from the ground up, using Django and a custom-made API for future projects.

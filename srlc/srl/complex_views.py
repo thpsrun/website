@@ -4,6 +4,7 @@
 ### Description: Script that holds a lot of the complex views (webpages) for the project.
 ### Dependencies: srl/models
 ######################################################################################################################################################
+from collections import defaultdict
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -522,41 +523,60 @@ def GameLeaderboard(request,abbr,category=None):
 def MainPage(request):
     ### These subcategories are what is queried to have them appear as World Records on the main page. It is kinda clunky, I will eventually have a better solution.
     ### To get these values, look up the ID of the WR in a category and copy + paste the "Subcategory Name" field here.
-    subcategories = ["Any%", "Any% (6th Gen)", "100%", "Any% (No Major Glitches)", "All Goals & Golds (No Major Glitches)", "All Goals & Golds (All Careers)", "All Goals & Golds (6th Gen)", "Any% (Beginner)", "100% (NSR)",\
-                     "Story (Easy, NG+)", "100% (NG)", "Classic (Normal, NG+)", "Story Mode (Easy, NG+)", "Classic Mode (Normal)", "Any% (360/PS3)", "100% (360/PS3)","Any% Tour Mode (All Tours, New Game)","All Goals & Golds (All Tours, New Game)"]
+    subcategories    = ["Any%", "Any% (6th Gen)", "100%", "Any% (No Major Glitches)", "All Goals & Golds (No Major Glitches)", "All Goals & Golds (All Careers)", "All Goals & Golds (6th Gen)", "Any% (Beginner)", "100% (NSR)",\
+                     "Story (Easy, NG+)", "100% (NG)", "Classic (Normal, NG+)", "Story Mode (Easy, NG+)", "Classic Mode (Normal)", "Any% (360/PS3)", "100% (360/PS3)", "Any% Tour Mode (All Tours, New Game)", "All Goals & Golds (All Tours, New Game)"]
+    exempt_games     = ["GBA","PSP","GBC","Category Extensions","Remix","Sk8land","HD","2x"]
     
-    runs = MainRuns.objects.filter(place=1,subcategory__in=subcategories).order_by("-subcategory").annotate(o_date=TruncDate("date"))
+    exclusion_filter = Q()
+    run_list         = []
+    wrs_data         = []
+    runs_data        = []
 
-    run_list      = []
-    wrs_data      = []
-    runs_data     = []
-    exempt_games  = ["GBA","PSP","GBC","Category Extensions","Remix","Sk8land","HD","2x"]
+    for game in exempt_games:
+        exclusion_filter |= Q(game__name__icontains=game)
+
+    runs = MainRuns.objects.exclude(obsolete=True).exclude(exclusion_filter).filter(place=1,subcategory__in=subcategories).order_by("-subcategory").annotate(o_date=TruncDate("date"))
+
+    grouped_runs = []
+    seen_records = set()
 
     for run in runs:
-        if run.game and run.player:
-            gamename = run.game.name
+        key = (run.game.abbr, run.subcategory, run.time)
+        if key not in seen_records:
+            grouped_runs.append({
+                "game"          : run.game,
+                "subcategory"   : run.subcategory,
+                "time"          : run.time,
+                "players"       : []
+            })
+            seen_records.add(key)
 
-            if not any(game in gamename for game in exempt_games):
-                run_list.append(run)
+        for record in grouped_runs:
+            if record["game"].abbr == run.game.abbr and record["subcategory"] == run.subcategory and record["time"] == run.time:
+                record["players"].append({
+                    "player"    : run.player,
+                    "url"       : run.url,
+                    "date"      : run.o_date
+                })
 
-    run_list = sorted(run_list, key=lambda x: x.game.release, reverse=False)
+    run_list = sorted(grouped_runs, key=lambda x: x["game"].release, reverse=False)
 
     ### Sometimes v_date (verify_date) is null; this can happen if the runs on a leaderboard are super old.
     ### And since MainRuns and ILRuns are separate models, this code will exclude v_dates that are null, order by v_date, and get the latest 5 for each model.
     ### wrs does the same, but filters based on place=1 in the model.
-    pbs = (MainRuns.objects.exclude(place=1).exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.exclude(place=1).exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
-    wrs = (MainRuns.objects.filter(place=1).exclude(v_date__isnull=True).order_by("-v_date")[:25]).union(ILRuns.objects.filter(place=1).exclude(v_date__isnull=True).order_by("-v_date")[:25]).order_by("-v_date")[:5]
+    wrs = (MainRuns.objects.filter(place=1,obsolete=False,v_date__isnull=False).order_by("-v_date")[:25]).union(ILRuns.objects.filter(place=1,obsolete=False,v_date__isnull=False).order_by("-v_date")[:25]).order_by("-v_date").values("id")[:5]
+    pbs = (MainRuns.objects.filter(obsolete=False,v_date__isnull=False).exclude(place=1).order_by("-v_date")[:25]).union(ILRuns.objects.filter(obsolete=False,v_date__isnull=False).exclude(place=1).order_by("-v_date")[:25]).order_by("-v_date").values("id")[:5]
 
     for pb in pbs:
-        try: run = MainRuns.objects.get(id=pb.id)
-        except: run = ILRuns.objects.get(id=pb.id)
+        try: run = MainRuns.objects.get(id=pb["id"])
+        except: run = ILRuns.objects.get(id=pb["id"])
         
         if run:
             runs_data.append(run)
 
     for wr in wrs:
-        try: run = MainRuns.objects.get(id=wr.id)
-        except: run = ILRuns.objects.get(id=wr.id)
+        try: run = MainRuns.objects.get(id=wr["id"])
+        except: run = ILRuns.objects.get(id=wr["id"])
 
         if run:
             wrs_data.append(run)

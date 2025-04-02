@@ -40,32 +40,43 @@
                     <tbody>
                         {% for wr in runs %}
                             <tr>
-                                {% if wr.game.abbr == "thps12" %}
-                                    <td>THPS1+2</td>
-                                {% else %}
-                                    <td>{{ wr.game.abbr|upper }}</td>
-                                {% endif %}
+                                <td>
+                                    {% if wr.game.abbr == "thps12" %}
+                                        THPS1+2
+                                    {% elif wr.game.abbr == "thps34" %}
+                                        THPS3+4
+                                    {% else %}
+                                        {{ wr.game.abbr|upper }}
+                                    {% endif %}
+                                </td>
                                 <td>{{ wr.subcategory }}</td>
-                                {% if wr.player.countrycode %}
-                                    {% if wr.player.countrycode.id == "vh" %}
-                                        <td><img src="{% static 'srl/misc/vh.png' %}" title="{{ wr.player.countrycode.name }}" alt="{{ wr.player.countrycode.name }}" onerror="this.onerror=null; this.src=''" height="15" />
-                                    {% else %}
-                                        <td><img src="https://flagcdn.com/h20/{{ wr.player.countrycode.id }}.png" title="{{ wr.player.countrycode.name }}" alt="{{ wr.player.countrycode.name }}" onerror="this.onerror=null; this.src=''" height="15" />
-                                    {% endif %}
-                                        {% if wr.player.nickname %}
-                                            <a href="/player/{{ wr.player.name }}">{{ wr.player.nickname }}</a></td>
-                                        {% else %}
-                                            <a href="/player/{{ wr.player.name }}">{{ wr.player.name }}</a></td>
+                                <td>
+                                    {% for player in wr.players %}
+                                        {% if player.player.countrycode %}
+                                            {% if player.player.countrycode.id == "vh" %}
+                                                <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.player.countrycode.name }}" alt="{{ player.player.countrycode.name }}" height="15" />
+                                            {% else %}
+                                                <img src="https://flagcdn.com/h20/{{ player.player.countrycode.id }}.png" title="{{ player.player.countrycode.name }}" alt="{{ player.player.countrycode.name }}" height="15" />
+                                            {% endif %}
                                         {% endif %}
-                                {% else %}
-                                    {% if wr.player.nickname %}
-                                        <td><a href="/player/{{ wr.player.name }}">{{ wr.player.nickname }}</a></td>
-                                    {% else %}
-                                        <td><a href="/player/{{ wr.player.name }}">{{ wr.player.name }}</a></td>
-                                    {% endif %}
-                                {% endif %}
-                                <td><a href="{{ wr.url }}" target="_blank">{{ wr.time }}</a></td>
-                                <td>{{ wr.o_date }}</td>
+
+                                        {% if player.player.nickname %}
+                                            <a href="/player/{{ player.player.name }}">{{ player.player.nickname }}</a><br />
+                                        {% else %}
+                                            <a href="/player/{{ player.player.name }}">{{ player.player.name }}</a><br />
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% for player in wr.players %}
+                                        <a href="{{ player.url }}" target="_blank">{{ wr.time }}</a><br />
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% for player in wr.players %}
+                                        {{ player.date }}<br />
+                                    {% endfor %}
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -93,6 +104,8 @@
                                 <tr>
                                     {% if wr.game.abbr == "thps12" %}
                                         <td>THPS1+2</td>
+                                    {% elif wr.game.abbr == "thps34" %}
+                                        <td>THPS3+4</td>
                                     {% else %}
                                         <td>{{ wr.game.abbr|upper }}</td>
                                     {% endif %}
@@ -150,13 +163,15 @@
                                 <tr>
                                     {% if run.game.abbr == "thps12" %}
                                         <td>THPS1+2</td>
+                                    {% elif run.game.abbr == "thps34" %}
+                                        <td>THPS3+4</td>
                                     {% else %}
                                         <td>{{ run.game.abbr|upper }}</td>
                                     {% endif %}
                                     <td>{{ run.subcategory }}</td>
                                     {% if run.player.countrycode %}
                                         <td><img src="https://flagcdn.com/h20/{{ run.player.countrycode.id }}.png" title="{{ run.player.countrycode.name }}" onerror="this.onerror=null; this.src=''" height="15" />
-                                            {% if run.nickname %}
+                                            {% if run.player.nickname %}
                                                 <a href="/player/{{ run.player.name }}">{{ run.player.nickname }}</a></td>
                                             {% else %}
                                                 <a href="/player/{{ run.player.name }}">{{ run.player.name }}</a></td>
