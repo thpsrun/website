@@ -1,5 +1,11 @@
-# thps.run - Speedrun Leaderboard Creator (SRLC)
-## Version 2.2.1.1
+# Speedrun Leaderboard Creator (SRLC)
+## Version 2.3
+
+![Django](https://img.shields.io/badge/Django-5.1.7-green.svg?logo=django&logoColor=white)
+![DjangoREST](https://img.shields.io/badge/django--rest--framework-3.16.0-blue?labelColor=333333&logo=django&logoColor=white&color=green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.4-green?logo=postgresql&logoColor=white)
+
+
 
 ### NOTE: OUT OF DATE; NEED TO UPDATE SOMETIME BEFORE OPEN-SOURCE RELEASE
 
@@ -42,3 +48,31 @@ The points system utilized within this project was created by ibeechu and goatro
   - Static images checks need to be done regularly.
     - `docker run -it srlc-django /bin/bash`
     - `cd srlc && python manage.py collectstatic --no-input`
+
+
+[1]: https://img.shields.io/pypi/v/martor.svg
+[2]: https://pypi.python.org/pypi/martor
+
+[3]: https://img.shields.io/badge/donate-paypal-blue
+[4]: https://www.paypal.com/paypalme/summonagus
+
+[5]: https://img.shields.io/badge/license-GNUGPLv3-blue.svg
+[6]: https://raw.githubusercontent.com/agusmakmun/django-markdown-editor/master/LICENSE
+
+[7]: https://img.shields.io/pypi/pyversions/martor.svg
+[8]: https://pypi.python.org/pypi/martor
+
+[9]: https://img.shields.io/badge/Django-3.2%20%3E=%204.2-green.svg
+[10]: https://www.djangoproject.com
+
+[11]: https://img.shields.io/github/actions/workflow/status/agusmakmun/django-markdown-editor/run-tests.yml?branch=master
+[12]: https://github.com/agusmakmun/django-markdown-editor/actions/workflows/run-tests.yml
+
+[13]: https://github.com/agusmakmun/django-markdown-editor/wiki
+[14]: https://github.com/agusmakmun/django-markdown-editor/tree/master/martor_demo/app/templates
+[15]: https://github.com/adi-/django-markdownx
+[16]: https://github.com/waylan/Python-Markdown
+[17]: https://rsted.info.ucl.ac.be
+
+[18]: https://img.shields.io/badge/code%20style-black-000000.svg
+[19]: https://github.com/ambv/black

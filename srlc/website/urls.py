@@ -36,19 +36,23 @@ def src_redirect(request):
 def trigger_error(request):
     if(env("DEBUG_MODE")):
         division_by_zero = 1 / 0
+    else:
+        return redirect("/")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
     path("", include("srl.urls")),
-    #Redirects#
+    path("martor/", include("martor.urls")),
+    # REDIRECTS
     path("discord",discord_redirect,name="discord_redirect"),
     path("twitch",twitch_redirect,name="twitch_redirect"),
     path("twitter",twitter_redirect,name="twitter_redirect"),
     path("bluesky",bluesky_redirect,name="bluesky_redirect"),
     path("youtube",youtube_redirect,name="youtube_redirect"),
     path("src",src_redirect,name="src_redirect"),
-    path('debug', trigger_error),
+    ## DEBUG
+    path("debug", trigger_error),
 ]
 
 handler404 = "srl.static_views.page_not_found"

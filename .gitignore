@@ -131,10 +131,7 @@ dmypy.json
 */.DS_Store
 .DS_Store
 srlc/srl/static/pfp/*
-srlc/website/static/pfp/*
-srlc/website/static/admin/*
-srlc/website/static/rest_framework/*
-srlc/website/static/srl/*
+srlc/website/static/*
 bin/
 .vscode/
 include/
@@ -148,4 +145,4 @@ srlc/website/sqlite3.db
 srlc/srl/static/srl/imgs/awards/
 
 srlc/db.json
-srlc/NOTES.yaml
+NOTES.yaml

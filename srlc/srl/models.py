@@ -199,6 +199,7 @@ class Players(models.Model):
     twitch      = models.CharField(max_length=75,verbose_name="Twitch",blank=True,null=True)
     youtube     = models.CharField(max_length=100,verbose_name="YouTube",blank=True,null=True)
     twitter     = models.CharField(max_length=40,verbose_name="Twitter",blank=True,null=True)
+    bluesky     = models.CharField(max_length=40,verbose_name="Bluesky",blank=True,null=True)
     ex_stream   = models.BooleanField(
                 verbose_name="Stream Exception",
                 default=False,
