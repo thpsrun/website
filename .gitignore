@@ -141,7 +141,7 @@ typescript
 
 npm/*
 srlc/website/sqlite3.db
-
+srlc/website/static/*
 srlc/srl/static/srl/imgs/awards/
 
 srlc/db.json
