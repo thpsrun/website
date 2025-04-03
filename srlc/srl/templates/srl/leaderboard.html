@@ -10,11 +10,15 @@
 
         {% if "/fullgame" in request.path %}
             <title>Full Game Leaderboard - thps.run</title>
-        {% elif "/lbs/" in request.path %}
+        {% elif "/all" in request.path %}
             {% if game_abbr == "thps12" %}
                 <title>THPS1+2 IL Overall Leaderboard - thps.run</title>
             {% elif game_abbr == "thps12ce" %}
                 <title>THPS1+2 CE IL Overall Leaderboard - thps.run</title>
+            {% elif game_abbr == "thps34" %}
+                <title>THPS3+4 IL Overall Leaderboard - thps.run</title>
+            {% elif game_abbr == "thps34ce" %}
+                <title>THPS3+4 CE IL Overall Leaderboard - thps.run</title>
             {% else %}
                 <title>{{ game_abbr|upper }} IL Overall Leaderboard - thps.run</title>
             {% endif %}
@@ -29,6 +33,7 @@
         {% bootstrap_css %}
         {% bootstrap_javascript %}
 
+        <script type="text/javascript" src="{% static 'srl/misc/leaderboard.js' %}"></script>
         <link rel="stylesheet" type="text/css" href="{% static 'srl/misc/css.css' %}">
     </head>
     <body>
@@ -116,53 +121,6 @@
                 {% endif %}
             </tbody>
         </table>
-
-        <script>
-            $(document).ready(function() {
-                var originalLeaderboard = JSON.parse(document.getElementById("leaderboard-data").textContent);
-            
-                function populateLeaderboard(data) {
-                    var tableBody = document.getElementById("leaderboardTable").getElementsByTagName('tbody')[0];
-                    tableBody.innerHTML = '';
-            
-                    data.forEach(function(item, index) {
-                        var row = tableBody.insertRow();
-                        var rankCell = row.insertCell();
-                        var playerCell = row.insertCell();
-                        var pointsCell = row.insertCell();
-            
-                        console.log(item);
-                        if (item.countrycode) {
-                            
-                            playerCellContent = '<img src="https://flagcdn.com/h20/' + item.countrycode + '.png" height="15" />' + ' ' + '<a href="/player/' + item.player + '">' + item.player + '</a>';
-                        } else {
-                            playerCellContent = '<a href="/player/' + item.player + '">' + item.player + '</a>';
-                        }
-                        rankCell.textContent = item.rank;
-                        playerCell.innerHTML = playerCellContent;
-                        pointsCell.textContent = item.total_points;
-                    });
-                }
-            
-                $("#searchForm").submit(function(event) {
-                    event.preventDefault();
-                    var searchQuery = $("#searchInput").val().trim();
-                    if (searchQuery === "") {
-                        populateLeaderboard(originalLeaderboard);
-                        return;
-                    }
-                    var url = "{% url 'search_leaderboard' %}";
-                    $.ajax({
-                        url: url,
-                        data: { search: searchQuery },
-                        success: function(data) {
-                            populateLeaderboard(data);
-                        }
-                    });
-                });
-            });
-            
-        </script>
         {% include 'srl/footer.html' %}
     </body>
 </html>

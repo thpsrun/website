@@ -34,25 +34,25 @@
                     </div>                    
                     <div class="profile-data">
                         <div class="profile-username">
-                            {% if player.countrycode.id != "vh" %}
-                                {% if player.nickname %}
-                                    <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
-                                {% else %}
-                                    <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> {{ player.name }}
-                                {% endif %}
-                            {% elif player.countrycode.id == "vh" %}
-                                {% if player.nickname %}
-                                    <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
-                                {% else %}
-                                    <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" /> {{ player.name }}
-                                {% endif %}
+                        {% if player.countrycode.id != "vh" %}
+                            {% if player.nickname %}
+                                <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
                             {% else %}
-                                {% if player.nickname %}
-                                    <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
-                                {% else %}
-                                    {{ player.name }}
-                                {% endif %}
+                                <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> {{ player.name }}
                             {% endif %}
+                        {% elif player.countrycode.id == "vh" %}
+                            {% if player.nickname %}
+                                <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
+                            {% else %}
+                                <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" /> {{ player.name }}
+                            {% endif %}
+                        {% else %}
+                            {% if player.nickname %}
+                                <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
+                            {% else %}
+                                {{ player.name }}
+                            {% endif %}
+                        {% endif %}
                         </div>
                         {% if player.pronouns %}
                             <div class="profile-pronouns">({{ player.pronouns }})</div>
@@ -62,43 +62,43 @@
                         {% endif %}
                         <div class="profile-socials">
                             <p class="socialicons">
-                                {% if player.twitch %}
-                                    {% if player.nickname %}
-                                        <a href="{{ player.twitch }}" target="_blank"><i class="fab fa-twitch fa-lg" alt="{{ player.nickname }}'s Twitch" title="{{ player.nickname }}'s Twitch"></i></a>
-                                    {% else %}
-                                        <a href="{{ player.twitch }}" target="_blank"><i class="fab fa-twitch fa-lg" alt="{{ player.name }}'s Twitch" title="{{ player.name }}'s Twitch"></i></a>
-                                    {% endif %}
-                                {% endif %}
-
-                                {% if player.youtube %}
-                                    {% if player.nickname %}
-                                        <a href="{{ player.youtube }}" target="_blank"><i class="fab fa-youtube fa-lg" alt="{{ player.nickname }}'s YouTube" title="{{ player.nickname }}'s YouTube"></i></a>
-                                    {% else %}
-                                        <a href="{{ player.youtube }}" target="_blank"><i class="fab fa-youtube fa-lg" alt="{{ player.name }}'s YouTube" title="{{ player.name }}'s YouTube"></i></a>
-                                    {% endif %}
-                                {% endif %}
-
-                                {% if player.twitter %}
-                                    {% if player.nickname %}
-                                        <a href="{{ player.twitter }}" target="_blank"><i class="fab fa-twitter fa-lg" alt="{{ player.nickname }}'s Twitter" title="{{ player.nickname }}'s Twitter"></i></a>
-                                    {% else %}
-                                        <a href="{{ player.twitter }}" target="_blank"><i class="fab fa-twitter fa-lg" alt="{{ player.name }}'s Twitter" title="{{ player.name }}'s Twitter"></i></a>
-                                    {% endif %}
-                                {% endif %}
-
-                                {% if player.bluesky %}
-                                    {% if player.nickname %}
-                                        <a href="{{ player.bluesky }}" target="_blank"><i class="fab fa-bluesky fa-lg" alt="{{ player.nickname}}'s Bluesky" title="{{ player.nickname}}'s Bluesky"></i></a>
-                                    {% else %}
-                                        <a href="{{ player.bluesky }}" target="_blank"><i class="fab fa-bluesky fa-lg" alt="{{ player.name }}'s Bluesky" title="{{ player.name}}'s Bluesky"></i></a>
-                                    {% endif %}
-                                {% endif %}
-                                
+                            {% if player.twitch %}
                                 {% if player.nickname %}
-                                    <a href="https://speedrun.com/user/{{ player.name }}" target="_blank"><i class="fas fa-trophy fa-lg" alt="{{ player.nickname }}'s Speedrun.com Profile" title="{{ player.nickname }}'s Speedrun.com Profile"></i></a>
+                                    <a href="{{ player.twitch }}" target="_blank"><i class="fab fa-twitch fa-lg" alt="{{ player.nickname }}'s Twitch" title="{{ player.nickname }}'s Twitch"></i></a>
                                 {% else %}
-                                    <a href="https://speedrun.com/user/{{ player.name }}" target="_blank"><i class="fas fa-trophy fa-lg" alt="{{ player.name }}'s Speedrun.com Profile" title="{{ player.name }}'s Speedrun.com Profile"></i></a>
+                                    <a href="{{ player.twitch }}" target="_blank"><i class="fab fa-twitch fa-lg" alt="{{ player.name }}'s Twitch" title="{{ player.name }}'s Twitch"></i></a>
                                 {% endif %}
+                            {% endif %}
+
+                            {% if player.youtube %}
+                                {% if player.nickname %}
+                                    <a href="{{ player.youtube }}" target="_blank"><i class="fab fa-youtube fa-lg" alt="{{ player.nickname }}'s YouTube" title="{{ player.nickname }}'s YouTube"></i></a>
+                                {% else %}
+                                    <a href="{{ player.youtube }}" target="_blank"><i class="fab fa-youtube fa-lg" alt="{{ player.name }}'s YouTube" title="{{ player.name }}'s YouTube"></i></a>
+                                {% endif %}
+                            {% endif %}
+
+                            {% if player.twitter %}
+                                {% if player.nickname %}
+                                    <a href="{{ player.twitter }}" target="_blank"><i class="fab fa-twitter fa-lg" alt="{{ player.nickname }}'s Twitter" title="{{ player.nickname }}'s Twitter"></i></a>
+                                {% else %}
+                                    <a href="{{ player.twitter }}" target="_blank"><i class="fab fa-twitter fa-lg" alt="{{ player.name }}'s Twitter" title="{{ player.name }}'s Twitter"></i></a>
+                                {% endif %}
+                            {% endif %}
+
+                            {% if player.bluesky %}
+                                {% if player.nickname %}
+                                    <a href="{{ player.bluesky }}" target="_blank"><i class="fab fa-bluesky fa-lg" alt="{{ player.nickname}}'s Bluesky" title="{{ player.nickname}}'s Bluesky"></i></a>
+                                {% else %}
+                                    <a href="{{ player.bluesky }}" target="_blank"><i class="fab fa-bluesky fa-lg" alt="{{ player.name }}'s Bluesky" title="{{ player.name}}'s Bluesky"></i></a>
+                                {% endif %}
+                            {% endif %}
+                            
+                            {% if player.nickname %}
+                                <a href="https://speedrun.com/user/{{ player.name }}" target="_blank"><i class="fas fa-trophy fa-lg" alt="{{ player.nickname }}'s Speedrun.com Profile" title="{{ player.nickname }}'s Speedrun.com Profile"></i></a>
+                            {% else %}
+                                <a href="https://speedrun.com/user/{{ player.name }}" target="_blank"><i class="fas fa-trophy fa-lg" alt="{{ player.name }}'s Speedrun.com Profile" title="{{ player.name }}'s Speedrun.com Profile"></i></a>
+                            {% endif %}
                             </p>
                         </div>
                     </div>
@@ -120,9 +120,9 @@
         </div>
         <div class="main-page-container">
             {% if main_runs.count > 0 %}
-            {% if il_runs.count > 0 %}
-                <div class="fg-table">
-            {% endif %}
+                {% if il_runs.count > 0 %}
+                    <div class="fg-table">
+                {% endif %}
                 <table id="leaderboard-table-1" class="table table-striped">
                     <thead class="bg-info">
                         <tr class="bg-info">

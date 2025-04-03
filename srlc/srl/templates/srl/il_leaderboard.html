@@ -12,12 +12,18 @@
                 <title>THPS1+2 IL Leaderboards - thps.run</title>
             {% elif game_abbr == "thps12ce" %}
                 <title>THPS1+2 CE IL Leaderboards - thps.run</title>
+            {% elif game_abbr == "thps34" %}
+                <title>THPS3+4 IL Leaderboards - thps.run</title>
+            {% elif game_abbr == "thps34ce" %}
+                <title>THPS3+4 IL Leaderboards - thps.run</title>
             {% else %}
                 <title>{{ game_abbr|upper }} IL Leaderboards - thps.run</title>
             {% endif %}
         {% else %}
-            {% if game_abbr == 'thps12' %}
+            {% if game_abbr == "thps12" %}
                 <title>THPS1+2 Full Game Leaderboards - thps.run</title>
+            {% elif game_abbr == "thps34" %}
+                <title>THPS3+4 Full Game Leaderboards - thps.run</title>
             {% else %}
                 <title>{{ game_abbr|upper }} Full Game Leaderboards - thps.run</title>
             {% endif %}
@@ -57,20 +63,11 @@
                     </th>
                     <th class="bg-info">Date</th>
                     <th class="bg-info">Points</th>
+                    <th class="bg-info">Videos</th>
                 </tr>
             </thead>
             <tbody>
-                {% for run in runs %}
-                    {% if run.subcategory == selected_subcategory %}
-                        <tr data-subcategory="{{ run.subcategory }}">
-                            <td>{{ run.place }}</td>
-                            <td>{{ run.player }}</td>
-                            <td>{{ run.time }}</td>
-                            <td>{{ run.date }}</td>
-                            <td>{{ run.points }}</td>
-                        </tr>
-                    {% endif %}
-                {% endfor %}
+                {% comment %} Leaderboard is rendered from srl/complex_views.py {% endcomment %}
             </tbody>
         </table>
         {% include 'srl/footer.html' %}

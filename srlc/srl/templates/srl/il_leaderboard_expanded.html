@@ -56,17 +56,13 @@
                             </th>
                             <th class="bg-info">Date</th>
                             <th class="bg-info">Points</th>
+                            <th class="bg-info">Videos</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for run in runs %}
                             {% if run.subcategory == selected_subcategory %}
                                 <tr data-subcategory="{{ run.subcategory }}">
-                                    <td>{{ run.place }}</td>
-                                    <td>{{ run.player }}</td>
-                                    <td>{{ run.time }}</td>
-                                    <td>{{ run.date }}</td>
-                                    <td>{{ run.points }}</td>
                                 </tr>
                             {% endif %}
                         {% endfor %}

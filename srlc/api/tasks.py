@@ -358,7 +358,7 @@ def update_points(game_id,subcategory,max_points,reset_points):
             old_time   = run_time
             old_points = points
         
-        run.save()
+        run.save(update_fields=["place","points"])
 
 
 ### remove_obsolete is ran after a new run is successfully uploaded to the API.
@@ -388,12 +388,6 @@ def remove_obsolete(game_id,subcategory,players,run_type):
                 ### Once found, it will set the slowest_runs variable based on the game ID, whether it is already obsolete, from the same player, in the same category.
                 default_time = GameOverview.objects.get(id=game_id).idefaulttime
                 slowest_runs = ILRuns.objects.filter(game=game_id,obsolete=False,player=player["id"],subcategory__in=duplicated_subcategories).order_by(f"-{time_columns[default_time]}")
-
-                ### Removes the newest time from the query, then sets all other runs (should be one) to obsolete.
-                if len(slowest_runs) > 0:
-                    last = slowest_runs.last()
-                    slowest_runs = slowest_runs.exclude(id=last.id)
-                    slowest_runs.update(obsolete=True)
             
             else:
                 duplicated_subcategories = (
@@ -409,8 +403,10 @@ def remove_obsolete(game_id,subcategory,players,run_type):
                 default_time = GameOverview.objects.get(id=game_id).defaulttime
                 slowest_runs = MainRuns.objects.filter(game=game_id,obsolete=False,player=player["id"],subcategory__in=duplicated_subcategories).order_by(f"-{time_columns[default_time]}")
                 
-                ### Removes the newest time from the query, then sets all other runs (should be one) to obsolete.
-                if len(slowest_runs) > 0:
-                    last = slowest_runs.last()
-                    slowest_runs = slowest_runs.exclude(id=last.id)
-                    slowest_runs.update(obsolete=True)
+            ### Removes the newest time from the query, then sets all other runs (should be one) to obsolete.
+            if len(slowest_runs) > 0:
+                last = slowest_runs.last()
+                slowest_runs = slowest_runs.exclude(id=last.id)
+                for new_obsolete in slowest_runs:
+                    new_obsolete.obsolete = True
+                    new_obsolete.save(force_update=True)

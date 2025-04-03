@@ -384,17 +384,19 @@ def ILGameLeaderboard(request,abbr,category=None):
                             )
                     
                         run_add = {
-                            "player"        : player.name if player else "Anonymous",
-                            "nickname"      : player.nickname if player.nickname else None,
-                            "countrycode"   : player.countrycode.id if player and player.countrycode else None,
-                            "countryname"   : player.countrycode.name if player and player.countrycode else None,
-                            "place"         : run.place,
-                            "defaulttime"   : defaulttime,
-                            "time"          : run_time,
-                            "points"        : run.points,
-                            "date"          : run.date,
-                            "subcategory"   : run.subcategory,
-                            "url"           : run.url
+                            "player"      : player.name if player else "Anonymous",
+                            "nickname"    : player.nickname if player.nickname else None,
+                            "countrycode" : player.countrycode.id if player and player.countrycode else None,
+                            "countryname" : player.countrycode.name if player and player.countrycode else None,
+                            "place"       : run.place,
+                            "defaulttime" : defaulttime,
+                            "time"        : run_time,
+                            "points"      : run.points,
+                            "date"        : run.date,
+                            "subcategory" : run.subcategory,
+                            "url"         : run.url,
+                            "video"       : run.video,
+                            "other_video" : run.arch_video
                         }
 
                     runs_list.append(run_add)
@@ -477,7 +479,9 @@ def GameLeaderboard(request,abbr,category=None):
                     "points"        : run.points,
                     "date"          : run.date,
                     "subcategory"   : run.subcategory,
-                    "url"           : run.url
+                    "url"           : run.url,
+                    "video"         : run.video,
+                    "other_video"   : run.arch_video,
                 }
 
                 if run.subcategory == "Classic Mode - Co-Op (Normal)":
@@ -502,7 +506,9 @@ def GameLeaderboard(request,abbr,category=None):
                     "points"        : run.points,
                     "date"          : run.date,
                     "subcategory"   : run.subcategory,
-                    "url"           : run.url
+                    "url"           : run.url,
+                    "video"         : run.video,
+                    "other_video"   : run.arch_video,
                 }
 
             runs_list.append(run_add)

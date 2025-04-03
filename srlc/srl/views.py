@@ -71,6 +71,5 @@ class ImportSRLTimes(ListView):
         
         for run in run_ids:
             asyncio.run(import_srltimes(run))
-            
-        
+                
         return redirect("/admin/srl/")
