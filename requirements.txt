@@ -3,7 +3,7 @@ asgiref==3.8.1
 celery[redis]
 certifi==2025.1.31
 crispy-bootstrap5==2024.10
-Django==5.1.7
+Django>=5.2
 django-bootstrap5==25.1
 django-classy-tags==4.1.0
 django-cors-headers==4.7.0

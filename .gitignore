@@ -132,6 +132,9 @@ dmypy.json
 .DS_Store
 srlc/srl/static/pfp/*
 srlc/website/static/*
+srlc/website/static/admin/*
+srlc/website/static/rest_framework/*
+srlc/website/static/srl/*
 bin/
 .vscode/
 include/
@@ -141,7 +144,6 @@ typescript
 
 npm/*
 srlc/website/sqlite3.db
-srlc/website/static/*
 srlc/srl/static/srl/imgs/awards/
 
 srlc/db.json

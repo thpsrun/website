@@ -1,22 +1,3 @@
-
-### Known Issues
-
-*   Tied speedruns should be displayed better on the front page.
-*   Extra features from the SRC API are not available in their v1 endpoint. When v2 is more stable/usable/not hidden, website will be refactored.
-    *   Bluesky cannot be added to user profiles on here automatically due to it not being available in the v1 endpoint.
-
-***
-
-### Upcoming Stuff
-
-*   v2.X - Historical points system
-*   v2.3 - Open-source entire project
-*   v2.3 - Admin panel confirmations
-*   v2.3 - Adding "Guides" to allow approved users the ability to upload user-created guides.
-    *   Would also open up registration on this site to other users. Need to work on authentication and stuff.
-*   v2.3 - Page that displays currently live streams.
-    *   `Livestreams` model and `/live/` endpoint would be added so they can be called correctly in the API.
-
 ### v2.3 - The Open Source Update
 ###### April ??, 2025
 *   [!!!!] This project - dubbed the Speedrun Leaderboard Creator (SRLC) - is now open source! For more information on this, please check out the project's github here: [https://github.com/ThePackle/SRLC/](https://github.com/ThePackle/SRLC/)
@@ -27,17 +8,17 @@
 *   Added support for a run's current run verification status from SRC.
     *   Runs will be cached from now on when they are awaiting approval. They will be removed if rejected.
 *   Added support for an optional archived videos field to `MainRuns` and `ILRuns` models.
-*   [#19](https://github.com/ThePackle/SRLC/issues/19) Added quick-links to Twitch, YouTube, and/or Archived Video to player profiles, leaderboards, and the main page.
+*   Added quick-links to Twitch, YouTube, and/or Archived Video to player profiles, leaderboards, and the main page. [#19](https://github.com/ThePackle/SRLC/issues/19)
 *   Added more alt and title tags through the site for accessibility.
   
   
-*   [#12](https://github.com/ThePackle/SRLC/issues/12) Changed the front page to display tied world records on the same table row.
+*   Changed the front page to display tied world records on the same table row. [#12](https://github.com/ThePackle/SRLC/issues/12)
 *   Changed all of the API endpoints so they properly return information. Embed and query support has been added where applicable.
     *   This was broken for a few releases, since a lot of code was refactored.
   
   
-*   [#17](https://github.com/ThePackle/SRLC/issues/17) Fixed an issue where the nickname of players
-*   [#18](https://github.com/ThePackle/SRLC/issues/18) Fixed an issue where world records were also appearing on the "Latest Runs" portion of the main page.
+*   Fixed an issue where the nickname of players would not properly appear in the "Latest Runs" portion of the main page. [#17](https://github.com/ThePackle/SRLC/issues/17)
+*   Fixed an issue where world records were also appearing on the "Latest Runs" portion of the main page. [#18](https://github.com/ThePackle/SRLC/issues/18)
     *   Also added additional logic to remove obsolete runs, in cases that a player gets multiple WRs in a row in the same game and category.
   
 
