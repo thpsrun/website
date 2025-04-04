@@ -28,6 +28,12 @@
 
 * * *
 
+### v2.2.1.2
+###### April 3, 2024
+*   [#21](https://github.com/ThePackle/SRLC/issues/21) Fixed an isue where runs were not properly set to obsolete when a new run was uploaded.
+  
+* * *
+  
 ### v2.2.1.1
 ###### March 24, 2025
 
@@ -54,10 +60,12 @@
 *   Added an additional check for the obsolete run imports that prevents importing runs awaiting review or are denied.
 *   Added external links to the approved PARTYMOD and ClownJob'd mods.
     *   In a later update, resources will be handled better (to include guides).
+  
 
 *   Changed dropdowns for all categories to be alphabetized.
     *   Need to work on a better system for showing categories (especially showing default categories first).
 *   Changed `date` in `MainRuns` and `ILRuns` models from a regular date field to date and time field.
+  
 
 *   Fixed an issue where some runs that did not have a "submitted" or "verified" date would return as null.
     *   Because of this, the website would return a date of "January 1, 1970" (beginning of Unix epoch time). The games didn't exist back then.
@@ -73,6 +81,7 @@
 *   Fixed an issue where IL leaderboards were displaying "Full Game" in the page title when they were obviously ILs.
 *   Fixed an issue where profile pictures were calling an incorrect player ID.
 *   Fixed an issue where obsolete runs were still counting towards a player's overall total in the overall IL leaderboards.
+  
 
 *   Removed `NewRuns` and `NewWRs` models.
 *   Removed a lot of libraries and dependencies that were no longer in use/needed.
@@ -93,12 +102,14 @@
 *   Added the "obsolete" field to `MainRuns` and `ILRuns` models.
     *   Before, obsolete runs were considered obsolete when their Points were set to zero. However, this could cause potential issues in the future and was just a poor way to mark runs as old.
     *   This also allows for all obsolete runs to be added to the database, without issue.
+  
 
 *   Changed the URLs for all leaderboards (again) so they make more sense:
     *   /lbs/thps1/ -> [/thps1/](/thps1/) -- Primary RTA leaderboard
     *   /lbs/ils/thps1/ -> [/thps1/ils/](/thps1/ils) -- Primary IL leaderboard
     *   /lbs/all/thps1/ -> [/thps1/all/](/thps1/all) -- Game Points Leaderboard
 *   With this change, there will be no redirects; please update your links accordingly.
+  
 
 *   Updated the flag icons throughout the website to display hover-over text in compliance with accessibility standards.
     *   The otherworldly country known as Valhalla has been added to the list, as well. It's flag will also now display properly.
@@ -106,11 +117,13 @@
 *   Updated the SQL database's performance with a dedicated solution.
 *   Updated a bunch of Models in the database to feature heavier use of Foreign Keys to link data more dynamically together.
     *   This change will reduce on the number of overall requests a bit, while also making it easier to manage for future releases.
+  
 
 *   Fixed an issue where obsolete runs would fail to be added.
 *   Fixed an issue where country codes were being set as the profile picture for users.
 *   Fixed an issue where the profile pictures of users weren't being saved properly in some cases, causing errors.
 *   Fixed an issue where, in some cases, new categories or levels would not be properly added to the database.
+   
 
 *   Removed the "THP8 - Rank 1" category from the main page.
 
@@ -160,6 +173,7 @@
 ###### November 2, 2023
 
 *   Added dates for when updates were applied from v2 to current day.
+  
 
 *   Fixed an issue where the THPS4 IL Oldest Record board was accounting for the previous world record instead of the current one.
 *   Fixed an issue where dates on the IL leaderboards were set to one day backwards than their actual ones.
@@ -172,6 +186,7 @@
 *   Added the THPS4CE Overall IL Leaderboard to the navigation bar.
 *   Added a disclaimer to the THPS4 IL Leaderboards to show that the WR Count table doesn't account for the "Zoo - Feed the Hippos" goal.
 *   Added a basic FAQ portion of the webiste to explain some things on how the website functions; more questions will be added over time.
+  
 
 *   Changed the following URL patterns to shorten the links by a good bit and make them less confusing. The mappings are as follows:
     *   /lbs/ -> /overall
@@ -181,6 +196,7 @@
     *   /lbs/ils/all/(ABBR) -> /lbs/all/(ABBR)
     *   /lbs/game/(ABBR) -> /lbs/(ABBR)
     *   /lbs/ils/game/(ABBR) -> /lbs/ils/(ABBR)
+  
 
 *   Fixed an issue where the webpage titles had the wrong formatting for some games.
 *   Fixed an issue where placement logic would become out of sync when a new run was added to a leaderboard, especially when ties are involved.
@@ -194,6 +210,7 @@
 *   Added a filter in the Regional Leaderboard that shows you all runners who have no country association known.
 *   Added a default "Internal Server Error" message page when server errors occur.
 *   Added a default "Resource Does Not Exist" message when the requested resource could not be found.
+  
 
 *   Fixed an issue where ILs would sometimes fail to be registered in the database.
 
@@ -221,6 +238,7 @@
 *   Added "World Record Count" for THPS4 ILs.
     *   Again, only for THPS4 ILs but can easily be added to other games as requested.
 *   Added a footer to the bottom of the website with a disclaimer about the website.
+  
 
 *   Changed "THPS12" to display as "THPS1+2" on the home page.
 *   Changed the social icons on the navigation bar to be more stylized.
@@ -228,6 +246,7 @@
 *   Changed the profile page a bit to make it more pleasing to look at.
     *   Reduced the amount of white space on the top panel.
     *   Changed the social icons to match the navigation bar.
+  
 
 *   Fixed an issue where names were case sensitive, leading to issues where "username" didn't equal "UserName" and errors were raised.
 *   Fixed an issue where the entire leaderboard would be shown with no pagination if nothing was searched.
@@ -255,9 +274,11 @@
 *   Added an additional ability for administrators to completely refresh a leaderboard from scratch.
 *   Added additional calls as setup for the upcoming API Update.
   
+
 *   Fixed an issue where the THAW leaderboards did not properly separate the Difficulty and NG+ sub-categories and instead combined them.
 *   Fixed an issue where API calls were not properly updating speedruns that have two non-global sub-categories.
 *   Fixed a rare issue where the API will fail, even if an API key is properly given.
+  
   
 *   Updated Django and all libraries to their latest versions.
 
@@ -268,6 +289,7 @@
 
 *   Added automation in the background to check for new static images every 5 minutes in Django.
   
+
 *   Fixed an issue where only the very last obsolete speedrun would be set to 0 points.
 *   Fixed an issue where the real placing of tied runs would not be displayed properly.
     *   Before: the earliest runs held tiebreakers and all subsequent runs were incremented by 1.

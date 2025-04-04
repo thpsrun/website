@@ -5,7 +5,8 @@ def PrivacyPolicy(request):
     return render(request, "srl/privacy_policy.html")
 
 def Changelog(request):
-    return render(request, "srl/changelog.html")
+    #return render(request, "srl/changelog.html")
+    return redirect("https://github.com/ThePackle/SRLC/blob/main/CHANGELOG.md")
 
 def FAQ(request):
     return render(request, "srl/faq.html")

@@ -4,48 +4,45 @@
 ### Description: Script that holds a lot of the complex views (webpages) for the project.
 ### Dependencies: srl/models
 ######################################################################################################################################################
-from collections import defaultdict
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.db.models import Sum,Q,Max,F
 from django.db.models.functions import TruncDate
-from .models import GameOverview,Players,Categories,MainRuns,ILRuns,VariableValues
+from .models import GameOverview,Players,MainRuns,ILRuns,VariableValues
 
 ## PlayerProfile grabs all of the unique information for a single user
 ## (e.g., username, nickname, main runs, individual level runs, etc.) and context's them
 ## so the webpage can render them.
 def PlayerProfile(request,name):
     try:
-        player          = Players.objects.get(name__iexact=name)
+        player = Players.objects.get(name__iexact=name)
     except Players.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
     except:
         return render(request, "srl/500.html")
     
-    unique_game_names   = set()
-    games               = GameOverview.objects.all().order_by("name")
-    categories          = Categories.objects.all()
-    main_runs           = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("date"))
-    il_runs             = ILRuns.objects.filter(player_id=player.id).annotate(o_date=TruncDate("date"))
-    total_runs          = len(main_runs) + len(il_runs)
+    games         = GameOverview.objects.all().order_by("name")
+    main_runs     = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("date"))
+    il_runs       = ILRuns.objects.filter(player_id=player.id).annotate(o_date=TruncDate("date"))
+    total_runs    = len(main_runs) + len(il_runs)
     
-    main_runs           = main_runs.filter(obsolete=False)
-    il_runs             = il_runs.filter(obsolete=False)
+    main_runs     = main_runs.filter(obsolete=False)
+    il_runs       = il_runs.filter(obsolete=False)
 
-    hidden_cats         = VariableValues.objects.filter(hidden=True).values_list("value")
-    main_runs           = main_runs.exclude(values__in=hidden_cats)
+    hidden_cats   = VariableValues.objects.filter(hidden=True).values_list("value")
+    main_runs     = main_runs.exclude(values__in=hidden_cats)
 
     if main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)"):
-        exclude = main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)").order_by("-points").values("id")[1:]
+        exclude   = main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)").order_by("-points").values("id")[1:]
         main_runs = main_runs.exclude(id__in=exclude)
 
-    main_points         = sum(run.points for run in main_runs)
-    il_points           = sum(run.points for run in il_runs)
-    total_points        = main_points + il_points
+    main_points   = sum(run.points for run in main_runs)
+    il_points     = sum(run.points for run in il_runs)
+    total_points  = main_points + il_points
     
-    leaderboard         = Leaderboard(request,3)
-    unique_game_names   = games.order_by("release").values_list("name","release")
+    leaderboard   = Leaderboard(request,3)
+    u_game_names  = games.order_by("release").values_list("name","release")
 
     if isinstance(leaderboard,tuple):
         for index, item in enumerate(leaderboard[0]):
@@ -77,8 +74,6 @@ def PlayerProfile(request,name):
 
         context = {
             "player"            : player,
-            "games"             : games,
-            "categories"        : categories,
             "main_runs"         : main_runs,
             "il_runs"           : il_runs,
             "main_points"       : main_points,
@@ -91,10 +86,28 @@ def PlayerProfile(request,name):
             "player_count"      : player_count,
             "main_count"        : main_count,
             "il_count"          : il_count,
-            "unique_game_names" : unique_game_names,
+            "unique_game_names" : u_game_names,
             "awards"            : award_set,
         }
         return render(request, "srl/player_profile.html", context)
+    
+def PlayerHistory(request,name):
+    try:
+        player = Players.objects.get(name__iexact=name)
+    except Players.DoesNotExist:
+        return render(request, "srl/resource_no_exist.html")
+    except:
+        return render(request, "srl/500.html")
+    
+    games      = GameOverview.objects.all().order_by("name")
+    main_runs  = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("date"))
+    il_runs    = ILRuns.objects.filter(player_id=player.id).annotate(o_date=TruncDate("date"))
+
+    if main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)"):
+        exclude = main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)").order_by("-points").values("id")[1:]
+        main_runs = main_runs.exclude(id__in=exclude)
+
+    unique_game_names   = games.order_by("release").values_list("name","release")
 
 def Leaderboard(request,profile=None,game=None):
     players_all     = Players.objects.all()
@@ -239,7 +252,8 @@ def Leaderboard(request,profile=None,game=None):
         }
 
         return render(request, "srl/leaderboard.html", context)
-    
+
+### FG_Leaderboard is used as the COMBINED points of ALL full game runs. It heavily uses the Leaderboard function above.
 def FG_Leaderboard(request):
     leaderboard         = Leaderboard(request,1)
 
@@ -258,6 +272,7 @@ def FG_Leaderboard(request):
 
     return render(request, "srl/leaderboard.html", context)
 
+### IL_Leaderboard is the COMBINED IL leaderboards for a single game. It heavily uses the Leaderboard function above.
 def IL_Leaderboard(request,game_abbr):
     try:
         game = GameOverview.objects.get(abbr=game_abbr)
@@ -285,6 +300,8 @@ def IL_Leaderboard(request,game_abbr):
 
     return render(request, "srl/leaderboard.html", context)
 
+### search_leaderboard is used on the /overall web page (the one that combines IL and Full game points).
+### This is pretty much how the searching portion works.
 def search_leaderboard(request):
     search_query        = request.GET.get("search", "")
     players_all         = Players.objects.all()
@@ -319,20 +336,6 @@ def search_leaderboard(request):
                 leaderboard.append(leaderboard_item)
 
     return JsonResponse(leaderboard, safe=False)
-
-def GameSelection(request):
-    games       = GameOverview.objects.all().order_by("name")
-    categories  = Categories.objects.all()
-    main_runs   = MainRuns.objects.all()
-    il_runs     = ILRuns.objects.all()
-
-    context = {
-        "games"         : games,
-        "categories"    : categories,
-        "main_runs"     : main_runs,
-        "il_runs"       : il_runs,
-    }
-    return render(request, "srl/game_selection.html", context)
 
 def ILGameLeaderboard(request,abbr,category=None):
     if "thps4/ils" in request.path_info:
@@ -467,52 +470,35 @@ def GameLeaderboard(request,abbr,category=None):
                     ("0", None)
                 )
 
-            if player != "Anonymous":
-                run_add = {
-                    "player"        : player.name,
-                    "nickname"      : player.nickname,
-                    "countrycode"   : player.countrycode.id if player.countrycode is not None else None,
-                    "countryname"   : player.countrycode.name if player.countrycode is not None else None,
-                    "place"         : run.place,
-                    "defaulttime"   : defaulttime,
-                    "time"          : run_time,
-                    "points"        : run.points,
-                    "date"          : run.date,
-                    "subcategory"   : run.subcategory,
-                    "url"           : run.url,
-                    "video"         : run.video,
-                    "other_video"   : run.arch_video,
-                }
+            run_add = {
+                "player"        : player.name if player != "Anonymous" else player,
+                "nickname"      : player.nickname if player != "Anonymous" else None,
+                "place"         : run.place,
+                "defaulttime"   : defaulttime,
+                "time"          : run_time,
+                "points"        : run.points,
+                "date"          : run.date,
+                "subcategory"   : run.subcategory,
+                "url"           : run.url,
+                "video"         : run.video,
+                "other_video"   : run.arch_video,
+            }
 
-                if run.subcategory == "Classic Mode - Co-Op (Normal)":
-                    if player2 != "Anonymous":
-                        run_add.update({"player2":player2.name})
-                        run_add.update({"player2nickname":player2.nickname})
-                        run_add.update({"countrycode2":player2.countrycode.id if player2.countrycode is not None else None})
-                        run_add.update({"countryname2":player2.countrycode.name if player2.countrycode is not None else None})
-                    else:
-                        run_add.update({"player2":"Anonymous"})
-                        run_add.update({"player2nickname":None})
-                        run_add.update({"countrycode2":None})
-                        run_add.update({"countryname2":None})
-            else:
-                run_add = {
-                    "player"        : player,
-                    "countrycode"   : None,
-                    "countryname"   : None,
-                    "place"         : run.place,
-                    "defaulttime"   : defaulttime,
-                    "time"          : run_time,
-                    "points"        : run.points,
-                    "date"          : run.date,
-                    "subcategory"   : run.subcategory,
-                    "url"           : run.url,
-                    "video"         : run.video,
-                    "other_video"   : run.arch_video,
-                }
+            if player != "Anonymous":
+                run_add.update({
+                    "countrycode": player.countrycode.id if player.countrycode is not None else None,
+                    "countryname": player.countrycode.name if player.countrycode is not None else None
+                })
+
+            if run.subcategory == "Classic Mode - Co-Op (Normal)":
+                run_add.update({
+                    "player2": player2.name if player2 != "Anonymous" else "Anonymous",
+                    "player2nickname": player2.nickname if player2 != "Anonymous" else None,
+                    "countrycode2": player2.countrycode.id if player2 != "Anonymous" and player2.countrycode else None,
+                    "countryname2": player2.countrycode.name if player2 != "Anonymous" and player2.countrycode else None
+                })
 
             runs_list.append(run_add)
-
         
         leaderboard = sorted(runs_list, key=lambda x: x["place"], reverse=False)
 
@@ -526,6 +512,8 @@ def GameLeaderboard(request,abbr,category=None):
 
     return render(request, "srl/il_leaderboard.html", context)
 
+### MainPage is, well, for the main page. This sets up the "Current World Records", "Latest Runs", and "Latest World Records" tables.
+### subcategories and exempt_games are hard-coded for now until a better solution comes up for how to store them. For your project, modify them.
 def MainPage(request):
     ### These subcategories are what is queried to have them appear as World Records on the main page. It is kinda clunky, I will eventually have a better solution.
     ### To get these values, look up the ID of the WR in a category and copy + paste the "Subcategory Name" field here.
@@ -543,6 +531,8 @@ def MainPage(request):
 
     runs = MainRuns.objects.exclude(obsolete=True).exclude(exclusion_filter).filter(place=1,subcategory__in=subcategories).order_by("-subcategory").annotate(o_date=TruncDate("date"))
 
+    ### Next blocks of code are checks to group runs together within the same game and subcategory. In some circumstances, world records are ties.
+    ### This makes it so it display properly on the main page (as opposed to two rows, they are on a combined row).
     grouped_runs = []
     seen_records = set()
 
@@ -565,6 +555,7 @@ def MainPage(request):
                     "date"      : run.o_date
                 })
 
+    ### Sorts runs within the run_list by the game release date, oldest first.
     run_list = sorted(grouped_runs, key=lambda x: x["game"].release, reverse=False)
 
     ### Sometimes v_date (verify_date) is null; this can happen if the runs on a leaderboard are super old.
@@ -595,6 +586,8 @@ def MainPage(request):
 
     return render(request, "srl/main.html", context)
 
+### All of the below is a work-in-progress for the eventual Historical Leaderboards update
+###########################################################################################
 def MonthlyLeaderboard(request,year,month=None):
     def add_run(main_runs,il_runs,type,month=None):
         export = {}

@@ -7,7 +7,7 @@
 import time,math,requests
 
 ### convert_time is used a few times through the project, mainly to take integer seconds and convert them to a string to call on the website.
-### For example: time_secs of a run is 69.420; this will take the float and conver it to say "1m 09s 420ms"
+### For example: time_secs of a run is 69.420; this will take the float and convert it to say "1m 09s 420ms"
 def convert_time(secs):
     hours, remainder = divmod(secs, 3600)
     minutes, seconds = divmod(remainder, 60)
