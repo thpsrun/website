@@ -2,19 +2,35 @@
 ###### April ??, 2025
 *   [!!!!] This project - dubbed the Speedrun Leaderboard Creator (SRLC) - is now open source! For more information on this, please check out the project's github here: [https://github.com/ThePackle/SRLC/](https://github.com/ThePackle/SRLC/)
   
-*   Added support for Bluesky to player profiles.
+*   Added `bluesky` to the `Players` model.
     *   As a note, this is minor change. If you want your Bluesky account added to your profile, contact Packle. A later update will move to SRC's v2 endpoint, which can return Bluesky links.
+*   Added `twitch` to the `GameOverview` model.
+    *   Added logic so this is imported when a new game is added.
 *   Added Bluesky as an environmental variable to the project that can display on the navbar.
 *   Added support for a run's current run verification status from SRC.
     *   Runs will be cached from now on when they are awaiting approval. They will be removed if rejected.
 *   Added support for an optional archived videos field to `MainRuns` and `ILRuns` models.
 *   Added quick-links to Twitch, YouTube, and/or Archived Video to player profiles, leaderboards, and the main page. [#19](https://github.com/ThePackle/SRLC/issues/19)
 *   Added more alt and title tags through the site for accessibility.
+*   Added a new panel on the main page to show who is actively streaming.
+    *   Also added the `/live/` endpoint, more information below.
   
   
 *   Changed the front page to display tied world records on the same table row. [#12](https://github.com/ThePackle/SRLC/issues/12)
 *   Changed all of the API endpoints so they properly return information. Embed and query support has been added where applicable.
-    *   This was broken for a few releases, since a lot of code was refactored.
+    *   `/runs/<ID>` returns information on a run based on its ID (e.g. SRC).
+    *   `/players/<ID>` returns information on a player based on their name or ID.
+    *   `/players/all` returns all information on players, but must be given query options.
+    *   `/players/<USER>/pbs` returns all PBs of a player based on their name or ID.
+    *   `/games/<ID>` returns information on a game based on their name or abbreviation.
+    *   `/games/all` returns information on all games.
+    *   `/categories/<ID>` returns information on a category based on its ID.
+    *   `/levels/<ID>` returns information on a level based on its ID.
+    *   `/variables/<ID>` returns information on a variable based on its ID.
+    *   `/live/` returns information on active streams.
+        * `/live/` has GET, POST, PUT, and DELETE.
+    *   All endpoints have specific query and embed options that are added (TODO) <HERE>.
+*   Changed `/runs/` endpoint to now properly return data upon POST'ing a new run.
   
   
 *   Fixed an issue where the nickname of players would not properly appear in the "Latest Runs" portion of the main page. [#17](https://github.com/ThePackle/SRLC/issues/17)
@@ -25,6 +41,9 @@
 *   Removed `Location` field from the Players model.
     *   `CountryCode` does a similar thing. `Location` was a remnant from the refactor.
 *   Removed the website's changelog to appear on this GitHub repo.
+*   Removed the `/import/` endpoint.
+    *   This was a fragment from the earlier days of the project when I - quite frankly - did not know what I was doing.
+        * Clarification: I still don't.
 
 * * *
 

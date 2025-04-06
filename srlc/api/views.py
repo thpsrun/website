@@ -1,20 +1,56 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.http import HttpResponseForbidden,HttpResponseBadRequest,HttpResponseServerError,HttpResponseNotFound,HttpResponse
+from django.http import HttpResponseBadRequest,HttpResponseNotFound
 from .serializers import *
 from srl.tasks import *
-from srl.models import GameOverview,MainRuns,ILRuns
 from api.tasks import *
 from django.db.models import Count,F,Subquery,OuterRef, Q
 from django.http import JsonResponse
 
-class API_ProcessRuns(APIView):
-    def get(self,request,runid=None):
-        return HttpResponseBadRequest("GET Requests are not allowed")
+class API_Runs(APIView):
+    ALLOWED_QUERIES = {"status"}
+    ALLOWED_EMBEDS  = {"category","level","game","platform","players"}
+    def get(self,request,id):
+        query_fields    = request.GET.get("query","").split(",")
+        query_fields    = [field.strip() for field in query_fields if field.strip()] 
+        invalid_queries = [field for field in query_fields if field not in self.ALLOWED_QUERIES]
 
-    def post(self, request, runid):
-        serializer = ImportRunSerializer(data={"runid": runid})
+        if invalid_queries:
+            return Response({"ERROR": f"Invalid queries: {', '.join(invalid_queries)}"},status=status.HTTP_400_BAD_REQUEST)
+        
+        embed_fields   = request.GET.get("embed","").split(",")
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
+
+        if invalid_embeds:
+            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},status=status.HTTP_400_BAD_REQUEST)
+
+        if id == "all":
+            if "status" in query_fields:
+                m_runs = MainRuns.objects.filter(vid_status="new")
+                i_runs = ILRuns.objects.filter(vid_status="new")
+
+                main_runs = MainRunSerializer(m_runs,many=True,context={"embed": embed_fields}).data
+                il_runs = ILRunSerializer(i_runs,many=True,context={"embed": embed_fields}).data
+                
+                return Response({
+                    "main_runs" : main_runs,
+                    "il_runs"   : il_runs,
+                })
+            else:
+                return Response({"ERROR": "'all' can only be used with a query (status)"},status=status.HTTP_400_BAD_REQUEST)
+        else:
+            try:
+                run = MainRuns.objects.get(id__iexact=id)
+                return Response(MainRunSerializer(run,context={"embed": embed_fields}).data,status=status.HTTP_200_OK)
+            except MainRuns.DoesNotExist:
+                run = ILRuns.objects.get(id__iexact=id)
+                return Response(ILRunSerializer(run,context={"embed": embed_fields}).data,status=status.HTTP_200_OK)
+
+                
+    def post(self,request,id):
+        serializer = ImportRunSerializer(data={"runid": id})
         serializer.is_valid(raise_exception=True)
 
         validated_data = serializer.validated_data
@@ -59,53 +95,17 @@ class API_ProcessRuns(APIView):
             if finish == 0:
                 run_info["place"] = 0
                 add_run.delay(lb_info["game"]["data"],run_info,lb_info["category"]["data"],lb_info["level"]["data"],run_info["values"],True)
-                return HttpResponse(status=200)
+            
+            time.sleep(2)
+            if run_info["level"]:
+                return Response(ILRunSerializer(ILRuns.objects.get(id=run_info['id'])).data,status=status.HTTP_201_CREATED)
             else:
-                return HttpResponse(status=200)
+                return Response(MainRunSerializer(MainRuns.objects.get(id=run_info['id'])).data,status=status.HTTP_201_CREATED)
         else:
-            return HttpResponse("The run provided is not associated with the Tony Hawk series.")
-
-class API_Runs(APIView):
-    def get(self, request, runid):
-        serializer = ImportRunSerializer(data={"runid": runid})
-        serializer.is_valid(raise_exception=True)
-
-        validated_data = serializer.validated_data
-        validated_runid = validated_data["runid"]
-
-        run = MainRuns.objects.filter(id=validated_runid) or ILRuns.objects.filter(id=validated_runid)
-
-        if len(run) == 0:
-            return HttpResponseNotFound(f"runid {validated_runid} does not exist in either FG or IL models.")
-        else:
-            common = {
-                "id":           run[0].id,
-                "gameid":       run[0].game,
-                "category":     run[0].category,
-                "subcategory":  run[0].subcategory,
-                "values":       run[0].values,
-                "place":        run[0].place,
-                "url":          run[0].url,
-                "date":         run[0].date,
-                "time":         run[0].time,
-                "time_secs":    run[0].time_secs,
-                "packlepoints": run[0].points,
-                "platform":     run[0].platform,
-                "player1":      run[0].player,
-            }
-
-            try:
-                common["player2"] = run[0].playerid2
-            except AttributeError:
-                common["levelid"] = run[0].levelid
-
-            return Response(common)
-                
-    def post(self,request,runid=None):
-        return HttpResponseBadRequest("POST Requests are not allowed")
+            return Response({"ERROR": f"The link provided does not belong to the Tony Hawk series."},status=status.HTTP_400_BAD_REQUEST)
     
     def update(self,request,runid=None):
-        return HttpResponseBadRequest("POST Requests are not allowed")
+        return HttpResponseBadRequest("PUT Requests are not allowed")
     
 class API_Players(APIView):
     ALLOWED_QUERIES = {"streamexceptions"}
@@ -174,11 +174,11 @@ class API_Games(APIView):
 
         if id == "all":
             games = GameOverview.objects.all().order_by("release")
-            return Response(GameSerializer(games,many=True,context={"embed": embed_fields}).data)
+            return Response(GameSerializer(games,many=True,context={"embed": embed_fields}).data,status=status.HTTP_200_OK)
         
         game = GameOverview.objects.filter(id__iexact=id).first() or GameOverview.objects.filter(abbr__iexact=id).first()
         if game:
-            return Response(GameSerializer(game,context={"embed": embed_fields}).data)
+            return Response(GameSerializer(game,context={"embed": embed_fields}).data,status=status.HTTP_200_OK)
         else:
             return Response({"ERROR": "Game ID or Abbreviation does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -197,7 +197,7 @@ class API_Categories(APIView):
     
         category = Categories.objects.filter(id__iexact=id).first()
         if category:
-            return Response(CategorySerializer(category,context={"embed": embed_fields}).data) 
+            return Response(CategorySerializer(category,context={"embed": embed_fields}).data,status=status.HTTP_200_OK) 
         else:
             return Response({"ERROR": "Category ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
             
@@ -216,9 +216,9 @@ class API_Variables(APIView):
     
         variables = Variables.objects.filter(id__iexact=id).first()
         if variables:
-            return Response(VariableSerializer(variables,context={"embed": embed_fields}).data) 
+            return Response(VariableSerializer(variables,context={"embed": embed_fields}).data,status=status.HTTP_200_OK) 
         else:
-            return Response({"ERROR": "Variable ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"ERROR": "Variable ID does not exist"},status=status.HTTP_404_NOT_FOUND)
 
 class API_Values(APIView):
     def get(self, request, value):
@@ -254,6 +254,22 @@ class API_Levels(APIView):
     
         levels = Levels.objects.filter(id__iexact=id).first()
         if levels:
-            return Response(LevelSerializer(levels,context={"embed": embed_fields}).data) 
+            return Response(LevelSerializer(levels,context={"embed": embed_fields}).data,status=status.HTTP_200_OK) 
         else:
-            return Response({"ERROR": "Level ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"ERROR": "Level ID does not exist"},status=status.HTTP_404_NOT_FOUND)
+        
+class API_Streams(APIView):
+    def get(self,request):
+        return Response(StreamSerializer(NowStreaming.objects.all(),many=True).data,status=status.HTTP_200_OK)
+    
+    def post(self,request):
+        serializer = StreamSerializerPost(data=request.data)
+
+        if not NowStreaming.objects.filter(Q(streamer__name__iexact=request.data["streamer"]) | Q(streamer__id__iexact=request.data["streamer"])).exists():
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data,status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"ERROR": "Stream from this player already exists."},status=status.HTTP_409_CONFLICT)

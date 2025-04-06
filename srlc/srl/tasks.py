@@ -16,8 +16,7 @@ from .m_tasks import src_api,convert_time,points_formula
 
 @shared_task
 def update_game(src_game):
-    src_game = src_api(f"https://www.speedrun.com/api/v1/games/{src_game['id']}?embed=platforms")
-
+    src_game = src_api(f"https://www.speedrun.com/api/v1/games/{src_game}?embed=platforms")
     if isinstance(src_game,dict):
         with transaction.atomic():
             game, created = GameOverview.objects.update_or_create(
@@ -29,6 +28,7 @@ def update_game(src_game):
                     "defaulttime"   : src_game["ruleset"]["default-time"],
                     "idefaulttime"  : src_game["ruleset"]["default-time"],
                     "boxart"        : src_game["assets"]["cover-large"]["uri"],
+                    "twitch"        : src_game.get("names").get("twitch") if src_game.get("names").get("twitch") is not None else None,
                     "pointsmax"     : 1000 if not "category extension" in src_game["names"]["international"].lower() else 25,
                     "ipointsmax"    : 100 if not "category extension" in src_game["names"]["international"].lower() else 25
                 }
@@ -46,8 +46,8 @@ def update_game_runs(game_id,reset):
         Levels.objects.filter(game=game_id).delete()
         Variables.objects.filter(game=game_id).delete()
         VariableValues.objects.filter(var__game__id=game_id).delete()
-        MainRuns.objects.filter(game=game_id).delete()
-        ILRuns.objects.filter(game=game_id).delete()
+        MainRuns.objects.filter(game=game_id,obsolete=False).delete()
+        ILRuns.objects.filter(game=game_id,obsolete=False).delete()
 
     game_check = src_api(f"https://www.speedrun.com/api/v1/games/{game_id}?embed=platforms,levels,categories,variables")
 

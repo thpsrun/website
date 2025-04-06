@@ -22,9 +22,9 @@ form.search-bar{
     border-width: 5px;
 }
 th{ 
-    color:#fff!important;
+    color:#fff !important;
     text-align: center;
-    font-size: larger;
+    font-size: large;
 }
 td{
     font-size: large;
@@ -38,7 +38,7 @@ td{
 .table{
     padding: 0.5%;
     text-align: center;
-    vertical-align:middle;
+    vertical-align: middle;
     margin-left: auto;
     margin-right: auto;
     background-color: rgba(255,255,255,.85);
@@ -79,7 +79,6 @@ td{
 .bg-info{
     background-color: #515151 !important;
 }
-
 .navbar-nav li:hover > ul.dropdown-menu {
     display: block;
 }
@@ -116,6 +115,25 @@ td{
     display: flex;
     flex-direction: column;
 }
+td.now-streaming{
+    text-align: left;
+    font-size: medium !important;
+}
+td.side-table-td{
+    font-size: medium !important;
+}
+.pfp-img-streaming{
+    width: 50px;
+    height: 50px;
+    vertical-align: top;
+}
+.flag-streaming{
+    width: 8%;
+}
+.stream-title{
+    width: 300px;
+    word-wrap: break-word;
+}
 /*PROFILE CSS*/
 .super-container{
     background-color: rgba(255,255,255,.85);
@@ -126,7 +144,7 @@ td{
     margin-top: 1%;
     margin-bottom: 1%;
     flex-wrap: wrap;
-    font-size: large;
+    font-size: medium;
     display: flex;
     justify-content: center;
     text-align: center;
@@ -137,14 +155,17 @@ td{
     padding: 10px;
 }
 .pfp-img{
-    height: 100px;
     width: 100px;
+    height: 100%;
+    vertical-align: middle;
 }
 .profile-info{
     display: flex;
+    vertical-align: middle;
 }
 .profile-pfp{
     padding-right: 10px;
+    vertical-align: middle;
 }
 .profile-username{
     font-size: 20px;
@@ -160,8 +181,11 @@ td{
     padding-bottom: 5px;
 }
 .profile-stats{
-    justify-content: center;
+    vertical-align: middle;
     padding: 0 50px;
+}
+.obsolete-tr{
+    background-color: #00cc66 !important;
 }
 
 /*COOKIE BANNER*/
@@ -234,5 +258,12 @@ body.with-cookie-bar {
     }
     .side-table{
         margin-left: unset;
+    }
+    .flag-streaming{
+        width: 5%;
+    }
+    .stream-title{
+        width: 400px;
+        word-wrap: break-word;
     }
 }

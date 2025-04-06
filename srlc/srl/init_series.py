@@ -43,7 +43,7 @@ def init_series(series_id):
                 for plat in game_check["platforms"]["data"]:
                     update_platform.delay(plat)
 
-                update_game.delay(game_check)
+                update_game.delay(game["id"])
 
                 for category in game_check["categories"]["data"]:
                     update_category.delay(category,game["id"])

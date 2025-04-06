@@ -60,8 +60,9 @@ class GameOverview(models.Model):
     ]
 
     id          = models.CharField(max_length=10,primary_key=True,verbose_name="SRL Game ID")
-    name        = models.CharField(max_length=35,verbose_name="Name")
+    name        = models.CharField(max_length=55,verbose_name="Name")
     abbr        = models.CharField(max_length=20,verbose_name="Abbreviation")
+    twitch      = models.CharField(max_length=55,verbose_name="Twitch Name",null=True,blank=True)
     release     = models.DateField(verbose_name="Release Date")
     boxart      = models.URLField(verbose_name="Box Art URL")
     defaulttime = models.CharField(verbose_name="Default Time",choices=LeaderboardChoices,default="realtime")
@@ -327,3 +328,18 @@ class ILRuns(models.Model):
                 null=True,
                 help_text="Optional field. If you have a mirrored link to a video, you can input it here."
     )
+
+class NowStreaming(models.Model):
+    def __str__(self):
+        return "Streaming: " + self.streamer.name
+    class Meta:
+        verbose_name_plural = "Streaming"
+
+    streamer    = models.ForeignKey(Players,verbose_name="Streamer",null=True,on_delete=models.SET_NULL)
+    game        = models.ForeignKey(GameOverview,verbose_name="Game",null=True,on_delete=models.SET_NULL)
+    title       = models.CharField(max_length=100,verbose_name="Twitch Title")
+    offline_ct  = models.IntegerField(
+        verbose_name="Offline Count",
+        help_text="In some situations, bots or the Twitch API can mess up. To help users, you can use this counter to countup the number of attempts to see if the runner is offline. After a certain number is hit, you can do something like remove embeds and/or remove this record."
+    )
+    stream_time = models.DateTimeField(verbose_name="Started Stream")

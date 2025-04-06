@@ -60,7 +60,6 @@ class ImportObsoleteView(ListView):
     def get(self, request):
         player_ids = self.request.GET.get("player_ids", "").split(",")
         for player in player_ids:
-            #asyncio.run(import_obsolete(player))
             import_obsolete.delay(player)
 
         return redirect("/admin/srl/players/")

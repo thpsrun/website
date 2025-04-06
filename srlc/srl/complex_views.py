@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.db.models import Sum,Q,Max,F
 from django.db.models.functions import TruncDate
-from .models import GameOverview,Players,MainRuns,ILRuns,VariableValues
+from .models import GameOverview,Players,MainRuns,ILRuns,VariableValues,NowStreaming
 
 ## PlayerProfile grabs all of the unique information for a single user
 ## (e.g., username, nickname, main runs, individual level runs, etc.) and context's them
@@ -23,8 +23,8 @@ def PlayerProfile(request,name):
         return render(request, "srl/500.html")
     
     games         = GameOverview.objects.all().order_by("name")
-    main_runs     = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("date"))
-    il_runs       = ILRuns.objects.filter(player_id=player.id).annotate(o_date=TruncDate("date"))
+    main_runs     = MainRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("date"))
+    il_runs       = ILRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(player_id=player.id).annotate(o_date=TruncDate("date"))
     total_runs    = len(main_runs) + len(il_runs)
     
     main_runs     = main_runs.filter(obsolete=False)
@@ -33,6 +33,8 @@ def PlayerProfile(request,name):
     hidden_cats   = VariableValues.objects.filter(hidden=True).values_list("value")
     main_runs     = main_runs.exclude(values__in=hidden_cats)
 
+    ### For co-op categories, runners could be player 1 or player 2 and it would count as two different runs.
+    ### This would remove the slower of the two and not count it towards points.
     if main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)"):
         exclude   = main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)").order_by("-points").values("id")[1:]
         main_runs = main_runs.exclude(id__in=exclude)
@@ -49,7 +51,7 @@ def PlayerProfile(request,name):
             if item["player"] == player.name:
                 player_rank = index + 1
                 break
-
+ 
         for index, item in enumerate(leaderboard[1]):
             if item["player"] == player.name:
                 main_rank = index + 1
@@ -100,20 +102,35 @@ def PlayerHistory(request,name):
         return render(request, "srl/500.html")
     
     games      = GameOverview.objects.all().order_by("name")
-    main_runs  = MainRuns.objects.filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("date"))
-    il_runs    = ILRuns.objects.filter(player_id=player.id).annotate(o_date=TruncDate("date"))
+    main_runs  = (MainRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("date"))).order_by("-o_date")
+    il_runs    = ILRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(player_id=player.id).annotate(o_date=TruncDate("date")).order_by("subcategory")
 
+    ### For co-op categories, runners could be player 1 or player 2 and it would count as two different runs.
+    ### This would remove the slower of the two and not count it towards points.
     if main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)"):
-        exclude = main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)").order_by("-points").values("id")[1:]
+        exclude   = main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)").order_by("-points").values("id")[1:]
         main_runs = main_runs.exclude(id__in=exclude)
 
+    award_set = []
+    for award in player.awards.all():
+        award_set.append([award.name,award.image.name.rsplit("/")[-1]])
+
     unique_game_names   = games.order_by("release").values_list("name","release")
+
+    context = {
+        "player"            : player,
+        "main_runs"         : main_runs,
+        "il_runs"           : il_runs,
+        "unique_game_names" : unique_game_names,
+    }
+
+    return render(request, "srl/player_profile.html", context)
 
 def Leaderboard(request,profile=None,game=None):
     players_all     = Players.objects.all()
     games_all       = GameOverview.objects.all()
-    main_runs_all   = MainRuns.objects.exclude(place=0).filter(obsolete=False)
-    il_runs_all     = ILRuns.objects.exclude(place=0).filter(obsolete=False)
+    main_runs_all   = MainRuns.objects.exclude(vid_status__in=["new","rejected"],place=0).filter(obsolete=False)
+    il_runs_all     = ILRuns.objects.exclude(vid_status__in=["new","rejected"],place=0).filter(obsolete=False)
 
     leaderboard     = []
     fg_leaderboard  = []
@@ -311,8 +328,8 @@ def search_leaderboard(request):
     leaderboard         = []
     
     for player in players_all:
-        main_points     = MainRuns.objects.filter(obsolete=False).filter(Q(player_id=player.id) | Q(player2_id=player.id)).filter(points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
-        il_points       = ILRuns.objects.filter(obsolete=False,player_id=player.id,points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
+        main_points     = MainRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(obsolete=False).filter(Q(player_id=player.id) | Q(player2_id=player.id)).filter(points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
+        il_points       = ILRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(obsolete=False,player_id=player.id,points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
         total_points    = main_points + il_points
 
         leaderboard_all.append({
@@ -351,7 +368,7 @@ def ILGameLeaderboard(request,abbr,category=None):
     try:
         game        = GameOverview.objects.filter(abbr=abbr)
         players     = Players.objects.all()
-        ilruns      = ILRuns.objects.filter(game_id=game[0].id).filter(points__gt=0,obsolete=False)
+        ilruns      = ILRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(game_id=game[0].id).filter(points__gt=0,obsolete=False)
     except GameOverview.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
     except:
@@ -427,8 +444,8 @@ def GameLeaderboard(request,abbr,category=None):
     try:
         game        = GameOverview.objects.get(abbr=abbr)
         players     = Players.objects.all()
-        mainruns    = MainRuns.objects.filter(game_id=game.id).filter(points__gt=0,obsolete=False)
-        hidden_cats = VariableValues.objects.filter(hidden=True).values_list("value")
+        mainruns    = MainRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(game_id=game.id,points__gt=0,obsolete=False)
+        hidden_cats = VariableValues.objects.exclude(vid_status__in=["new","rejected"]).filter(hidden=True).values_list("value")
     except GameOverview.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
     except:
@@ -529,7 +546,8 @@ def MainPage(request):
     for game in exempt_games:
         exclusion_filter |= Q(game__name__icontains=game)
 
-    runs = MainRuns.objects.exclude(obsolete=True).exclude(exclusion_filter).filter(place=1,subcategory__in=subcategories).order_by("-subcategory").annotate(o_date=TruncDate("date"))
+    streamers = NowStreaming.objects.all()
+    runs = MainRuns.objects.exclude(vid_status__in=["new","rejected"],obsolete=True).exclude(exclusion_filter).filter(place=1,subcategory__in=subcategories).order_by("-subcategory").annotate(o_date=TruncDate("date"))
 
     ### Next blocks of code are checks to group runs together within the same game and subcategory. In some circumstances, world records are ties.
     ### This makes it so it display properly on the main page (as opposed to two rows, they are on a combined row).
@@ -561,8 +579,8 @@ def MainPage(request):
     ### Sometimes v_date (verify_date) is null; this can happen if the runs on a leaderboard are super old.
     ### And since MainRuns and ILRuns are separate models, this code will exclude v_dates that are null, order by v_date, and get the latest 5 for each model.
     ### wrs does the same, but filters based on place=1 in the model.
-    wrs = (MainRuns.objects.filter(place=1,obsolete=False,v_date__isnull=False).order_by("-v_date")[:25]).union(ILRuns.objects.filter(place=1,obsolete=False,v_date__isnull=False).order_by("-v_date")[:25]).order_by("-v_date").values("id")[:5]
-    pbs = (MainRuns.objects.filter(obsolete=False,v_date__isnull=False).exclude(place=1).order_by("-v_date")[:25]).union(ILRuns.objects.filter(obsolete=False,v_date__isnull=False).exclude(place=1).order_by("-v_date")[:25]).order_by("-v_date").values("id")[:5]
+    wrs = (MainRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(place=1,obsolete=False,v_date__isnull=False).order_by("-v_date")[:25]).union(ILRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(place=1,obsolete=False,v_date__isnull=False).order_by("-v_date")[:25]).order_by("-v_date").values("id")[:5]
+    pbs = (MainRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(obsolete=False,v_date__isnull=False).exclude(place=1).order_by("-v_date")[:25]).union(ILRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(obsolete=False,v_date__isnull=False).exclude(place=1).order_by("-v_date")[:25]).order_by("-v_date").values("id")[:5]
 
     for pb in pbs:
         try: run = MainRuns.objects.get(id=pb["id"])
@@ -579,6 +597,7 @@ def MainPage(request):
             wrs_data.append(run)
 
     context = {
+        "streamers" : streamers,
         "runs"      : run_list,
         "new_runs"  : runs_data,
         "new_wrs"   : wrs_data,
