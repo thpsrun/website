@@ -404,36 +404,36 @@ class StreamSerializerPost(serializers.ModelSerializer):
 
     def validate_streamer(self,streamer):
         try:
-            return Players.objects.get(Q(id__iexact=streamer) | Q(name__iexact=streamer))
+            return Players.objects.get(Q(id__iexact=streamer) | Q(name__iexact=streamer) | Q(twitch__icontains=streamer))
         except Players.DoesNotExist:
-            raise serializers.ValidationError("Player name or ID does not exist.")
+            raise serializers.ValidationError("streamer name or ID does not exist.")
         
     def validate_game(self,gameid):
         try:
             return GameOverview.objects.get(Q(id__iexact=gameid) | Q(name__iexact=gameid) | Q(abbr__iexact=gameid))
         except GameOverview.DoesNotExist:
-            raise serializers.ValidationError("Game name, ID, or abbreviation does not exist.")
+            raise serializers.ValidationError("game name, ID, or abbreviation does not exist.")
         
     def validate_title(self,title):
         if len(title) == 0 or len(title) > 100:
-            raise serializers.ValidationError("Title length is 0 or greater than 100.")
+            raise serializers.ValidationError("title length is 0 or greater than 100.")
         else:
             return title
     
     def validate_offline_ct(self,count):
         try:
             if count < 0:
-                raise serializers.ValidationError("Offline count must be positive.")
+                raise serializers.ValidationError("offline_ct must be a positive integer.")
             else:
                 return count
         except:
-            raise serializers.ValidationError("Offline count must be an integer.")
+            raise serializers.ValidationError("offline_ct must be an integer.")
         
     def validate_stream_time(self,streamtime):
         try:
             correct_time = datetime.fromisoformat(streamtime.replace("Z","+00:00")).replace(tzinfo=None)
             if correct_time > datetime.now():
-                raise serializers.ValidationError("Date and time cannot be in the future.")
+                raise serializers.ValidationError("stream_time cannot be in the future.")
             else:
                 return correct_time
         except:

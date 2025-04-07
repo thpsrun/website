@@ -127,8 +127,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # API RATE LIMITING
-RATELIMIT_RATE      = "50/m"
-RATELIMIT_RESPONSE  = '{"error": "Too many requests. Please try again later."}'
+RATELIMIT_RATE      = "200/m"
+RATELIMIT_RESPONSE  = '{"ERROR": "Too many requests. Please try again later."}'
 RATELIMIT_ENABLE    = True
 
 

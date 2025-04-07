@@ -335,7 +335,7 @@ class NowStreaming(models.Model):
     class Meta:
         verbose_name_plural = "Streaming"
 
-    streamer    = models.ForeignKey(Players,verbose_name="Streamer",null=True,on_delete=models.SET_NULL)
+    streamer    = models.OneToOneField(Players,primary_key=True,verbose_name="Streamer",on_delete=models.CASCADE)
     game        = models.ForeignKey(GameOverview,verbose_name="Game",null=True,on_delete=models.SET_NULL)
     title       = models.CharField(max_length=100,verbose_name="Twitch Title")
     offline_ct  = models.IntegerField(

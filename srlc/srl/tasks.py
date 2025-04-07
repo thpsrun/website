@@ -10,6 +10,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.db import transaction
 from celery import shared_task
+from .automations import *
 from langcodes import standardize_tag
 from .models import GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,CountryCodes,Platforms,MainRunTimeframe
 from .m_tasks import src_api,convert_time,points_formula
@@ -405,7 +406,8 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                 "points"        : points,
                 "platform"      : Platforms.objects.get(id=wr_records["run"]["system"]["platform"]) if Platforms.objects.filter(id=wr_records["run"]["system"]["platform"]).exists() else None,
                 "emulated"      : wr_records["run"]["system"]["emulated"],
-                "obsolete"      : False
+                "obsolete"      : False,
+                "vis_status"    : wr_records["run"]["status"]["status"],
             }
 
             lrt_fix = False
@@ -492,7 +494,8 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                         "points"        : points,
                         "platform"      : Platforms.objects.get(id=pb["run"]["system"]["platform"]) if Platforms.objects.filter(id=pb["run"]["system"]["platform"]).exists() else None,
                         "emulated"      : pb["run"]["system"]["emulated"],
-                        "obsolete"      : False
+                        "obsolete"      : False,
+                        "vid_status"    : pb["run"]["status"]["status"],
                     }
 
                     if category["type"] == "per-game":
@@ -631,6 +634,8 @@ def import_obsolete(player):
 
 
 ### TODO: This is for the upcoming "Historical Points" update.
+##############################################################################
+##############################################################################
 def import_srltimes(run):
     print(run)
     run_info = src_api(f"https://speedrun.com/api/v1/runs/{run}")

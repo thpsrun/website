@@ -9,9 +9,61 @@ from django.db import transaction
 from django.db.models import Count
 from celery import shared_task
 from srl.models import Variables,Categories,VariableValues,MainRuns,ILRuns,GameOverview,Players,Levels,Platforms
-from srl.tasks import convert_time,update_player
-from srl.m_tasks import points_formula
+from srl.tasks import *
+from srl.m_tasks import points_formula,src_api
 
+### normalize_src is the beginning of a chain of functions used to normalize the data from SRC and put them into the database.
+### It performs checks to see if it is a new game, category, sub-category, and so on.
+### It also checks if the run is a world record, before importing, so it knows to complete additional functions and checks and balances.
+@shared_task
+def normalize_src(id):
+    run_info = src_api(f"https://speedrun.com/api/v1/runs/{id}?embed=players")
+    try:
+        if "speedrun.com/th" in run_info["weblink"]:
+            if not GameOverview.objects.filter(id=run_info["game"]).exists():
+                update_game_runs.delay(run_info["game"])
+
+            for player in run_info["players"]["data"]:
+                if player["rel"] != "guest":
+                    if not Players.objects.filter(id=player["id"]).exists():
+                        update_player.delay(player["id"])
+
+            if run_info["level"]:
+                lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run_info['game']}/level/{run_info['level']}/{run_info['category']}?embed=game,category,level,players,variables")
+
+                update_level.delay(lb_info["level"]["data"],run_info["game"])
+            elif len(run_info["values"]) > 0:
+                lb_variables = ""
+                for key, value in run_info["values"].items():
+                    lb_variables += f"var-{key}={value}&"
+
+                lb_variables = lb_variables.rstrip("&")
+
+                lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run_info['game']}/category/{run_info['category']}?{lb_variables}&embed=game,category,level,players,variables")
+            else:
+                lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run_info['game']}/category/{run_info['category']}?embed=game,category,level,players,variables")
+            
+            for variable in lb_info["variables"]["data"]:
+                update_variable.delay(run_info["game"],variable)
+
+            update_category.delay(lb_info["category"]["data"],run_info["game"])
+            finish = 0
+            for run in lb_info["runs"]:
+                if run["run"]["id"] == run_info["id"]:
+                    add_run.delay(lb_info["game"]["data"],run,lb_info["category"]["data"],lb_info["level"]["data"],run_info["values"])
+                    finish = 1
+                
+            if finish == 0:
+                run_info["place"] = 0
+                add_run.delay(lb_info["game"]["data"],run_info,lb_info["category"]["data"],lb_info["level"]["data"],run_info["values"],True)
+        
+            if run_info["level"]: return True
+            else: return False
+        else:
+            return "invalid"
+    except:
+        return "invalid"
+    
 ### add_run starts to gathers information about the approved run from the SRC API.
 ### The biggest thing here is that it will normalize the data so it can be properly stored in your API.
 ### Part of the normalization is taking the categories and sub-categories and sub-sub-categories and properly formatting them before handing them to invoke_run.
@@ -172,7 +224,7 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
             "url"           : run["run"]["weblink"],
             "video"         : run_video,
             "date"          : run["run"]["submitted"] if run["run"]["submitted"] else run["run"]["date"],
-            "v_date"        : run["run"]["status"]["verify-date"],
+            "v_date"        : run["run"]["status"].get("verify-date") if run["run"]["status"].get("verify-date") is not None else None,
             "time"          : convert_time(run["run"]["times"]["realtime_t"]) if run["run"]["times"]["realtime_t"] > 0 else 0,
             "time_secs"     : run["run"]["times"]["realtime_t"],
             "timenl"        : convert_time(run["run"]["times"]["realtime_noloads_t"]) if run["run"]["times"]["realtime_noloads_t"] > 0 else 0,
@@ -181,7 +233,8 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
             "timeigt_secs"  : run["run"]["times"]["ingame_t"],
             "platform"      : Platforms.objects.get(id=run["run"]["system"]["platform"]) if Platforms.objects.filter(id=run["run"]["system"]["platform"]).exists() else None,
             "emulated"      : run["run"]["system"]["emulated"],
-            "obsolete"      : obsolete
+            "obsolete"      : obsolete,
+            "vid_status"    : run["run"]["status"]["status"],
         }
 
         ### LRT_TEMP_FIX
@@ -265,6 +318,8 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
                             wrecord = wr_pull.timeigt_secs
                     
                     points = points_formula(wrecord,secs,max_points)
+                else:
+                    points = 0
 
             player1 = players[0].get("id")
             

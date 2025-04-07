@@ -164,7 +164,11 @@
                                                 {% if game.game.defaulttime == "realtime"%}
                                                     <a href="{{ game.url }}">{{ game.time }}</a>
                                                 {% elif game.game.defaulttime == "realtime_noloads" %}
-                                                    <a href="{{ game.url }}">{{ game.timenl }}</a>
+                                                    {% if game.timenl_secs == 0 %}
+                                                        <a href="{{ game.url }}">{{ game.time }}</a>
+                                                    {% else %}
+                                                        <a href="{{ game.url }}">{{ game.timenl }}</a>
+                                                    {% endif %}
                                                 {% else %}
                                                     {% if game.timeigt_secs == 0 %}
                                                         <a href="{{ game.url }}">{{ game.time }}</a>
@@ -247,10 +251,14 @@
                                                         <div class="placing">---
                                                     {% endif %}
                                                     <br />
-                                                    {% if game.game.defaulttime == "realtime" %}
+                                                    {% if game.game.idefaulttime == "realtime" %}
                                                         <a href="{{ game.url }}">{{ game.time }}</a>
-                                                    {% elif game.game.defaulttime == "realtime_noloads" %}
-                                                        <a href="{{ game.url }}">{{ game.timenl }}</a>
+                                                    {% elif game.game.idefaulttime == "realtime_noloads" %}
+                                                        {% if game.timenl_secs == 0 %}
+                                                            <a href="{{ game.url }}">{{ game.time }}</a>
+                                                        {% else %}
+                                                            <a href="{{ game.url }}">{{ game.timenl }}</a>
+                                                        {% endif %}
                                                     {% else %}
                                                         {% if game.timeigt_secs == 0%}
                                                             <a href="{{ game.url }}">{{ game.time }}</a>
