@@ -61,6 +61,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "website.context_processor.global_name",
+                "website.context_processor.global_social_media",
             ],
         },
     },

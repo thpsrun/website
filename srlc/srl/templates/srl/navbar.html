@@ -133,24 +133,36 @@
             </li>
         </ul>
         <ul class="navbar-nav social ml-autio">
+            {% if ENV_DISCORD %}
             <li class="nav-item me-3 me-lg-0">
                 <a href="/discord" class="soc" target="_blank"><i class="fab fa-discord fa-lg" alt="Community Discord" title="Community Discord"></i></a>
             </li>
+            {% endif %}
+            {% if ENV_TWITCH %}
             <li class="nav-item me-3 me-lg-0">
                 <a href="/twitch" class="soc" target="_blank"><i class="fab fa-twitch fa-lg" alt="Community Twitch" title="Community Twitch"></i></a>
             </li>
+            {% endif %}
+            {% if ENV_YOUTUBE %}
             <li class="nav-item me-3 me-lg-0">
                 <a href="/youtube" class="soc" target="_blank"><i class="fab fa-youtube fa-lg" alt="Community YouTube" title="Community YouTube"></i></a>
             </li>
+            {% endif %}
+            {% if ENV_BLUESKY %}
             <li class="nav-item me-3 me-lg-0">
                 <a href="/bluesky" class="soc" target="_blank"><i class="fab fa-bluesky fa-lg" alt="Community Bluesky" title="Community Bluesky"></i></a>
             </li>
-            {% comment %} <li class="nav-item me-3 me-lg-0">
+            {% endif %}
+            {% if ENV_TWITTER %}
+            <li class="nav-item me-3 me-lg-0">
                 <a href="/twitter" class="soc" target="_blank"><i class="fab fa-twitter fa-lg" alt="Community Twitter" title="Community Twitter"></i></a>
-            </li> {% endcomment %}
+            </li>
+            {% endif %}
+            {% if ENV_SRC %}
             <li class="nav-item me-3 me-lg-0">
                 <a href="/src" class="soc" target="_blank"><i class="fas fa-trophy fa-lg" alt="Communuty Speedrun.com Leaderboards" title="Community Speedrun.com Leaderboards"></i></a>
             </li>
+            {% endif %}
         </ul>
     </div>
 </nav>

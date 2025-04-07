@@ -15,22 +15,32 @@ admin.site.index_title = "Admin Panel"
 def discord_redirect(request):
     if (env("DISCORD_URL")):
         return redirect(env("DISCORD_URL"))
+    else:
+        return redirect("/")
 
 def twitch_redirect(request):
     if (env("TWITCH_URL")):
         return redirect(env("TWITCH_URL"))
+    else:
+        return redirect("/")
 
 def twitter_redirect(request):
     if (env("TWITTER_URL")):
         return redirect(env("TWITTER_URL"))
+    else:
+        return redirect("/")
   
 def youtube_redirect(request):
     if (env("YOUTUBE_URL")):
         return redirect(env("YOUTUBE_URL"))
+    else:
+        return redirect("/")
 
 def bluesky_redirect(request):
     if (env("BLUESKY_URL")):
         return redirect(env("BLUESKY_URL"))
+    else:
+        return redirect("/")
 
 def src_redirect(request):
     return redirect(env("SRC_URL"))
