@@ -3,16 +3,16 @@
     <head>
         {% load static %}
         <meta charset="utf-8">
-        <meta name="description" content="THPS Speedrun Leaderboards - {{ player.name }} Personal Bests and Statistics">
-        <meta name="author" content="THPS Speedrun Community">
+        <meta name="description" content="{{ ENV_WEBSITE_DESCRIPTION }}">
+        <meta name="author" content="{{ ENV_WEBSITE_AUTHOR }}">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="keywords" content="speedrun, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+        <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
 
         {% load custom_filters %}
         {% if player.nickname %}
-            <title>{{ player.nickname }}{% if "/history" in request.path %}'s Run History{% endif %} - thps.run</title>
+            <title>{{ player.nickname }}{% if "/history" in request.path %}'s Run History{% endif %} - {{ ENV_WEBSITE_NAME }}</title>
         {% else %}
-            <title>{{ player.name }}{% if "/history" in request.path %}'s Run History{% endif %} - thps.run</title>
+            <title>{{ player.name }}{% if "/history" in request.path %}'s Run History{% endif %} - {{ ENV_WEBSITE_NAME }}</title>
         {% endif %}
 
         

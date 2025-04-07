@@ -8,8 +8,8 @@ from django.conf.urls.static import static
 env = environ.Env()
 environ.Env.read_env()
 
-admin.site.site_header = "thps.run"
-admin.site.site_title  = "thps.run"
+admin.site.site_header = env("SITE_NAME")
+admin.site.site_title  = env("SITE_NAME")
 admin.site.index_title = "Admin Panel"
 
 def discord_redirect(request):

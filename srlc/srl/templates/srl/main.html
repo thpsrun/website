@@ -3,13 +3,13 @@
     <head>
         {% load static %}
         <meta charset="utf-8">
-        <meta name="description" content="THPS Speedrun Community Leaderboards and Stats">
-        <meta name="author" content="THPS Speedrun Community">
+        <meta name="description" content="{{ ENV_WEBSITE_DESCRIPTION }}">
+        <meta name="author" content="{{ ENV_WEBSITE_AUTHOR }}">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="keywords" content="speedrun, speedrun.com, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+        <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
 
         {% load custom_filters %}
-        <title>thps.run</title>
+        <title>{{ ENV_WEBSITE_NAME }}</title>
         <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
 
         {% load django_bootstrap5 %}

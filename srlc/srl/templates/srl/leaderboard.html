@@ -3,27 +3,27 @@
     <head>
         {% load static %}
         <meta charset="utf-8">
-        <meta name="description" content="THPS Speedrun Leaderboards">
-        <meta name="author" content="THPS Speedrun Community">
+        <meta name="description" content="{{ ENV_WEBSITE_DESCRIPTION }}">
+        <meta name="author" content="{{ ENV_WEBSITE_AUTHOR }}">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="keywords" content="speedrun, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+        <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
 
         {% if "/fullgame" in request.path %}
-            <title>Full Game Leaderboard - thps.run</title>
+            <title>Full Game Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
         {% elif "/all" in request.path %}
             {% if game_abbr == "thps12" %}
-                <title>THPS1+2 IL Overall Leaderboard - thps.run</title>
+                <title>THPS1+2 IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
             {% elif game_abbr == "thps12ce" %}
-                <title>THPS1+2 CE IL Overall Leaderboard - thps.run</title>
+                <title>THPS1+2 CE IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
             {% elif game_abbr == "thps34" %}
-                <title>THPS3+4 IL Overall Leaderboard - thps.run</title>
+                <title>THPS3+4 IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
             {% elif game_abbr == "thps34ce" %}
-                <title>THPS3+4 CE IL Overall Leaderboard - thps.run</title>
+                <title>THPS3+4 CE IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
             {% else %}
-                <title>{{ game_abbr|upper }} IL Overall Leaderboard - thps.run</title>
+                <title>{{ game_abbr|upper }} IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
             {% endif %}
         {% else %}
-            <title>Overall Leaderboard - thps.run</title>
+            <title>Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
         {% endif %}
         
         <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
