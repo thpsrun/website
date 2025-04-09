@@ -134,6 +134,10 @@ td.side-table-td{
     width: 300px;
     word-wrap: break-word;
 }
+.markdown-body{
+    width: 1300px;
+    word-wrap: break-word;
+}
 /*PROFILE CSS*/
 .super-container{
     background-color: rgba(255,255,255,.85);

@@ -1,9 +1,10 @@
-import os,environ
+import environ
 from django.contrib import admin
-from django.shortcuts import render,redirect
-from django.urls import path, include
+from django.shortcuts import redirect
+from django.urls import path,include
 from django.conf import settings
 from django.conf.urls.static import static
+
 
 env = environ.Env()
 environ.Env.read_env()
@@ -49,6 +50,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
     path("", include("srl.urls")),
+    path("docs/", include("guides.urls")),
     # REDIRECTS
     path("discord",discord_redirect,name="discord_redirect"),
     path("twitch",twitch_redirect,name="twitch_redirect"),

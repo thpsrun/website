@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 load_dotenv() 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(",")
@@ -30,6 +29,7 @@ INSTALLED_APPS = [
     # LOCAL
     "srl",
     "api",
+    "guides",
 ]
 
 MIDDLEWARE = [
@@ -62,6 +62,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "website.context_processor.global_name",
                 "website.context_processor.global_social_media",
+                "website.context_processor.navbar_docs",
             ],
         },
     },
