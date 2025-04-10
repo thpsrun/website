@@ -12,7 +12,7 @@ from django.db import transaction
 from celery import shared_task
 from .automations import *
 from langcodes import standardize_tag
-from .models import GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,CountryCodes,Platforms,MainRunTimeframe
+from .models import GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,CountryCodes,Platforms
 from .m_tasks import src_api,convert_time,points_formula
 
 @shared_task
@@ -407,7 +407,7 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                 "platform"      : Platforms.objects.get(id=wr_records["run"]["system"]["platform"]) if Platforms.objects.filter(id=wr_records["run"]["system"]["platform"]).exists() else None,
                 "emulated"      : wr_records["run"]["system"]["emulated"],
                 "obsolete"      : False,
-                "vis_status"    : wr_records["run"]["status"]["status"],
+                "vid_status"    : wr_records["run"]["status"]["status"],
             }
 
             lrt_fix = False
@@ -636,7 +636,7 @@ def import_obsolete(player):
 ### TODO: This is for the upcoming "Historical Points" update.
 ##############################################################################
 ##############################################################################
-def import_srltimes(run):
+""" def import_srltimes(run):
     print(run)
     run_info = src_api(f"https://speedrun.com/api/v1/runs/{run}")
 
@@ -722,4 +722,4 @@ def invoke_timereview():
                                 run_id      = archived_run.id,
                                 start_date  = wr_run.date,
                                 points      = points_formula(wr_time,run_time,run_type)
-                            )
+                            ) """

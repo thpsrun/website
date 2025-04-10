@@ -445,7 +445,7 @@ def GameLeaderboard(request,abbr,category=None):
         game        = GameOverview.objects.get(abbr=abbr)
         players     = Players.objects.all()
         mainruns    = MainRuns.objects.exclude(vid_status__in=["new","rejected"]).filter(game_id=game.id,points__gt=0,obsolete=False)
-        hidden_cats = VariableValues.objects.exclude(vid_status__in=["new","rejected"]).filter(hidden=True).values_list("value")
+        hidden_cats = VariableValues.objects.filter(hidden=True).values_list("value")
     except GameOverview.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
     except:

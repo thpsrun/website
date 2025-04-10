@@ -75,7 +75,10 @@ def add_run(game,run,category,level,run_variables,obsolete=False,point_reset=Tru
     variable_list = []
     for key, value in run_variables.items():
         variable_list.append(value)
-
+    print("-------------------------------------------------------------------------------")
+    print("Variables: ",len(var_ids))
+    print("Global Variables:",len(global_cats))
+    print("-------------------------------------------------------------------------------")
     if category["type"] == "per-level":
         per_level_check = Categories.objects.filter(game=game["id"],type="per-level")
 
@@ -121,7 +124,6 @@ def add_run(game,run,category,level,run_variables,obsolete=False,point_reset=Tru
                 
                 invoke_single_run.delay(game["id"],category,run,var_name,var_str,obsolete,point_reset)
 
-
     elif len(var_ids) > 1:
         var_string  = ""
         var_name    = ""
@@ -139,14 +141,14 @@ def add_run(game,run,category,level,run_variables,obsolete=False,point_reset=Tru
 
         if len(global_cats) > 1:
             for global_cat in global_cats:
-                    global_values = VariableValues.objects.filter(var=global_cat.id)
+                global_values = VariableValues.objects.filter(var=global_cat.id)
 
-                    for global_value in global_values:
-                        if global_value.value in variable_list:
-                            var_name2  = f"{global_value.name}"
+                for global_value in global_values:
+                    if global_value.value in variable_list:
+                        var_name2  = f"{global_value.name}"
 
-                            var_name = category["name"] + " " + var_name + "(" + var_name2 + ")"
-                            var_str = var_string + "&" + f"{global_value.value}"
+                        var_name = category["name"] + " " + var_name + "(" + var_name2 + ")"
+                        var_str = var_string + "&" + f"{global_value.value}"
 
         elif len(global_cats) == 1:
             global_values = VariableValues.objects.filter(var=global_cats[0].id)
@@ -189,7 +191,7 @@ def add_run(game,run,category,level,run_variables,obsolete=False,point_reset=Tru
 def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolete=False,point_reset=True):
     if obsolete == False:
         players = run["run"]["players"]
-        place = run["place"]
+        place   = run["place"]
     else:
         run = {"run":run}
         if "data" in run.get("run", {}).get("players", {}): players = run["run"]["players"]["data"]
@@ -208,8 +210,8 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
         if GameOverview.objects.get(id=game_id).defaulttime == "realtime_noloads": lrt_fix = True
 
     if players != None:
-        run_id       = run["run"]["id"]
-        secs         = run["run"]["times"]["primary_t"]
+        run_id  = run["run"]["id"]
+        secs    = run["run"]["times"]["primary_t"]
 
         try: run_video = run.get("run").get("videos").get("links")[0].get("uri") if run.get("run").get("videos") is not None or run.get("run").get("videos").get("text") != "N/A" else None
         except: run_video = None

@@ -12,7 +12,7 @@ from django.views.generic import ListView,View
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from .tasks import update_game,update_game_runs,update_player,import_obsolete,import_srltimes
+from .tasks import update_game,update_game_runs,update_player,import_obsolete
 from .init_series import init_series
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -63,12 +63,3 @@ class ImportObsoleteView(ListView):
             import_obsolete.delay(player)
 
         return redirect("/admin/srl/players/")
-
-class ImportSRLTimes(ListView):
-    def get(self, request):
-        run_ids = self.request.GET.get("run_ids", "").split(",")
-        
-        for run in run_ids:
-            asyncio.run(import_srltimes(run))
-                
-        return redirect("/admin/srl/")

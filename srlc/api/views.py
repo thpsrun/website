@@ -41,12 +41,20 @@ class API_Runs(APIView):
             else:
                 return Response({"ERROR": "'all' can only be used with a query (status)."},status=status.HTTP_400_BAD_REQUEST)
         else:
-            try:
-                run = MainRuns.objects.get(id__iexact=id)
-                return Response(MainRunSerializer(run,context={"embed": embed_fields}).data,status=status.HTTP_200_OK)
-            except MainRuns.DoesNotExist:
-                run = ILRuns.objects.get(id__iexact=id)
-                return Response(ILRunSerializer(run,context={"embed": embed_fields}).data,status=status.HTTP_200_OK)
+            run_models = [
+                (MainRuns,MainRunSerializer),
+                (ILRuns,ILRunSerializer),
+            ]
+
+            for model,serializer_class in run_models:
+                try:
+                    run = model.objects.get(id__iexact=id)
+                    serializer = serializer_class(run,context={"embed":embed_fields})
+                    return Response(serializer.data,status=status.HTTP_200_OK)
+                except model.DoesNotExist:
+                    continue
+
+            return Response({"ERROR": f"{id} does not exist."},status=status.HTTP_400_BAD_REQUEST)
 
     def post(self,request,id):
         if len(id) > 10:
@@ -54,6 +62,7 @@ class API_Runs(APIView):
         
         normalize = normalize_src.delay(id)
         ilcheck = normalize.get()
+        time.sleep(1) ## Sometimes the other celery tasks are slow, so this will allow them to quickly finish before providing a response.
 
         if ilcheck == "invalid":
             return Response({"ERROR":"id provided does not belong to this leaderboard's games."},status=status.HTTP_400_BAD_REQUEST)
@@ -68,6 +77,7 @@ class API_Runs(APIView):
         
         normalize = normalize_src.delay(id)
         ilcheck = normalize.get()
+        time.sleep(1) ## Sometimes the other celery tasks are slow, so this will allow them to quickly finish before providing a response.
 
         if ilcheck == "invalid":
             return Response({"ERROR":"id provided does not belong to this leaderboard's games."},status=status.HTTP_400_BAD_REQUEST)

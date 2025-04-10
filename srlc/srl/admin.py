@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.shortcuts import redirect
 from django.urls import path
 from .models import Series,GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,CountryCodes,Awards,Platforms,NowStreaming
-from .views import UpdateSeriesView,UpdateGameView,UpdateGameRunsView,UpdatePlayerView,RefreshGameRunsView,ImportObsoleteView,ImportSRLTimes
+from .views import UpdateSeriesView,UpdateGameView,UpdateGameRunsView,UpdatePlayerView,RefreshGameRunsView,ImportObsoleteView
 
 class SeriesAdmin(admin.ModelAdmin):
     list_display    = ["name"]

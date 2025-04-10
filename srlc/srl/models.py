@@ -141,6 +141,7 @@ class VariableValues(models.Model):
         return self.name
     class Meta:
         verbose_name_plural = "Variable Values"
+        unique_together     = ("")
 
     var         = models.ForeignKey(Variables,verbose_name="Linked Variable",null=True,on_delete=models.SET_NULL)
     name        = models.CharField(max_length=50,verbose_name="Name")
@@ -169,6 +170,7 @@ class Awards(models.Model):
                 default=False,
                 help_text="When checked, this award will be given the 'unique' tag - enabling special effects for the award on the profile page."
     )
+
 class CountryCodes(models.Model):
     def __str__(self):
         return self.name
@@ -214,38 +216,51 @@ class Players(models.Model):
                 help_text="Earned awards can be selected here. All selected awards will appear on the Player's profile."
     )
 
-class MainRunTimeframe(models.Model):
-    def __str__(self):
-        return "Run ID: " + self.run_id + " - " + self.timeframe
-    
-    class Meta:
-        verbose_name_plural = "Main Run Timeframes"
+class RunQuerySet(models.QuerySet):
+    def main(self):
+        return self.filter(run_type = "main")
 
-    id          = models.AutoField(primary_key=True)
-    run_id      = models.ForeignKey("MainRuns",max_length=10,verbose_name="Run ID",null=True,on_delete=models.SET_NULL)
-    start_date  = models.DateTimeField(verbose_name="Approved Date")
-    end_date    = models.DateTimeField(verbose_name="Beaten Date")
-    points      = models.IntegerField(verbose_name="Packle Points",default=0)
+    def il(self):
+        return self.filter(run_type = "il")
 
-class MainRuns(models.Model):
-    def __str__(self):
+class RunManager(models.Manager):
+    def get_queryset(self):
+        return RunQuerySet(self.model,using = self._db)
+
+    def main(self):
+        return self.get_queryset().main()
+
+    def il(self):
+        return self.get_queryset().il()
+
+class Runs(models.Model):
+    def __str__ (self):
         return "Run ID: " + self.id
     class Meta:
-        verbose_name_plural = "Main Runs"
+        verbose_name_plural = "Runs"
 
-    LeaderboardChoices = [
+    objects = RunManager()
+
+    statuschoices = [
         ("verified", "Verified"),
         ("new", "Unverified"),
-        ("rejected","Rejected"),
+        ("rejected", "Rejected"),
     ]
-    
+
+    runtype = [
+        ("main", "Full Game"),
+        ("il", "Individual Level"),
+    ]
+
     id          = models.CharField(max_length=10,primary_key=True,verbose_name="Run ID")
-    game        = models.ForeignKey(GameOverview,verbose_name="Game ID",null=True,on_delete=models.SET_NULL)
-    category    = models.ForeignKey(Categories,verbose_name="Category ID",null=True,on_delete=models.SET_NULL)
+    runtype     = models.CharField(max_length=5,choices=runtype,verbose_name="Full-Game or IL")
+    game        = models.ForeignKey(GameOverview,verbose_name="Game ID",on_delete=models.CASCADE)
+    category    = models.ForeignKey(Categories,verbose_name="Category ID",blank=True,null=True,on_delete=models.SET_NULL)
+    level       = models.ForeignKey(Levels,verbose_name="Level ID",blank=True,null=True,on_delete=models.SET_NULL)
     subcategory = models.CharField(max_length=100,verbose_name="Subcategory Name",blank=True,null=True)
-    values      = models.CharField(max_length=100,verbose_name="Subcategory Values",blank=True,null=True)
-    player      = models.ForeignKey(Players,verbose_name="Player ID",blank=True,null=True,on_delete=models.SET_NULL,related_name="main_runs")
-    player2     = models.ForeignKey(Players,verbose_name="Player 2 ID",blank=True,null=True,on_delete=models.SET_NULL,related_name="main_runs_p2")
+    #variables   = models.ManyToManyField(Variables,verbose_name="Variables",through="VariableValues")
+    player      = models.ForeignKey(Players,verbose_name="Player ID",blank=True,null=True,on_delete=models.SET_NULL,related_name="runs_p1")
+    player2     = models.ForeignKey(Players,verbose_name="Player 2 ID",blank=True,null=True,on_delete=models.SET_NULL,related_name="runs_p2")
     place       = models.IntegerField(verbose_name="Placing")
     url         = models.URLField(verbose_name="URL")
     video       = models.URLField(verbose_name="Video",blank=True,null=True)
@@ -262,7 +277,7 @@ class MainRuns(models.Model):
     emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
     vid_status  = models.CharField(
                 verbose_name="SRC Status",
-                choices=LeaderboardChoices,
+                choices=statuschoices,
                 default="verified",
                 help_text="This is the current status of the run, according to Speedrun.com. It should be updated whenever the run is approved. Runs set as \"Unverified\" do not appear anywhere on this site."
     )
@@ -278,56 +293,9 @@ class MainRuns(models.Model):
                 help_text="Optional field. If you have a mirrored link to a video, you can input it here."
     )
 
-class ILRuns(models.Model):
-    def __str__(self):
-        return "Run ID: " + self.id
-    class Meta:
-        verbose_name_plural = "IL Runs"
-
-    LeaderboardChoices = [
-        ("verified", "Verified"),
-        ("new", "Unverified"),
-        ("rejected","Rejected"),
-    ]
-
-    id          = models.CharField(max_length=10,primary_key=True,verbose_name="Run ID")
-    game        = models.ForeignKey(GameOverview,verbose_name="Game ID",null=True,on_delete=models.SET_NULL)
-    category    = models.ForeignKey(Categories,verbose_name="Category ID",null=True,on_delete=models.SET_NULL)
-    subcategory = models.CharField(max_length=100,verbose_name="Subcategory Name",blank=True,null=True)
-    values      = models.CharField(max_length=100,verbose_name="Subcategory Values",blank=True,null=True)
-    level       = models.ForeignKey(Levels,verbose_name="Level ID",null=True,on_delete=models.SET_NULL)
-    player      = models.ForeignKey(Players,verbose_name="Player ID",blank=True,null=True,on_delete=models.SET_NULL)
-    place       = models.IntegerField(verbose_name="Placing")
-    url         = models.URLField(verbose_name="URL")
-    video       = models.URLField(verbose_name="Video",blank=True,null=True)
-    date        = models.DateTimeField(verbose_name="Submitted Date",blank=True,null=True)
-    v_date      = models.DateTimeField(verbose_name="Verified Date",blank=True,null=True)
-    time        = models.CharField(max_length=25,verbose_name="RTA Time",blank=True,null=True)
-    time_secs   = models.FloatField(verbose_name="RTA Time (Seconds)",blank=True,null=True)
-    timenl      = models.CharField(max_length=25,verbose_name="LRT Time",blank=True,null=True)
-    timenl_secs = models.FloatField(verbose_name="LRT Time (Seconds)",blank=True,null=True)
-    timeigt     = models.CharField(max_length=25,verbose_name="IGT Time",blank=True,null=True)
-    timeigt_secs= models.FloatField(verbose_name="IGT Time (Seconds)",blank=True,null=True)
-    points      = models.IntegerField(verbose_name="Packle Points",default=0)
-    platform    = models.ForeignKey(Platforms,verbose_name="Platform",blank=True,null=True,on_delete=models.SET_NULL)
-    emulated    = models.BooleanField(verbose_name="Emulated?",default=False)
-    vid_status  = models.CharField(
-                verbose_name="SRC Status",
-                choices=LeaderboardChoices,
-                default="verified",
-                help_text="This is the current status of the run, according to Speedrun.com. It should be updated whenever the run is approved. Runs set as \"Unverified\" do not appear anywhere on this site."
-    )
-    obsolete    = models.BooleanField(
-                verbose_name="Obsolete?",
-                default=False,
-                help_text="When True, the run will be considered obsolete. Points will not count towards the player's total."
-    )
-    arch_video  = models.URLField(
-                verbose_name="Archived Video URL",
-                blank=True,
-                null=True,
-                help_text="Optional field. If you have a mirrored link to a video, you can input it here."
-    )
+    def set_variables(self,variable_value_map: dict):
+        for variable,value in variable_value_map.items():
+            VariableValues.objects.create(run = self,variable = variable,value = value)
 
 class NowStreaming(models.Model):
     def __str__(self):
@@ -339,7 +307,23 @@ class NowStreaming(models.Model):
     game        = models.ForeignKey(GameOverview,verbose_name="Game",null=True,on_delete=models.SET_NULL)
     title       = models.CharField(max_length=100,verbose_name="Twitch Title")
     offline_ct  = models.IntegerField(
-        verbose_name="Offline Count",
-        help_text="In some situations, bots or the Twitch API can mess up. To help users, you can use this counter to countup the number of attempts to see if the runner is offline. After a certain number is hit, you can do something like remove embeds and/or remove this record."
+                verbose_name="Offline Count",
+                help_text="In some situations, bots or the Twitch API can mess up. To help users, you can use this counter to countup the number of attempts to see if the runner is offline. After a certain number is hit, you can do something like remove embeds and/or remove this record."
     )
     stream_time = models.DateTimeField(verbose_name="Started Stream")
+
+
+""" 
+### Disabled for now; will return when working on Historical Points.
+class MainRunTimeframe(models.Model):
+    def __str__(self):
+        return "Run ID: " + self.run_id + " - " + self.timeframe
+    
+    class Meta:
+        verbose_name_plural = "Main Run Timeframes"
+
+    id          = models.AutoField(primary_key=True)
+    run_id      = models.ForeignKey("MainRuns",max_length=10,verbose_name="Run ID",null=True,on_delete=models.SET_NULL)
+    start_date  = models.DateTimeField(verbose_name="Approved Date")
+    end_date    = models.DateTimeField(verbose_name="Beaten Date")
+    points      = models.IntegerField(verbose_name="Packle Points",default=0) """
