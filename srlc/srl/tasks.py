@@ -2,17 +2,15 @@
 ### File Name: srl/tasks.py
 ### Author: ThePackle
 ### Description: Script that holds a lot of the tasks utilized by Django to perform operations.
-### Dependencies: srl/m_tasks, srl/models
 ######################################################################################################################################################
 
-import time,math,requests,os,re
+import time,requests,os,re
 from django.db import transaction
-from django.db.models import Q
 from django.db import transaction
 from celery import shared_task
-from .automations import *
 from langcodes import standardize_tag
-from .models import GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,CountryCodes,Platforms
+from .automations import *
+from .models import GameOverview,Categories,Levels,Variables,VariableValues,Runs,Players,CountryCodes,Platforms
 from .m_tasks import src_api,convert_time,points_formula
 
 @shared_task
@@ -47,8 +45,7 @@ def update_game_runs(game_id,reset):
         Levels.objects.filter(game=game_id).delete()
         Variables.objects.filter(game=game_id).delete()
         VariableValues.objects.filter(var__game__id=game_id).delete()
-        MainRuns.objects.filter(game=game_id,obsolete=False).delete()
-        ILRuns.objects.filter(game=game_id,obsolete=False).delete()
+        Runs.objects.filter(game=game_id,obsolete=False).delete()
 
     game_check = src_api(f"https://www.speedrun.com/api/v1/games/{game_id}?embed=platforms,levels,categories,variables")
 
@@ -77,7 +74,7 @@ def update_category(category,game_id):
             id       = category["id"],
             defaults = {
                 "name"  : category["name"],
-                "game"  : GameOverview.objects.get(id=game_id),
+                "game"  : GameOverview.objects.only("id").get(id=game_id),
                 "type"  : category["type"],
                 "url"   : category["weblink"],
             }
@@ -100,7 +97,7 @@ def update_level(level,game_id):
             id      = level["id"],
             defaults = {
                 "name"  : level["name"],
-                "game"  : GameOverview.objects.get(id=game_id),
+                "game"  : GameOverview.objects.only("id").get(id=game_id),
                 "url"   : level["weblink"],
             }
         )
@@ -112,8 +109,8 @@ def update_variable(gameid,variable):
             id      = variable["id"],
             defaults = {
                 "name"      : variable["name"],
-                "game"      : GameOverview.objects.get(id=gameid),
-                "cat"       : None if variable["category"] == None else Categories.objects.get(id=variable["category"]),
+                "game"      : GameOverview.objects.only("id").get(id=gameid),
+                "cat"       : None if variable["category"] == None else Categories.objects.only("id").get(id=variable["category"]),
                 "all_cats"  : True if variable["category"] == None else False,
                 "scope"     : variable["scope"]["type"],
             }
@@ -134,9 +131,9 @@ def update_variable_value(variable,value):
 
 @shared_task
 def update_category_runs(game_id,category,il_check):
-    var_ids        = Variables.objects.filter(cat=category["id"])
-    global_cats    = Variables.objects.filter(all_cats=True,game=game_id)
-    global_fg_cats = Variables.objects.filter(all_cats=True,scope="full-game",game=game_id)
+    var_ids        = Variables.objects.only("id").filter(cat=category["id"])
+    global_cats    = Variables.objects.only("id").filter(all_cats=True,game=game_id)
+    global_fg_cats = Variables.objects.only("id").filter(all_cats=True,scope="full-game",game=game_id)
 
     if category["type"] == "per-level":
         per_level_check = Categories.objects.filter(game=game_id,type="per-level")
@@ -156,8 +153,8 @@ def update_category_runs(game_id,category,il_check):
         var_str_list  = []
 
         if len(global_fg_cats) == 2:
-            global_cat_one = VariableValues.objects.filter(var_id=global_fg_cats[0].id)
-            global_cat_two = VariableValues.objects.filter(var_id=global_fg_cats[1].id)
+            global_cat_one = VariableValues.objects.select_related("var").only("id","name","var","value").filter(var_id=global_fg_cats[0].id)
+            global_cat_two = VariableValues.objects.select_related("var").only("id","name","var","value").filter(var_id=global_fg_cats[1].id)
 
             for global_value_one in global_cat_one:
                 var_name   = ""
@@ -183,7 +180,7 @@ def update_category_runs(game_id,category,il_check):
                 invoke_runs.delay(game_id,category,leaderboard,var_name_list[index],var_str_list[index])
 
     elif len(var_ids) == 1:
-        var_value = VariableValues.objects.filter(var=var_ids[0].id)
+        var_value = VariableValues.objects.select_related("var").only("id","name","var","value").filter(var=var_ids[0].id)
 
         for var in var_value:
             lb_string     = f"var-{var.var.id}={var.value}" 
@@ -197,7 +194,7 @@ def update_category_runs(game_id,category,il_check):
 
             if len(global_cats) > 1:
                 for global_cat in global_cats:
-                    global_values = VariableValues.objects.filter(var=global_cat.id)
+                    global_values = VariableValues.objects.select_related("var").only("id","name","var","value").filter(var=global_cat.id)
 
                     for global_value in global_values:
                         lb_string2 = f"var-{global_cat.id}={global_value.value}&" 
@@ -208,7 +205,7 @@ def update_category_runs(game_id,category,il_check):
                         var_str_list.append(var_string + "&" + f"{global_value.value}")
 
             elif len(global_cats) == 1:
-                global_values = VariableValues.objects.filter(var=global_cats[0].id)
+                global_values = VariableValues.objects.select_related("var").only("id","name","var","value").filter(var=global_cats[0].id)
 
                 for global_value in global_values:
                     lb_string2 = f"&var-{global_value.var.id}={global_value.value}"  
@@ -229,8 +226,8 @@ def update_category_runs(game_id,category,il_check):
                     invoke_runs.delay(game_id,category,leaderboard,var_name_list[index],var_str_list[index])
 
     elif len(var_ids) > 1:
-        var_value_one = VariableValues.objects.filter(var=var_ids[0].id)
-        var_value_two = VariableValues.objects.filter(var=var_ids[1].id)
+        var_value_one = VariableValues.objects.select_related("var").only("id","name","var","value").filter(var=var_ids[0].id)
+        var_value_two = VariableValues.objects.select_related("var").only("id","name","var","value").filter(var=var_ids[1].id)
 
         lb_string     = ""
         var_string    = ""
@@ -249,7 +246,7 @@ def update_category_runs(game_id,category,il_check):
 
                 if len(global_cats) > 1:
                     for global_cat in global_cats:
-                        global_values = VariableValues.objects.filter(var=global_cat.id)
+                        global_values = VariableValues.objects.only("name","value").filter(var=global_cat.id)
 
                         for global_value in global_values:
                             lb_string2 = f"var-{global_cat.id}={global_value.value}&" 
@@ -260,7 +257,7 @@ def update_category_runs(game_id,category,il_check):
                             var_str_list.append(var_string + "&" + f"{global_value.value}")
 
                 elif len(global_cats) == 1:
-                    global_values = VariableValues.objects.filter(var=global_cats[0].id)
+                    global_values = VariableValues.objects.only("name","value").filter(var=global_cats[0].id)
 
                     for global_value in global_values:
                         lb_string2 = f"&var-{global_value.var.id}={global_value.value}"  
@@ -289,7 +286,7 @@ def update_category_runs(game_id,category,il_check):
                 lb_string = ""
                 var_name  = ""
 
-                global_values = VariableValues.objects.filter(var=global_cat.id)
+                global_values = VariableValues.objects.only("name","value").filter(var=global_cat.id)
 
                 for global_value in global_values:
                     lb_string = f"var-{global_cat.id}={global_value.value}" 
@@ -345,13 +342,18 @@ def update_player(player):
                     }
                 )
 
+        try:
+            cc_get = CountryCodes.objects.only("id").get(id=cc)
+        except CountryCodes.DoesNotExist:
+            cc_get = None
+
         with transaction.atomic():
             Players.objects.update_or_create(
                 id          = player,
                 defaults    = {
                     "name"          : player_data["names"]["international"],
                     "url"           : player_data["weblink"],
-                    "countrycode"   : CountryCodes.objects.get(id=cc) if CountryCodes.objects.filter(id=cc).exists() else None,
+                    "countrycode"   : cc_get,
                     "pfp"           : file_path,
                     "pronouns"      : player_data.get("pronouns") if player_data.get("pronouns") is not None else None,
                     "twitch"        : player_data.get("twitch").get("uri") if player_data.get("twitch") is not None and player_data.get("twitch").get("uri") is not None else None,
@@ -366,7 +368,7 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
         wr_records = leaderboard["runs"][0]
         pb_records = leaderboard["runs"][1:]
         wr_players = wr_records["run"]["players"]
-        maingame   = GameOverview.objects.get(id=game_id)
+        maingame   = GameOverview.objects.only("id","pointsmax","ipointsmax","defaulttime","idefaulttime").get(id=game_id)
 
         if "category extension" in wr_records["run"]["game"].lower():
             run_type = maingame.pointsmax
@@ -386,12 +388,25 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
             player1 = wr_players[0].get("id")
             player2 = wr_players[1]["id"] if len(wr_players) > 1 and wr_players[1]["rel"] == "user" else None
 
+            for player in wr_players:
+                if player["rel"] != "guest":
+                    invoke_players.delay(leaderboard["players"]["data"],player["id"])
+
+            try:
+                player_get = Players.objects.only("id").get(id=player1)
+            except Players.DoesNotExist:
+                player_get = None
+
+            try:
+                platform_get = Platforms.objects.only("id").get(id=wr_records["run"]["system"]["platform"])
+            except Platforms.DoesNotExist:
+                platform_get = None
+
             default = {
-                "player"        : Players.objects.get(id=player1) if Players.objects.filter(id=player1).exists() else None,
+                "player"        : player_get,
                 "game"          : maingame,
-                "category"      : Categories.objects.get(id=category["id"]),
+                "category"      : Categories.objects.only("id").get(id=category["id"]),
                 "subcategory"   : var_name,
-                "values"        : var_string,
                 "place"         : 1,
                 "url"           : wr_records["run"]["weblink"],
                 "video"         : wr_video,
@@ -404,7 +419,7 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                 "timeigt"       : convert_time(wr_records["run"]["times"]["ingame_t"]) if wr_records["run"]["times"]["ingame_t"] > 0 else 0,
                 "timeigt_secs"  : wr_records["run"]["times"]["ingame_t"],
                 "points"        : points,
-                "platform"      : Platforms.objects.get(id=wr_records["run"]["system"]["platform"]) if Platforms.objects.filter(id=wr_records["run"]["system"]["platform"]).exists() else None,
+                "platform"      : platform_get,
                 "emulated"      : wr_records["run"]["system"]["emulated"],
                 "obsolete"      : False,
                 "vid_status"    : wr_records["run"]["status"]["status"],
@@ -413,47 +428,34 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
             lrt_fix = False
             if category["type"] == "per-game":
                 if player2:
-                    default["player2"] = Players.objects.get(id=player2) if Players.objects.filter(id=player2).exists() else None
+                    try:
+                        player2_get = Players.objects.only("id").get(id=player2)
+                    except Players.DoesNotExist:
+                        player2_get = None
+
+                    default["player2"] = player2_get
 
                 if maingame.defaulttime == "realtime_noloads": lrt_fix = True
 
-                ### LRT_TEMP_FIX
-                ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
-                ### LRT set to RTA instead. Really dumb.
-                if lrt_fix and default["time_secs"] > 0 and default["timenl_secs"] == 0:
-                    default["time"]         = "0"
-                    default["time_secs"]    = 0.0
-                    default["timenl"]       = convert_time(wr_records["run"]["times"]["realtime_t"])
-                    default["timenl_secs"]  = wr_records["run"]["times"]["realtime_t"]
-
-                with transaction.atomic():
-                    MainRuns.objects.update_or_create(
-                        id=run_id,
-                        defaults=default
-                    )
             else:
-                default["level"] = Levels.objects.get(id=wr_records["run"]["level"])
+                default["level"] = Levels.objects.only("id").get(id=wr_records["run"]["level"])
 
                 if maingame.idefaulttime == "realtime_noloads": lrt_fix = True
 
-                ### LRT_TEMP_FIX
-                ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
-                ### LRT set to RTA instead. Really dumb.
-                if lrt_fix and default["time_secs"] > 0 and default["timenl_secs"] == 0:
-                    default["time"]         = "0"
-                    default["time_secs"]    = 0.0
-                    default["timenl"]       = convert_time(wr_records["run"]["times"]["realtime_t"])
-                    default["timenl_secs"]  = wr_records["run"]["times"]["realtime_t"]
+            ### LRT_TEMP_FIX
+            ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
+            ### LRT set to RTA instead. Really dumb.
+            if lrt_fix and default["time_secs"] > 0 and default["timenl_secs"] == 0:
+                default["time"]         = "0"
+                default["time_secs"]    = 0.0
+                default["timenl"]       = convert_time(wr_records["run"]["times"]["realtime_t"])
+                default["timenl_secs"]  = wr_records["run"]["times"]["realtime_t"]
 
-                with transaction.atomic():
-                    ILRuns.objects.update_or_create(
-                        id=run_id,
-                        defaults=default
-                    )
-
-            for player in wr_players:
-                if player["rel"] != "guest":
-                    invoke_players.delay(leaderboard["players"]["data"],player["id"])
+            with transaction.atomic():
+                Runs.objects.update_or_create(
+                    id=run_id,
+                    defaults=default
+                )
 
         for pb in pb_records:
             if pb["place"] > 0:
@@ -473,13 +475,22 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
 
                     videos = pb.get("run").get("videos")
                     pb_video = videos["links"][0]["uri"] if videos and videos.get("text") != "N/A" else None
+
+                    try:
+                        player_get = Players.objects.only("id").get(id=player1)
+                    except Players.DoesNotExist:
+                        player_get = None
+
+                    try:
+                        platform_get = Platforms.objects.only("id").get(id=pb["run"]["system"]["platform"])
+                    except Platforms.DoesNotExist:
+                        platform_get = None
                     
                     default = {
-                        "player"        : Players.objects.get(id=player1) if Players.objects.filter(id=player1).exists() else None,
+                        "player"        : player_get,
                         "game"          : maingame,
-                        "category"      : Categories.objects.get(id=category["id"]),
+                        "category"      : Categories.objects.only("id").get(id=category["id"]),
                         "subcategory"   : var_name,
-                        "values"        : var_string,
                         "place"         : pb["place"],
                         "url"           : pb["run"]["weblink"],
                         "video"         : pb_video,
@@ -492,50 +503,42 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
                         "timeigt"       : convert_time(pb["run"]["times"]["ingame_t"]) if pb["run"]["times"]["ingame_t"] > 0 else 0,
                         "timeigt_secs"  : pb["run"]["times"]["ingame_t"],
                         "points"        : points,
-                        "platform"      : Platforms.objects.get(id=pb["run"]["system"]["platform"]) if Platforms.objects.filter(id=pb["run"]["system"]["platform"]).exists() else None,
+                        "platform"      : platform_get,
                         "emulated"      : pb["run"]["system"]["emulated"],
                         "obsolete"      : False,
                         "vid_status"    : pb["run"]["status"]["status"],
                     }
 
+                    lrt_fix = False
                     if category["type"] == "per-game":
-                        default["player2"] = Players.objects.get(id=player2) if Players.objects.filter(id=player2).exists() else None
+                        if player2:
+                            try:
+                                player2_get = Players.objects.only("id").get(id=player2)
+                            except Players.DoesNotExist:
+                                player2_get = None
+
+                            default["player2"] = player2_get
 
                         if maingame.defaulttime == "realtime_noloads": lrt_fix = True
-
-                        ### LRT_TEMP_FIX
-                        ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
-                        ### LRT set to RTA instead. Really dumb.
-                        if default["time_secs"] > 0 and default["timenl_secs"] == 0:
-                            default["time"]         = "0"
-                            default["time_secs"]    = 0.0
-                            default["timenl"]       = convert_time(pb["run"]["times"]["realtime_t"])
-                            default["timenl_secs"]  = pb["run"]["times"]["realtime_t"]
-
-                        with transaction.atomic():
-                            MainRuns.objects.update_or_create(
-                                id=run_id,
-                                defaults=default
-                            )
                     else:
-                        default["level"] = Levels.objects.get(id=pb["run"]["level"])
+                        default["level"] = Levels.objects.only("id").get(id=pb["run"]["level"])
 
                         if maingame.idefaulttime == "realtime_noloads": lrt_fix = True
+                    
+                    ### LRT_TEMP_FIX
+                    ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
+                    ### LRT set to RTA instead. Really dumb.
+                    if lrt_fix and default["time_secs"] > 0 and default["timenl_secs"] == 0:
+                        default["time"]         = "0"
+                        default["time_secs"]    = 0.0
+                        default["timenl"]       = convert_time(pb["run"]["times"]["realtime_t"])
+                        default["timenl_secs"]  = pb["run"]["times"]["realtime_t"]
 
-                        ### LRT_TEMP_FIX
-                        ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
-                        ### LRT set to RTA instead. Really dumb.
-                        if default["time_secs"] > 0 and default["timenl_secs"] == 0:
-                            default["time"]         = "0"
-                            default["time_secs"]    = 0.0
-                            default["timenl"]       = convert_time(pb["run"]["times"]["realtime_t"])
-                            default["timenl_secs"]  = pb["run"]["times"]["realtime_t"]
-
-                        with transaction.atomic():
-                            ILRuns.objects.update_or_create(
-                                id=run_id,
-                                defaults=default
-                            )
+                    with transaction.atomic():
+                        Runs.objects.update_or_create(
+                            id=run_id,
+                            defaults=default
+                        )
 
 @shared_task
 def invoke_players(players_data,player=None):
@@ -612,7 +615,7 @@ def import_obsolete(player):
         for run in all_runs:
             if run["status"]["status"] == "verified":
                 if GameOverview.objects.filter(id=run["game"]).exists():
-                    if not MainRuns.objects.filter(id=run["id"]).exists() and not ILRuns.objects.filter(id=run["id"]).exists():
+                    if not Runs.objects.filter(id=run["id"]).exists():
                         if run["level"]:
                             lb_info = src_api(f"https://speedrun.com/api/v1/leaderboards/{run['game']}/level/{run['level']}/{run['category']}?embed=game,category,level,players,variables")
                         elif len(run["values"]) > 0:
