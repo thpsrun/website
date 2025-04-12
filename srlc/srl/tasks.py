@@ -435,12 +435,14 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
 
                     default["player2"] = player2_get
 
-                if maingame.defaulttime == "realtime_noloads": lrt_fix = True
+                if maingame.defaulttime == "realtime_noloads":
+                    lrt_fix = True
 
             else:
                 default["level"] = Levels.objects.only("id").get(id=wr_records["run"]["level"])
 
-                if maingame.idefaulttime == "realtime_noloads": lrt_fix = True
+                if maingame.idefaulttime == "realtime_noloads":
+                    lrt_fix = True
 
             ### LRT_TEMP_FIX
             ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the
@@ -519,11 +521,13 @@ def invoke_runs(game_id,category,leaderboard,var_name=None,var_string=None):
 
                             default["player2"] = player2_get
 
-                        if maingame.defaulttime == "realtime_noloads": lrt_fix = True
+                        if maingame.defaulttime == "realtime_noloads":
+                            lrt_fix = True
                     else:
                         default["level"] = Levels.objects.only("id").get(id=pb["run"]["level"])
 
-                        if maingame.idefaulttime == "realtime_noloads": lrt_fix = True
+                        if maingame.idefaulttime == "realtime_noloads":
+                            lrt_fix = True
                     
                     ### LRT_TEMP_FIX
                     ### This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA time will have the

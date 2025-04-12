@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import reverse
 from django.shortcuts import redirect
 from django.urls import path
-from .models import Series,GameOverview,Categories,Levels,Variables,VariableValues,MainRuns,ILRuns,Players,CountryCodes,Awards,Platforms,NowStreaming
+from .models import Series,GameOverview,Categories,Levels,Variables,VariableValues,Runs,Players,CountryCodes,Awards,Platforms,NowStreaming
 from .views import UpdateSeriesView,UpdateGameView,UpdateGameRunsView,UpdatePlayerView,RefreshGameRunsView,ImportObsoleteView
 
 class SeriesAdmin(admin.ModelAdmin):
@@ -115,8 +115,7 @@ admin.site.register(Categories, CategoriesAdmin)
 admin.site.register(Levels, CategoriesAdmin)
 admin.site.register(Variables, DefaultAdmin)
 admin.site.register(VariableValues, DefaultAdmin)
-admin.site.register(MainRuns, SpeedrunAdmin)
-admin.site.register(ILRuns, SpeedrunAdmin)
+admin.site.register(Runs, SpeedrunAdmin)
 admin.site.register(Players, PlayersAdmin)
 admin.site.register(Platforms, DefaultAdmin)
 admin.site.register(NowStreaming)

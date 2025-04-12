@@ -1,7 +1,7 @@
 from django import template
 from django.db.models import Sum
 from django.utils.timezone import now
-from ..models import GameOverview,ILRuns,MainRuns,Players,CountryCodes
+from srl.models import GameOverview,Players,Runs
 
 register = template.Library()
 
@@ -25,20 +25,16 @@ def get_unique_game_names(main_runs):
     return unique_games
 
 @register.filter
-def get_category_name(categories, category_id):
-    return categories.get(id=category_id).name
-
-@register.filter
 def filter_game_name(game_runs, game_name):
     return [game for game in game_runs if GameOverview.objects.get(id=game.game.id).name == game_name]
 
 @register.filter
 def get_rank(game_name, player_name):
-    players = Players.objects.all()
+    players = Players.objects.only("id").all()
     leaderboard = []
 
     game_id  = GameOverview.objects.get(name=game_name).id
-    il_board = ILRuns.objects.filter(gameid=game_id).all()
+    il_board = Runs.objects.only("id").filter(runtype="il",gameid=game_id).all()
 
     for player in players:
         il_points = il_board.filter(playerid=player.id).aggregate(total_points=Sum("points"))["total_points"] or 0

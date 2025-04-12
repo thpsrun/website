@@ -1,11 +1,3 @@
-"""
-######################################################################################################################################################
-### File Name: srl/models.py
-### Author: ThePackle
-### Description: Models used throughout the entire SRLC project. Speedrun.com runs are converted into these formats.
-######################################################################################################################################################
-"""
-
 from django.db import models
 from django_resized import ResizedImageField
 from django.core.exceptions import ValidationError
@@ -218,10 +210,10 @@ class Players(models.Model):
 
 class RunQuerySet(models.QuerySet):
     def main(self):
-        return self.filter(run_type = "main")
+        return self.filter(runtype="main")
 
     def il(self):
-        return self.filter(run_type = "il")
+        return self.filter(runtype="il")
 
 class RunManager(models.Manager):
     def get_queryset(self):

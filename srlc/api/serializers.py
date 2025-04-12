@@ -1,18 +1,9 @@
-"""
-######################################################################################################################################################
-### File Name: api/serializers.py
-### Author: ThePackle
-### Description: Serializers used when an API endpoint is called.
-### Dependencies: srl/models.py
-######################################################################################################################################################
-"""
-
 from rest_framework import serializers
 from datetime import datetime
-from srl.models import GameOverview,MainRuns,ILRuns,Players,Categories,Platforms,Levels,Variables,VariableValues,CountryCodes,Awards,NowStreaming
+from srl.models import GameOverview,Runs,Players,Categories,Platforms,Levels,Variables,VariableValues,CountryCodes,Awards,NowStreaming
 from django.db.models import Q
 
-### Used with the /import/ endpoint.
+### Used with the POST /runs/ endpoint.
 class ImportRunSerializer(serializers.Serializer):
     runid = serializers.CharField(max_length=10)
 
@@ -22,7 +13,7 @@ class ImportRunSerializer(serializers.Serializer):
         return value
 
 ### API Serializers
-class MainRunSerializer(serializers.ModelSerializer):
+class RunSerializer(serializers.ModelSerializer):
     game       = serializers.SerializerMethodField()
     category   = serializers.SerializerMethodField()
     platform   = serializers.SerializerMethodField()
@@ -86,7 +77,7 @@ class MainRunSerializer(serializers.ModelSerializer):
         return data
 
     class Meta:
-        model  = MainRuns
+        model  = Runs
         fields = ["id","game","platform","category","subcategory","place","values","player","player2","players","url","video","arch_video","date","v_date","time","time_secs","timenl","timenl_secs","timeigt","timeigt_secs","points","emulated","vid_status","obsolete"]
 
 class ILRunSerializer(serializers.ModelSerializer):
@@ -145,7 +136,7 @@ class ILRunSerializer(serializers.ModelSerializer):
         return data
 
     class Meta:
-        model  = ILRuns
+        model  = Runs
         fields = ["id","game","platform","level","subcategory","place","values","player","players","url","video","arch_video","date","v_date","time","time_secs","timenl","timenl_secs","timeigt","timeigt_secs","points","emulated","vid_status","obsolete"]
 
 ### Used with the /platform/ endpoint.
@@ -178,8 +169,8 @@ class PlayerSerializer(serializers.ModelSerializer):
     awards  = serializers.SerializerMethodField()
 
     def get_stats(self,obj):
-        main_runs   = MainRuns.objects.filter(Q(player=obj.id) | Q(player2=obj.id)).filter(points__gt=0)
-        il_runs     = ILRuns.objects.filter(player=obj.id).filter(points__gt=0)
+        main_runs   = Runs.objects.main().filter(Q(player=obj.id) | Q(player2=obj.id)).filter(points__gt=0)
+        il_runs     = Runs.objects.il().filter(player=obj.id).filter(points__gt=0)
 
         main_points = sum(run.points for run in main_runs.filter(obsolete=False))
         il_points   = sum(run.points for run in il_runs.filter(obsolete=False))

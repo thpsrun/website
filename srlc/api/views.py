@@ -28,63 +28,47 @@ class API_Runs(APIView):
 
         if id == "all":
             if "status" in query_fields:
-                m_runs = MainRuns.objects.filter(vid_status="new")
-                i_runs = ILRuns.objects.filter(vid_status="new")
+                m_runs = Runs.objects.filter(vid_status="new")
 
-                main_runs = MainRunSerializer(m_runs,many=True,context={"embed": embed_fields}).data
-                il_runs = ILRunSerializer(i_runs,many=True,context={"embed": embed_fields}).data
+                main_runs = RunSerializer(m_runs,many=True,context={"embed": embed_fields}).data
                 
                 return Response({
                     "main_runs" : main_runs,
-                    "il_runs"   : il_runs,
                 })
             else:
                 return Response({"ERROR": "'all' can only be used with a query (status)."},status=status.HTTP_400_BAD_REQUEST)
         else:
-            run_models = [
-                (MainRuns,MainRunSerializer),
-                (ILRuns,ILRunSerializer),
-            ]
-
-            for model,serializer_class in run_models:
-                try:
-                    run = model.objects.get(id__iexact=id)
-                    serializer = serializer_class(run,context={"embed":embed_fields})
-                    return Response(serializer.data,status=status.HTTP_200_OK)
-                except model.DoesNotExist:
-                    continue
-
-            return Response({"ERROR": f"{id} does not exist."},status=status.HTTP_400_BAD_REQUEST)
+            run = Runs.objects.filter(id__iexact=id).first()
+            if run:
+                return Response(RunSerializer(run,context={"embed": embed_fields}).data,status=status.HTTP_200_OK)
+            else:
+                return Response({"ERROR": "run id provided does not exist."},status=status.HTTP_200_OK)
 
     def post(self,request,id):
         if len(id) > 10:
-            return Response({"ERROR":"id must be less than 10 characters."},status=status.HTTP_400_BAD_REQUEST)
+            return Response({"ERROR": "id must be less than 10 characters."},status=status.HTTP_400_BAD_REQUEST)
         
         normalize = normalize_src.delay(id)
         ilcheck = normalize.get()
         time.sleep(1) ## Sometimes the other celery tasks are slow, so this will allow them to quickly finish before providing a response.
 
         if ilcheck == "invalid":
-            return Response({"ERROR":"id provided does not belong to this leaderboard's games."},status=status.HTTP_400_BAD_REQUEST)
-        elif ilcheck:
-            return Response(ILRunSerializer(ILRuns.objects.get(id=id)).data,status=status.HTTP_201_CREATED)
+            return Response({"ERROR": "id provided does not belong to this leaderboard's games."},status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response(MainRunSerializer(MainRuns.objects.get(id=id)).data,status=status.HTTP_201_CREATED)
+            return Response(RunSerializer(Runs.objects.get(id=id)).data,status=status.HTTP_201_CREATED)
               
     def put(self,request,id):
         if len(id) > 10:
-            return Response({"ERROR":"id must be less than 10 characters."},status=status.HTTP_400_BAD_REQUEST)
+            return Response({"ERROR": "id must be less than 10 characters."},status=status.HTTP_400_BAD_REQUEST)
         
         normalize = normalize_src.delay(id)
         ilcheck = normalize.get()
         time.sleep(1) ## Sometimes the other celery tasks are slow, so this will allow them to quickly finish before providing a response.
 
         if ilcheck == "invalid":
-            return Response({"ERROR":"id provided does not belong to this leaderboard's games."},status=status.HTTP_400_BAD_REQUEST)
-        elif ilcheck:
-            return Response(ILRunSerializer(ILRuns.objects.get(id=id)).data,status=status.HTTP_202_ACCEPTED)
+            return Response({"ERROR": "id provided does not belong to this leaderboard's games."},status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response(MainRunSerializer(MainRuns.objects.get(id=id)).data,status=status.HTTP_202_ACCEPTED)
+            return Response(RunSerializer(Runs.objects.get(id=id)).data,status=status.HTTP_201_CREATED)
     
 class API_Players(APIView):
     ALLOWED_QUERIES = {"streamexceptions"}
@@ -124,11 +108,11 @@ class API_PlayerRecords(APIView):
         if player:
             player_data = PlayerSerializer(player).data
 
-            main_runs = MainRuns.objects.filter(player=player).filter(obsolete=False)
-            il_runs   = ILRuns.objects.filter(player=player).filter(obsolete=False)
+            main_runs = Runs.objects.main().filter(player=player).filter(obsolete=False)
+            il_runs   = Runs.objects.il().filter(player=player).filter(obsolete=False)
 
-            main_data = MainRunSerializer(main_runs,many=True,context={"embed": embed_fields}).data
-            il_data   = ILRunSerializer(il_runs,many=True,context={"embed": embed_fields}).data
+            main_data = RunSerializer(main_runs,many=True,context={"embed": embed_fields}).data
+            il_data   = RunSerializer(il_runs,many=True,context={"embed": embed_fields}).data
 
             return Response({
                 **player_data,

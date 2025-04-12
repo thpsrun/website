@@ -1,12 +1,3 @@
-"""
-######################################################################################################################################################
-### File Name: srl/views.py
-### Author: ThePackle
-### Description: Views that are loaded upon someone going to a specific webpage.
-### Dependencies: srl/tasks.py, srl/init_series.py
-######################################################################################################################################################
-"""
-
 import asyncio
 from django.views.generic import ListView,View
 from django.shortcuts import redirect

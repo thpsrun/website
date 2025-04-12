@@ -1,5 +1,5 @@
 from django.urls import path
-from .complex_views import MainPage,PlayerProfile,PlayerHistory,Leaderboard,GameLeaderboard,IL_Leaderboard,FG_Leaderboard,search_leaderboard,ILGameLeaderboard,MonthlyLeaderboard
+from .complex_views import MainPage,PlayerProfile,PlayerHistory,Leaderboard,GameLeaderboard,IL_Leaderboard,FG_Leaderboard,search_leaderboard,ILGameLeaderboard
 from .static_views import PrivacyPolicy,Changelog,FAQ
 
 urlpatterns = [
