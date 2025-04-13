@@ -1,5 +1,15 @@
 from django.urls import path
-from .views import API_Runs,API_Players,API_PlayerRecords,API_Games,API_Categories,API_Variables,API_Levels,API_Streams
+
+from .views import (
+    API_Categories,
+    API_Games,
+    API_Levels,
+    API_PlayerRecords,
+    API_Players,
+    API_Runs,
+    API_Streams,
+    API_Variables,
+)
 
 urlpatterns = [
     path("runs/<str:id>/", API_Runs.as_view(), name="Runs"),

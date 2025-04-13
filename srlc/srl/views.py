@@ -1,10 +1,13 @@
 import asyncio
-from django.views.generic import ListView,View
+
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from .tasks import update_game,update_game_runs,update_player,import_obsolete
+from django.views.generic import ListView, View
+
 from .init_series import init_series
+from .tasks import import_obsolete, update_game, update_game_runs, update_player
+
 
 @method_decorator(csrf_exempt, name="dispatch")
 class UpdateSeriesView(View):
@@ -13,7 +16,7 @@ class UpdateSeriesView(View):
         for series_id in series_ids:
             asyncio.run(init_series(series_id))
 
-        return redirect("/admin/srl/gameoverview/")
+        return redirect("/illiad/srl/games/")
     
 class UpdateGameView(ListView):
     def get(self,request):
@@ -21,7 +24,7 @@ class UpdateGameView(ListView):
         for game_id in game_ids:
             update_game.delay(game_id)
             
-        return redirect("/admin/srl/gameoverview/")
+        return redirect("/illiad/srl/games/")
     
 class RefreshGameRunsView(ListView):
     def get(self,request):
@@ -29,7 +32,7 @@ class RefreshGameRunsView(ListView):
         for game_id in game_ids:
             update_game_runs.delay(game_id,1)
         
-        return redirect("/admin/srl/gameoverview/")
+        return redirect("/illiad/srl/games/")
 
 class UpdateGameRunsView(ListView):
     def get(self,request):
@@ -37,7 +40,7 @@ class UpdateGameRunsView(ListView):
         for game_id in game_ids:
             update_game_runs.delay(game_id,0)
         
-        return redirect("/admin/srl/gameoverview/")
+        return redirect("/illiad/srl/games/")
     
 class UpdatePlayerView(ListView):
     def get(self, request):
@@ -45,7 +48,7 @@ class UpdatePlayerView(ListView):
         for player in player_ids:
             update_player.delay(player)
 
-        return redirect("/admin/srl/players/")
+        return redirect("/illiad/srl/players/")
     
 class ImportObsoleteView(ListView):
     def get(self, request):
@@ -53,4 +56,4 @@ class ImportObsoleteView(ListView):
         for player in player_ids:
             import_obsolete.delay(player)
 
-        return redirect("/admin/srl/players/")
+        return redirect("/illiad/srl/players/")

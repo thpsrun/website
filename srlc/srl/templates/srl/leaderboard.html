@@ -11,16 +11,16 @@
         {% if "/fullgame" in request.path %}
             <title>Full Game Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
         {% elif "/all" in request.path %}
-            {% if game_abbr == "thps12" %}
+            {% if game_slug == "thps12" %}
                 <title>THPS1+2 IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
-            {% elif game_abbr == "thps12ce" %}
+            {% elif game_slug == "thps12ce" %}
                 <title>THPS1+2 CE IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
-            {% elif game_abbr == "thps34" %}
+            {% elif game_slug == "thps34" %}
                 <title>THPS3+4 IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
-            {% elif game_abbr == "thps34ce" %}
+            {% elif game_slug == "thps34ce" %}
                 <title>THPS3+4 CE IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
             {% else %}
-                <title>{{ game_abbr|upper }} IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
+                <title>{{ game_slug|upper }} IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
             {% endif %}
         {% else %}
             <title>Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
@@ -54,9 +54,9 @@
                     {% if "/fullgame" in request.path %}
                         <th colspan="3" class="bg-info">Full Game Leaderboard</th>
                     {% elif "/lbs/" in request.path %}
-                        {% if game_abbr == "thps12" %}
+                        {% if game_slug == "thps12" %}
                             <th colspan="3" class="bg-info">Tony Hawk's Pro Skater 1+2 Overall IL Leaderboard</th>
-                        {% elif game_abbr == "thps12ce" %}
+                        {% elif game_slug == "thps12ce" %}
                             <th colspan="3" class="bg-info">THPS1+2 Category Extensions Overall IL Leaderboard</th>
                         {% else %}
                             <th colspan="3" class="bg-info">{{ game_name }} Overall IL Leaderboard</th>

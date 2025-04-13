@@ -1,4 +1,4 @@
-body{
+body {
     /* background: url("../imgs/background2.jpg") no-repeat fixed center; */
     background-color: #000000;
     background-size: cover;
@@ -7,140 +7,168 @@ body{
     margin-left: auto;
     margin-right: auto;
 }
-footer{
+
+footer {
     width: 1300px;
     margin-left: auto;
     margin-right: auto;
     border: 5px solid;
     border-width: 5px;
 }
-form.search-bar{
+
+form.search-bar {
     padding: 0.5%;
     text-align: center;
     margin-left: auto;
     margin-right: auto;
     border-width: 5px;
 }
-th{ 
-    color:#fff !important;
+
+th {
+    color: #fff !important;
     text-align: center;
     font-size: large;
 }
-td{
+
+td {
     font-size: large;
 }
-.row{
+
+.row {
     padding: 0.6%;
     text-align: center;
     margin-left: auto;
     margin-right: auto;
 }
-.table{
+
+.table {
     padding: 0.5%;
     text-align: center;
     vertical-align: middle;
     margin-left: auto;
     margin-right: auto;
-    background-color: rgba(255,255,255,.85);
+    background-color: rgba(255, 255, 255, .85);
     border: 5px solid;
     border-width: 5px;
 }
-.privacy{
+
+.privacy {
     padding: 0.5%;
     margin-left: auto;
     margin-right: auto;
-    background-color: rgba(255,255,255,.85);
+    background-color: rgba(255, 255, 255, .85);
     border: 5px solid;
     border-width: 5px;
 }
-.navbar-nav.social.ml-autio{
-    margin-left: auto !important; 
+
+.navbar-nav.social.ml-autio {
+    margin-left: auto !important;
     padding-right: 1%;
 }
-.soc{
+
+.soc {
     padding-left: 2px;
     padding-right: 2px;
 }
-.navbar{
-    background-color: rgba(255,255,255,.85) !important;
+
+.navbar {
+    background-color: rgba(255, 255, 255, .85) !important;
     margin-left: auto;
     margin-right: auto;
 }
-.faq{
-    background-color: rgba(255,255,255,.85);
+
+.faq {
+    background-color: rgba(255, 255, 255, .85);
     margin-left: auto;
     margin-right: auto;
     padding: 1%;
 }
-.drops{
+
+.drops {
     font-size: medium;
     text-align: center;
 }
-.bg-info{
+
+.bg-info {
     background-color: #515151 !important;
 }
-.navbar-nav li:hover > ul.dropdown-menu {
+
+.navbar-nav li:hover>ul.dropdown-menu {
     display: block;
 }
+
 .dropdown-submenu {
-    position:relative;
+    position: relative;
 }
-.dropdown-submenu > .dropdown-menu {
+
+.dropdown-submenu>.dropdown-menu {
     top: 0;
     left: 100%;
-    margin-top:-6px;
+    margin-top: -6px;
 }
-.dropdown-menu > li > a:hover:after {
+
+.dropdown-menu>li>a:hover:after {
     text-decoration: underline;
     transform: rotate(-90deg);
-} 
-.navbar-brand{
+}
+
+.navbar-brand {
     padding: 5%;
 }
+
 /*MAIN PAGE CSS*/
-.main-page-container{
+.main-page-container {
     display: flex;
     margin: auto;
-    
-    position:relative;
+
+    position: relative;
     justify-content: flex-start;
     margin-top: 1%;
 }
-.main-wrs{
+
+.main-wrs {
     flex: 3;
 }
-.side-table{
+
+.side-table {
     flex: 1;
     margin-left: 1%;
     display: flex;
     flex-direction: column;
 }
-td.now-streaming{
+
+td.now-streaming {
     text-align: left;
     font-size: medium !important;
 }
-td.side-table-td{
+
+td.side-table-td {
     font-size: medium !important;
 }
-.pfp-img-streaming{
+
+.pfp-img-streaming {
     width: 50px;
     height: 50px;
     vertical-align: top;
 }
-.flag-streaming{
+
+.flag-streaming {
     width: 8%;
 }
-.stream-title{
+
+.stream-title {
     width: 300px;
     word-wrap: break-word;
 }
-.markdown-body{
+
+.markdown-body {
     width: 1300px;
     word-wrap: break-word;
 }
+
 /*PROFILE CSS*/
-.super-container{
-    background-color: rgba(255,255,255,.85);
+.super-container {
+    background-color: rgba(255, 255, 255, .85);
     border: 5px solid;
     border-width: 5px;
     box-shadow: 0px 15px 6px 7px rgb(0 0 0 / 23%);
@@ -154,41 +182,50 @@ td.side-table-td{
     text-align: center;
     width: 60%;
 }
-.profile-container{
+
+.profile-container {
     letter-spacing: .4px;
     padding: 10px;
 }
-.pfp-img{
+
+.pfp-img {
     width: 125px;
     height: 125px;
     vertical-align: middle;
 }
-.profile-info{
+
+.profile-info {
     display: flex;
     vertical-align: middle;
 }
-.profile-pfp{
+
+.profile-pfp {
     padding-right: 10px;
     vertical-align: middle;
 }
-.profile-username{
+
+.profile-username {
     font-size: 20px;
     letter-spacing: .5px;
 }
-.profile-socials{
+
+.profile-socials {
     align-self: center;
 }
-.socialicons{
-    margin-bottom: 0!important;
-    margin-top: 5px!important;
+
+.socialicons {
+    margin-bottom: 0 !important;
+    margin-top: 5px !important;
     text-align: left;
     padding-bottom: 5px;
 }
-.profile-stats{
+
+.profile-stats {
     vertical-align: middle;
     padding: 0 50px;
 }
-.obsolete-tr{
+
+.obsolete-tr {
     background-color: #00cc66 !important;
 }
 
@@ -200,33 +237,38 @@ body.with-cookie-bar {
 .cookie-bar {
     position: fixed;
     width: 100%;
-    top:0;
-    text-align:center;
-    height:25px;
+    top: 0;
+    text-align: center;
+    height: 25px;
     line-height: 25px;
     background: #eee;
 }
 
-@media only screen and (max-width: 900px){
-    body{
+@media only screen and (max-width: 900px) {
+    body {
         width: 100%;
         font-size: small;
         text-align: unset;
     }
-    h5{
+
+    h5 {
         font-size: small;
     }
-    footer{
+
+    footer {
         width: 100%;
         border: unset;
     }
-    th{
+
+    th {
         font-size: small;
     }
-    td{
+
+    td {
         font-size: small;
     }
-    .super-container{
+
+    .super-container {
         border: 5px solid;
         border-width: 5px;
         box-shadow: 0px 15px 6px 7px rgb(0 0 0 / 23%);
@@ -240,33 +282,42 @@ body.with-cookie-bar {
         text-align: unset;
         width: 95%;
     }
-    .pfp-img{
+
+    .pfp-img {
         height: 50px;
         width: 50px;
     }
-    .profile-username{
+
+    .profile-username {
         font-size: small;
     }
-    .profile-container{
+
+    .profile-container {
         font-size: small;
     }
-    .profile-stats{
+
+    .profile-stats {
         justify-content: center;
         padding: 0 10px;
     }
-    .table{
+
+    .table {
         border: unset;
     }
-    .main-page-container{
+
+    .main-page-container {
         display: block;
     }
-    .side-table{
+
+    .side-table {
         margin-left: unset;
     }
-    .flag-streaming{
+
+    .flag-streaming {
         width: 5%;
     }
-    .stream-title{
+
+    .stream-title {
         width: 400px;
         word-wrap: break-word;
     }

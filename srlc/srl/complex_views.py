@@ -1,15 +1,11 @@
-######################################################################################################################################################
-### File Name: complex_views.py
-### Author: ThePackle
-### Description: Script that holds a lot of the complex views (webpages) for the project.
-### Dependencies: srl/models
-######################################################################################################################################################
 from django.core.paginator import Paginator
+from django.db.models import Q, Sum
+from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.db.models import Sum,Q
-from django.db.models.functions import TruncDate
-from .models import GameOverview,Players,Runs,VariableValues,NowStreaming
+
+from .models import Games, NowStreaming, Players, Runs
+
 
 ## PlayerProfile grabs all of the unique information for a single user
 ## (e.g., username, nickname, main runs, individual level runs, etc.) and context's them
@@ -19,19 +15,25 @@ def PlayerProfile(request,name):
         player = Players.objects.get(name__iexact=name)
     except Players.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
-    except:
+    except Exception:
         return render(request, "srl/500.html")
     
-    games         = GameOverview.objects.all().order_by("name")
-    main_runs     = Runs.objects.exclude(vid_status__in=["new","rejected"]).main().filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("date"))
-    il_runs       = Runs.objects.exclude(vid_status__in=["new","rejected"]).il().filter(player_id=player.id).annotate(o_date=TruncDate("date"))
-    total_runs    = len(main_runs) + len(il_runs)
+    games       = Games.objects.only("id","name","release","slug").all().order_by("name")
+    main_runs   = Runs.objects.exclude(vid_status__in=["new","rejected"])\
+                .select_related("game", "player")\
+                .only("id", "game__id", "game__name", "game__release", "subcategory", "player__id", "player__name", "player__awards", "time", "time_secs", "timenl", "timenl_secs", "timeigt", "timeigt_secs", "video", "arch_video", "url", "points", "place", "v_date", "vid_status")\
+                .main().filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("v_date"))
+    il_runs     = Runs.objects.exclude(vid_status__in=["new","rejected"])\
+                .select_related("game","player","level")\
+                .only("id", "game__id", "game__name", "game__release", "subcategory", "level__id", "level__name", "player__id", "player__name", "player__awards", "time", "time_secs", "timenl", "timenl_secs", "timeigt", "timeigt_secs", "video", "arch_video", "url", "points", "place", "v_date", "vid_status")\
+                .il().filter(player_id=player.id).annotate(o_date=TruncDate("v_date"))
+    total_runs  = len(main_runs) + len(il_runs)
     
-    main_runs     = main_runs.filter(obsolete=False)
-    il_runs       = il_runs.filter(obsolete=False)
+    main_runs   = main_runs.filter(obsolete=False)
+    il_runs     = il_runs.filter(obsolete=False)
 
-    hidden_cats   = VariableValues.objects.filter(hidden=True).values_list("value")
-    main_runs     = main_runs.exclude(values__in=hidden_cats)
+    #hidden_cats   = VariableValues.objects.filter(hidden=True).values_list("value")
+    #main_runs     = main_runs.exclude(values__in=hidden_cats)
 
     ### For co-op categories, runners could be player 1 or player 2 and it would count as two different runs.
     ### This would remove the slower of the two and not count it towards points.
@@ -44,7 +46,7 @@ def PlayerProfile(request,name):
     total_points  = main_points + il_points
     
     leaderboard   = Leaderboard(request,3)
-    u_game_names  = games.order_by("release").values_list("name","release")
+    u_game_names  = games.order_by("release").values_list("name", "release")
 
     if isinstance(leaderboard,tuple):
         for index, item in enumerate(leaderboard[0]):
@@ -72,7 +74,7 @@ def PlayerProfile(request,name):
 
         award_set = []
         for award in player.awards.all():
-            award_set.append([award.name,award.image.name.rsplit("/")[-1]])
+            award_set.append([award.name, award.image.name.rsplit("/")[-1]])
 
         context = {
             "player"            : player,
@@ -98,12 +100,14 @@ def PlayerHistory(request,name):
         player = Players.objects.get(name__iexact=name)
     except Players.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
-    except:
+    except Exception:
         return render(request, "srl/500.html")
     
-    games      = GameOverview.objects.all().order_by("name")
-    main_runs  = Runs.objects.objects.exclude(vid_status__in=["new","rejected"]).main().filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("date")).order_by("-o_date")
-    il_runs    = Runs.objects.exclude(vid_status__in=["new","rejected"]).il().filter(player_id=player.id).annotate(o_date=TruncDate("date")).order_by("subcategory")
+    games       = Games.objects.all().order_by("name")
+    main_runs   = Runs.objects.exclude(vid_status__in=["new", "rejected"])\
+                .main().filter(Q(player_id=player.id) | Q(player2_id=player.id)).annotate(o_date=TruncDate("date")).order_by("-o_date")
+    il_runs     = Runs.objects.exclude(vid_status__in=["new", "rejected"])\
+                .il().filter(player_id=player.id).annotate(o_date=TruncDate("date")).order_by("subcategory")
 
     ### For co-op categories, runners could be player 1 or player 2 and it would count as two different runs.
     ### This would remove the slower of the two and not count it towards points.
@@ -113,9 +117,9 @@ def PlayerHistory(request,name):
 
     award_set = []
     for award in player.awards.all():
-        award_set.append([award.name,award.image.name.rsplit("/")[-1]])
+        award_set.append([award.name, award.image.name.rsplit("/")[-1]])
 
-    unique_game_names   = games.order_by("release").values_list("name","release")
+    unique_game_names   = games.order_by("release").values_list("name", "release")
 
     context = {
         "player"            : player,
@@ -126,11 +130,11 @@ def PlayerHistory(request,name):
 
     return render(request, "srl/player_profile.html", context)
 
-def Leaderboard(request,profile=None,game=None):
+def Leaderboard(request, profile=None, game=None):
     players_all     = Players.objects.all()
-    games_all       = GameOverview.objects.all()
-    main_runs_all   = Runs.objects.exclude(vid_status__in=["new","rejected"],place=0).main().filter(obsolete=False)
-    il_runs_all     = Runs.objects.exclude(vid_status__in=["new","rejected"],place=0).il().filter(obsolete=False)
+    games_all       = Games.objects.all()
+    main_runs_all   = Runs.objects.exclude(vid_status__in=["new", "rejected"],place=0).main().filter(obsolete=False)
+    il_runs_all     = Runs.objects.exclude(vid_status__in=["new", "rejected"],place=0).il().filter(obsolete=False)
 
     leaderboard     = []
     fg_leaderboard  = []
@@ -155,13 +159,13 @@ def Leaderboard(request,profile=None,game=None):
             })
 
         elif profile == 2:
-            game_id   = games_all.get(abbr=game).id
-            il_runs   = il_runs_all.filter(player_id=player.id,game_id=game_id)
+            game_id   = games_all.get(slug=game).id
+            il_runs   = il_runs_all.filter(player_id=player.id, game_id=game_id)
             il_wrs    = il_runs.filter(place=1).count() or 0
             il_points = il_runs.aggregate(total_points=Sum("points"))["total_points"] or 0
             
         elif profile == 4:
-            game_id = games_all.get(abbr=game,points__gt=0).id
+            game_id = games_all.get(slug=game, points__gt=0).id
             il_runs = il_runs_all.filter(game_id=game_id).filter(points__gt=0)
             total_points = il_runs.aggregate(total_points=Sum("points"))["total_points"] or 0
 
@@ -175,8 +179,8 @@ def Leaderboard(request,profile=None,game=None):
                     "total_points"  : total_points
                 })
         elif profile == 5:
-            game_id     = games_all.get(abbr=game).id
-            il_runs     = il_runs_all.filter(player_id=player.id,game_id=game_id).order_by("subcategory")
+            game_id     = games_all.get(slug=game).id
+            il_runs     = il_runs_all.filter(player_id=player.id, game_id=game_id).order_by("subcategory")
             il_wrs      = il_runs.filter(place=1).count() or 0
         
             if il_wrs > 1:
@@ -251,7 +255,9 @@ def Leaderboard(request,profile=None,game=None):
         return leaderboard
     elif profile == 5:
         il_wr_counts    = sorted(il_leaderboard, key=lambda x: x["il_wrs"], reverse=True)
-        il_runs_old     = il_runs_all.filter(game_id=game_id,points=100).exclude(level_id="rdnoro6w").order_by("date").annotate(o_date=TruncDate("date")).values_list("subcategory","time","o_date")[:10]
+        il_runs_old     = il_runs_all.filter(game_id=game_id, points=100)\
+                        .exclude(level_id="rdnoro6w").order_by("date")\
+                        .annotate(o_date=TruncDate("date")).values_list("subcategory", "time", "o_date")[:10]
 
         return il_wr_counts,il_runs_old
     else:
@@ -290,15 +296,15 @@ def FG_Leaderboard(request):
     return render(request, "srl/leaderboard.html", context)
 
 ### IL_Leaderboard is the COMBINED IL leaderboards for a single game. It heavily uses the Leaderboard function above.
-def IL_Leaderboard(request,game_abbr):
+def IL_Leaderboard(request,game_slug):
     try:
-        game = GameOverview.objects.get(abbr=game_abbr)
-    except GameOverview.DoesNotExist:
+        game = Games.objects.get(slug=game_slug)
+    except Games.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
-    except:
+    except Exception:
         return render(request, "srl/500.html")
     
-    leaderboard         = Leaderboard(request,2,game_abbr)
+    leaderboard         = Leaderboard(request, 2, game_slug)
 
     paginator           = Paginator(leaderboard, 50)
     page_number         = request.GET.get("page")
@@ -312,7 +318,7 @@ def IL_Leaderboard(request,game_abbr):
     context = {
         "leaderboard"   : leaderboard_page,
         "game_name"     : game.name,
-        "game_abbr"     : game_abbr
+        "game_slug"     : game_slug
     }
 
     return render(request, "srl/leaderboard.html", context)
@@ -328,8 +334,13 @@ def search_leaderboard(request):
     leaderboard         = []
     
     for player in players_all:
-        main_points     = Runs.objects.exclude(vid_status__in=["new","rejected"]).main().filter(obsolete=False).filter(Q(player_id=player.id) | Q(player2_id=player.id)).filter(points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
-        il_points       = Runs.objects.exclude(vid_status__in=["new","rejected"]).il().filter(obsolete=False,player_id=player.id,points__gt=0).aggregate(total_points=Sum("points"))["total_points"] or 0
+        main_points     = Runs.objects.exclude(vid_status__in=["new","rejected"])\
+                        .main().filter(obsolete=False, points__gt=0)\
+                        .filter(Q(player_id=player.id) | Q(player2_id=player.id))\
+                        .aggregate(total_points=Sum("points"))["total_points"] or 0
+        il_points       = Runs.objects.exclude(vid_status__in=["new","rejected"])\
+                        .il().filter(obsolete=False, player_id=player.id, points__gt=0)\
+                        .aggregate(total_points=Sum("points"))["total_points"] or 0
         total_points    = main_points + il_points
 
         leaderboard_all.append({
@@ -338,7 +349,7 @@ def search_leaderboard(request):
             "total_points"  : total_points
         })
 
-    leaderboard_all     = sorted(leaderboard_all, key=lambda x: x["total_points"], reverse=True)
+    leaderboard_all = sorted(leaderboard_all, key=lambda x: x["total_points"], reverse=True)
 
     for rank, item in enumerate(leaderboard_all, start=1):
         if item["player"].name in players.values_list("name", flat=True):
@@ -354,35 +365,35 @@ def search_leaderboard(request):
 
     return JsonResponse(leaderboard, safe=False)
 
-def ILGameLeaderboard(request,abbr,category=None):
+def ILGameLeaderboard(request,slug,category=None):
     if "thps4/ils" in request.path_info:
-        lb_output   = Leaderboard(request,5,abbr)
+        lb_output = Leaderboard(request, 5, slug)
 
         if isinstance(lb_output,tuple):
-            wr_count    = lb_output[0]
-            old_runs    = lb_output[1]
+            wr_count = lb_output[0]
+            old_runs = lb_output[1]
     else:
-        wr_count    = None
-        old_runs    = None
+        wr_count = None
+        old_runs = None
 
     try:
-        game        = GameOverview.objects.filter(abbr=abbr)
-        players     = Players.objects.all()
-        ilruns      = Runs.objects.exclude(vid_status__in=["new","rejected"]).il().filter(game_id=game[0].id).filter(points__gt=0,obsolete=False)
-    except GameOverview.DoesNotExist:
+        game    = Games.objects.filter(slug=slug)
+        players = Players.objects.all()
+        ilruns  = Runs.objects.exclude(vid_status__in=["new", "rejected"]).filter(runtype="il", game_id=game[0].id, points__gt=0, obsolete=False)
+    except Games.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
-    except:
+    except Exception:
         return render(request, "srl/500.html")
 
-    runs_list    = []
+    runs_list = []
     
-    if category == None:
+    if category is not None:
         il_categories = sorted([subcategory[0] for subcategory in ilruns.values_list("subcategory").distinct()])
 
         for run in ilruns:
             if run.player is not None:
                 for player in [run.player.id]:
-                    if player != None:
+                    if player is not None:
                         player = players.filter(id=player)[0]
                         defaulttime = run.game.idefaulttime
 
@@ -429,7 +440,7 @@ def ILGameLeaderboard(request,abbr,category=None):
         "wr_count"          : wr_count,
         "old_runs"          : old_runs,
         "subcategories"     : il_categories,
-        "game_abbr"         : abbr,
+        "game_slug"         : slug,
         "selected_category" : category,
     }
 
@@ -439,22 +450,23 @@ def ILGameLeaderboard(request,abbr,category=None):
         return render(request, "srl/il_leaderboard.html", context)
 
 ### GameLeaderboard is the def used for full-game leaderboards.
-def GameLeaderboard(request,abbr,category=None):
+def GameLeaderboard(request,slug,category=None):
     ### Basic check to see if the game exists. If it doesn't work, returns a no exist; if it breaks, 500.
     try:
-        game        = GameOverview.objects.get(abbr=abbr)
+        game        = Games.objects.get(slug=slug)
         players     = Players.objects.all()
-        mainruns    = Runs.objects.exclude(vid_status__in=["new","rejected"]).main().filter(game_id=game.id,points__gt=0,obsolete=False)
-        hidden_cats = VariableValues.objects.filter(hidden=True).values_list("value")
-    except GameOverview.DoesNotExist:
+        mainruns    = Runs.objects.exclude(vid_status__in=["new", "rejected"])\
+                    .filter(runtype="main", game_id=game.id, points__gt=0, obsolete=False)
+        #hidden_cats = VariableValues.objects.filter(hidden=True).values_list("value")
+    except Games.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
-    except:
+    except Exception:
         return render(request, "srl/500.html")
     
     runs_list = []
 
-    if category == None:
-        mainruns    = mainruns.exclude(values__in=hidden_cats)
+    if category is not None:
+        #mainruns    = mainruns.exclude(values__in=hidden_cats)
         categories  = sorted([subcategory[0] for subcategory in mainruns.values_list("subcategory").distinct()])
 
         for run in mainruns:
@@ -503,16 +515,16 @@ def GameLeaderboard(request,abbr,category=None):
 
             if player != "Anonymous":
                 run_add.update({
-                    "countrycode": player.countrycode.id if player.countrycode is not None else None,
-                    "countryname": player.countrycode.name if player.countrycode is not None else None
+                    "countrycode" : player.countrycode.id if player.countrycode is not None else None,
+                    "countryname" : player.countrycode.name if player.countrycode is not None else None
                 })
 
             if run.subcategory == "Classic Mode - Co-Op (Normal)":
                 run_add.update({
-                    "player2": player2.name if player2 != "Anonymous" else "Anonymous",
-                    "player2nickname": player2.nickname if player2 != "Anonymous" else None,
-                    "countrycode2": player2.countrycode.id if player2 != "Anonymous" and player2.countrycode else None,
-                    "countryname2": player2.countrycode.name if player2 != "Anonymous" and player2.countrycode else None
+                    "player2"           : player2.name if player2 != "Anonymous" else "Anonymous",
+                    "player2nickname"   : player2.nickname if player2 != "Anonymous" else None,
+                    "countrycode2"      : player2.countrycode.id if player2 != "Anonymous" and player2.countrycode else None,
+                    "countryname2"      : player2.countrycode.name if player2 != "Anonymous" and player2.countrycode else None
                 })
 
             runs_list.append(run_add)
@@ -520,11 +532,11 @@ def GameLeaderboard(request,abbr,category=None):
         leaderboard = sorted(runs_list, key=lambda x: x["place"], reverse=False)
 
     context = {
-        "players"               : players,
-        "runs"                  : leaderboard,
-        "subcategories"         : categories,
-        "game_abbr"             : abbr,
-        "selected_category"     : category
+        "players"           : players,
+        "runs"              : leaderboard,
+        "subcategories"     : categories,
+        "game_slug"         : slug,
+        "selected_category" : category
     }
 
     return render(request, "srl/il_leaderboard.html", context)
@@ -536,7 +548,7 @@ def MainPage(request):
     ### To get these values, look up the ID of the WR in a category and copy + paste the "Subcategory Name" field here.
     subcategories    = ["Any%", "Any% (6th Gen)", "100%", "Any% (No Major Glitches)", "All Goals & Golds (No Major Glitches)", "All Goals & Golds (All Careers)", "All Goals & Golds (6th Gen)", "Any% (Beginner)", "100% (NSR)",\
                      "Story (Easy, NG+)", "100% (NG)", "Classic (Normal, NG+)", "Story Mode (Easy, NG+)", "Classic Mode (Normal)", "Any% (360/PS3)", "100% (360/PS3)", "Any% Tour Mode (All Tours, New Game)", "All Goals & Golds (All Tours, New Game)"]
-    exempt_games     = ["GBA","PSP","GBC","Category Extensions","Remix","Sk8land","HD","2x"]
+    exempt_games     = ["GBA", "PSP", "GBC", "Category Extensions", "Remix", "Sk8land", "HD", "2x"]
     
     exclusion_filter = Q()
     run_list         = []
@@ -555,7 +567,7 @@ def MainPage(request):
     seen_records = set()
 
     for run in runs:
-        key = (run.game.abbr, run.subcategory, run.time)
+        key = (run.game.slug, run.subcategory, run.time)
         if key not in seen_records:
             grouped_runs.append({
                 "game"          : run.game,
@@ -566,7 +578,7 @@ def MainPage(request):
             seen_records.add(key)
 
         for record in grouped_runs:
-            if record["game"].abbr == run.game.abbr and record["subcategory"] == run.subcategory and record["time"] == run.time:
+            if record["game"].slug == run.game.slug and record["subcategory"] == run.subcategory and record["time"] == run.time:
                 record["players"].append({
                     "player"    : run.player,
                     "url"       : run.url,
@@ -577,10 +589,15 @@ def MainPage(request):
     run_list = sorted(grouped_runs, key=lambda x: x["game"].release, reverse=False)
 
     ### Sometimes v_date (verify_date) is null; this can happen if the runs on a leaderboard are super old.
-    ### And since MainRuns and ILRuns are separate models, this code will exclude v_dates that are null, order by v_date, and get the latest 5 for each model.
-    ### wrs does the same, but filters based on place=1 in the model.
-    wrs = Runs.objects.exclude(vid_status__in=["new","rejected"]).filter(place=1,obsolete=False,v_date__isnull=False).order_by("-v_date")[:5]
-    pbs = Runs.objects.exclude(vid_status__in=["new","rejected"]).filter(obsolete=False,v_date__isnull=False).exclude(place=1).order_by("-v_date")[:5]
+    ### Essentially grabs the newest 5 runs for WRs (place=1) and PBs (place>1)
+    wrs = Runs.objects.exclude(vid_status__in=["new", "rejected"])\
+        .select_related("game", "player")\
+        .only("id", "game__slug", "player__name", "player__nickname", "subcategory", "time", "time_secs", "timenl", "timenl_secs", "timeigt", "timeigt_secs", "url")\
+        .filter(place=1, obsolete=False, v_date__isnull=False).order_by("-v_date")[:5]
+    pbs = Runs.objects.exclude(vid_status__in=["new", "rejected"])\
+        .select_related("game", "player")\
+        .only("id", "game__slug", "player__name", "player__nickname", "subcategory", "time", "time_secs", "timenl", "timenl_secs", "timeigt", "timeigt_secs", "url")\
+        .filter(place__gt=1, obsolete=False, v_date__isnull=False).order_by("-v_date")[:5]
     
     for pb in pbs:
         runs_data.append(pb)
@@ -598,7 +615,6 @@ def MainPage(request):
     return render(request, "srl/main.html", context)
 
 ### All of the below is a work-in-progress for the eventual Historical Leaderboards update
-###########################################################################################
 """ def MonthlyLeaderboard(request,year,month=None):
     def add_run(main_runs,il_runs,type,month=None):
         export = {}

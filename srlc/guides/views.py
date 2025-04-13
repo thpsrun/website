@@ -1,7 +1,7 @@
 import os
+
 import markdown
-from django.shortcuts import render,redirect
-from django.http import HttpResponse
+from django.shortcuts import redirect, render
 
 #DOCS_PATH = os.path.join(os.path.dirname(__file__), "docs/")
 DOCS_PATH = "/srlc/docs/"

@@ -1,4 +1,4 @@
-$(document).ready(function() {
+$(document).ready(function () {
     var originalLeaderboard = JSON.parse(document.getElementById("leaderboard-data").textContent);
 
     function populateLeaderboard(data) {
@@ -14,21 +14,21 @@ $(document).ready(function() {
             if (!countrycode) {
                 return "";
             }
-            
-            const countryFlag = countrycode === "vh" ? 
-                `<img src="https://www.speedrun.com/images/flags/vh.png" alt="${run.countryname}" title="${run.countryname}" height="15" />` : 
+
+            const countryFlag = countrycode === "vh" ?
+                `<img src="https://www.speedrun.com/images/flags/vh.png" alt="${run.countryname}" title="${run.countryname}" height="15" />` :
                 `<img src="https://flagcdn.com/h20/${countrycode}.png" alt="${run.countryname}" title="${run.countryname}" height="15" />`;
-            
+
             return countryFlag;
         };
 
-        data.forEach(function(item, index) {
-            var row          = tableBody.insertRow();
-            var rankCell     = row.insertCell();
-            var playerCell   = row.insertCell();
-            var pointsCell   = row.insertCell();
+        data.forEach(function (item, index) {
+            var row = tableBody.insertRow();
+            var rankCell = row.insertCell();
+            var playerCell = row.insertCell();
+            var pointsCell = row.insertCell();
 
-            const playerCellContent = getCountryFlag(item.countrycode) + '' + getPlayerLink(item.player,item.nickname);
+            const playerCellContent = getCountryFlag(item.countrycode) + '' + getPlayerLink(item.player, item.nickname);
 
             rankCell.textContent = item.rank;
             playerCell.innerHTML = playerCellContent;
@@ -36,7 +36,7 @@ $(document).ready(function() {
         });
     }
 
-    $("#searchForm").submit(function(event) {
+    $("#searchForm").submit(function (event) {
         event.preventDefault();
         var searchQuery = $("#searchInput").val().trim();
         if (searchQuery === "") {
@@ -47,7 +47,7 @@ $(document).ready(function() {
         $.ajax({
             url: url,
             data: { search: searchQuery },
-            success: function(data) {
+            success: function (data) {
                 populateLeaderboard(data);
             }
         });

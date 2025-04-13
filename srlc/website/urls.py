@@ -1,10 +1,9 @@
 import environ
-from django.contrib import admin
-from django.shortcuts import redirect
-from django.urls import path,include
 from django.conf import settings
 from django.conf.urls.static import static
-
+from django.contrib import admin
+from django.shortcuts import redirect
+from django.urls import include, path
 
 env = environ.Env()
 environ.Env.read_env()
@@ -47,7 +46,7 @@ def src_redirect(request):
     return redirect(env("SRC_URL"))
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("illiad/", admin.site.urls),
     path("api/", include("api.urls")),
     path("", include("srl.urls")),
     path("docs/", include("guides.urls")),

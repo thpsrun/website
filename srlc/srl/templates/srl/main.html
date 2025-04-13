@@ -41,12 +41,12 @@
                         {% for wr in runs %}
                             <tr>
                                 <td>
-                                    {% if wr.game.abbr == "thps12" %}
+                                    {% if wr.game.slug == "thps12" %}
                                         THPS1+2
-                                    {% elif wr.game.abbr == "thps34" %}
+                                    {% elif wr.game.slug == "thps34" %}
                                         THPS3+4
                                     {% else %}
-                                        {{ wr.game.abbr|upper }}
+                                        {{ wr.game.slug|upper }}
                                     {% endif %}
                                 </td>
                                 <td>{{ wr.subcategory }}</td>
@@ -148,12 +148,12 @@
                         <tbody>
                             {% for wr in new_wrs %}
                                 <tr>
-                                    {% if wr.game.abbr == "thps12" %}
+                                    {% if wr.game.slug == "thps12" %}
                                         <td class="side-table-td">THPS1+2</td>
-                                    {% elif wr.game.abbr == "thps34" %}
+                                    {% elif wr.game.slug == "thps34" %}
                                         <td class="side-table-td">THPS3+4</td>
                                     {% else %}
-                                        <td class="side-table-td">{{ wr.game.abbr|upper }}</td>
+                                        <td class="side-table-td">{{ wr.game.slug|upper }}</td>
                                     {% endif %}
                                     <td class="side-table-td">{{ wr.subcategory }}</td>
                                     {% if wr.player.countrycode %}
@@ -207,12 +207,12 @@
                         <tbody>
                             {% for run in new_runs %}
                                 <tr>
-                                    {% if run.game.abbr == "thps12" %}
+                                    {% if run.game.slug == "thps12" %}
                                         <td class="side-table-td">THPS1+2</td>
-                                    {% elif run.game.abbr == "thps34" %}
+                                    {% elif run.game.slug == "thps34" %}
                                         <td class="side-table-td">THPS3+4</td>
                                     {% else %}
-                                        <td class="side-table-td">{{ run.game.abbr|upper }}</td>
+                                        <td class="side-table-td">{{ run.game.slug|upper }}</td>
                                     {% endif %}
                                     <td class="side-table-td">{{ run.subcategory }}</td>
                                     {% if run.player.countrycode %}

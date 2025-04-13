@@ -8,24 +8,24 @@
         <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
 
         {% if "/ils" in request.path %}
-            {% if game_abbr == "thps12" %}
+            {% if game_slug == "thps12" %}
                 <title>THPS1+2 IL Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
-            {% elif game_abbr == "thps12ce" %}
+            {% elif game_slug == "thps12ce" %}
                 <title>THPS1+2 CE IL Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
-            {% elif game_abbr == "thps34" %}
+            {% elif game_slug == "thps34" %}
                 <title>THPS3+4 IL Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
-            {% elif game_abbr == "thps34ce" %}
+            {% elif game_slug == "thps34ce" %}
                 <title>THPS3+4 IL Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
             {% else %}
-                <title>{{ game_abbr|upper }} IL Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
+                <title>{{ game_slug|upper }} IL Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
             {% endif %}
         {% else %}
-            {% if game_abbr == "thps12" %}
+            {% if game_slug == "thps12" %}
                 <title>THPS1+2 Full Game Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
-            {% elif game_abbr == "thps34" %}
+            {% elif game_slug == "thps34" %}
                 <title>THPS3+4 Full Game Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
             {% else %}
-                <title>{{ game_abbr|upper }} Full Game Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
+                <title>{{ game_slug|upper }} Full Game Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
             {% endif %}
         {% endif %}
 

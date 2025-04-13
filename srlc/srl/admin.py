@@ -1,9 +1,31 @@
 from django.contrib import admin
-from django.urls import reverse
 from django.shortcuts import redirect
-from django.urls import path
-from .models import Series,GameOverview,Categories,Levels,Variables,VariableValues,Runs,Players,CountryCodes,Awards,Platforms,NowStreaming
-from .views import UpdateSeriesView,UpdateGameView,UpdateGameRunsView,UpdatePlayerView,RefreshGameRunsView,ImportObsoleteView
+from django.urls import path, reverse
+
+from .models import (
+    Awards,
+    Categories,
+    CountryCodes,
+    Games,
+    Levels,
+    NowStreaming,
+    Platforms,
+    Players,
+    Runs,
+    RunVariableValues,
+    Series,
+    Variables,
+    VariableValues,
+)
+from .views import (
+    ImportObsoleteView,
+    RefreshGameRunsView,
+    UpdateGameRunsView,
+    UpdateGameView,
+    UpdatePlayerView,
+    UpdateSeriesView,
+)
+
 
 class SeriesAdmin(admin.ModelAdmin):
     list_display    = ["name"]
@@ -22,7 +44,7 @@ class SeriesAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
-class GameOverviewAdmin(admin.ModelAdmin):
+class GameAdmin(admin.ModelAdmin):
     list_display    = ["name"]
     actions         = ["update_game", "update_game_runs", "refresh_game_runs"]
     search_fields   = ["name"]
@@ -55,18 +77,41 @@ class GameOverviewAdmin(admin.ModelAdmin):
         return custom_urls + urls
     
 class DefaultAdmin(admin.ModelAdmin):
-    list_display        = ["name"]
-    search_fields       = ["name"]
+    list_display    = ["name"]
+    search_fields   = ["name"]
 
 class CategoriesAdmin(admin.ModelAdmin):
-    list_display        = ["name"]
-    search_fields       = ["id"]
-    list_filter         = ["game"]
+    list_display    = ["name"]
+    search_fields   = ["id"]
+    list_filter     = ["game"]
+
+class RunVariableValuesInline(admin.TabularInline):
+    model = RunVariableValues
+    extra = 1
+    autocomplete_fields = ["variable", "value"]
 
 class SpeedrunAdmin(admin.ModelAdmin):
-    list_display        = ["id"]
-    search_fields       = ["id"]
-    list_filter         = ["obsolete","game","platform"]
+    list_display    = ["id"]
+    search_fields   = ["id"]
+    list_filter     = ["obsolete", "game", "platform"]
+    inlines         = [RunVariableValuesInline]
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name in ["category", "level"]:
+            if request.resolver_match and "object_id" in request.resolver_match.kwargs:
+                run_id = request.resolver_match.kwargs["object_id"]
+                try:
+                    run = Runs.objects.get(id=run_id)
+                    if db_field.name == "category":
+                        kwargs["queryset"] = Categories.objects.filter(game=run.game)
+                    elif db_field.name == "level":
+                        kwargs["queryset"] = Levels.objects.filter(game=run.game)
+                except Runs.DoesNotExist:
+                    pass
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
     """ actions             = ["update_runs"]
 
     def update_runs(self, request, queryset):
@@ -84,9 +129,9 @@ class SpeedrunAdmin(admin.ModelAdmin):
         return custom_urls + urls """
 
 class PlayersAdmin(admin.ModelAdmin):
-    list_display        = ["name"]
-    actions             = ["update_player","import_obsolete"]
-    search_fields       = ["name"]
+    list_display    = ["name"]
+    actions         = ["update_player", "import_obsolete"]
+    search_fields   = ["name"]
 
     def update_player(self, request, queryset):
         player_ids = [obj.id for obj in queryset]
@@ -108,7 +153,7 @@ class PlayersAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
 admin.site.register(Series, SeriesAdmin)
-admin.site.register(GameOverview, GameOverviewAdmin)
+admin.site.register(Games, GameAdmin)
 admin.site.register(Awards, DefaultAdmin) 
 admin.site.register(CountryCodes, DefaultAdmin)
 admin.site.register(Categories, CategoriesAdmin)

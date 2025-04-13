@@ -1,17 +1,18 @@
-### v2.3 - The Open Source Update
+### v3.0 - The Open Source Update
 ###### April ??, 2025
 *   [!!!!] This project is now open source! For more information on this, please check out the project's GitHub here: [https://github.com/ThePackle/SRLC/](https://github.com/ThePackle/SRLC/)
   
+  
 *   Added `bluesky` to the `Players` model.
     *   As a note, this is minor change. If you want your Bluesky account added to your profile, contact Packle. A later update will move to SRC's v2 endpoint, which can return Bluesky links; otherwise this must be done manually.
-*   Added `twitch` to the `GameOverview` model.
+*   Added `twitch` to the `Games` model.
     *   Added logic so this is imported when a new game is added.
     *   Sometimes, like with handheld leaderboards, an SRC game is appended with "GBC","GBA", "PSP", or others; because of this the default Twitch name will be different than reality (e.g., Tony Hawk's Pro Skater 4 exists, but Tony Hawk's Pro Skater 4 (GBA) does not).
 *   Added Bluesky as an environmental variable to the project that can display on the navbar.
 *   Added support for a run's current run verification status from SRC.
     *   Runs will be cached from now on when they are awaiting approval. They will be removed if rejected.
 *   Added support for an optional archived videos field to `Runs` model.
-*   Added quick-links to Twitch, YouTube, and/or Archived Video to player profiles, leaderboards, and the main page. [#19](https://github.com/ThePackle/SRLC/issues/19)
+*   [#19](https://github.com/ThePackle/SRLC/issues/19) Added quick-links to Twitch, YouTube, and/or Archived Video to player profiles, leaderboards, and the main page.
 *   Added "Run History" for all players. By navigating to `/player/<NAME>/history/`, you will be able to see ALL current and obsolete speedruns (ordered by date).
     *   Quick-links to Twitch, YouTube, and/or Archived Videos are also here!
 *   Added more alt and title tags through the site for accessibility.
@@ -22,7 +23,8 @@
     *   Each runtype (`main` and `il`) have been given new QuerySet options to better separate them quickly.
   
   
-*   Changed the front page to display tied world records on the same table row. [#12](https://github.com/ThePackle/SRLC/issues/12)
+*   Changed the `GameOverview` model to `Games`.
+*   [#12](https://github.com/ThePackle/SRLC/issues/12) Changed the front page to display tied world records on the same table row.
 *   Changed all of the API endpoints so they properly return information. Embed and query support has been added where applicable.
     *   `/runs/<ID>` returns information on a run based on its ID (e.g. SRC).
     *   `/players/<ID>` returns information on a player based on their name or ID.
@@ -34,18 +36,19 @@
     *   `/levels/<ID>` returns information on a level based on its ID.
     *   `/variables/<ID>` returns information on a variable based on its ID.
     *   `/live/` returns information on active streams.
-        * `/live/` has GET, POST, PUT, and DELETE.
+        *   `/live/` has GET, POST, PUT, and DELETE.
     *   All endpoints have specific query and embed options that are added (TODO) <HERE>.
 *   Changed `/runs/` endpoint to now properly return data upon POST'ing a new run.
+*   Changed `abbr` value in the `Games` model to `slug`.
   
   
-*   Fixed an issue where the nickname of players would not properly appear in the "Latest Runs" portion of the main page. [#17](https://github.com/ThePackle/SRLC/issues/17)
-*   Fixed an issue where world records were also appearing on the "Latest Runs" portion of the main page. [#18](https://github.com/ThePackle/SRLC/issues/18)
+*   [#17](https://github.com/ThePackle/SRLC/issues/17) Fixed an issue where the nickname of players would not properly appear in the "Latest Runs" portion of the main page.
+*   [#18](https://github.com/ThePackle/SRLC/issues/18) Fixed an issue where world records were also appearing on the "Latest Runs" portion of the main page.
     *   Also added additional logic to remove obsolete runs, in cases that a player gets multiple WRs in a row in the same game and category.
 *   Fixed an issue where, if a game's timing is set to LRT and no RTA was submitted, it would appear as "0m 00s" on the leaderboard.
     *   Only obsolete runs were really affected, so this is more for the "Runs History" page for players.
   
-
+  
 *   Removed `MainRuns` and `ILRuns` models.
 *   Removed Twitter from the navbar.
     *   If you want to use this in your projects, uncomment the code in navbar.html.
@@ -55,7 +58,7 @@
 *   Removed the `/import/` endpoint.
     *   This was a fragment from the earlier days of the project when I - quite frankly - did not know what I was doing.
         * Clarification: I still don't.
-
+  
 * * *
 
 ### v2.2.1.2

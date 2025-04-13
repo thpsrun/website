@@ -1,4 +1,6 @@
-import os,environ
+import os
+
+import environ
 
 env = environ.Env()
 environ.Env.read_env()
@@ -35,8 +37,8 @@ def navbar_docs(request):
             for file in sorted(os.listdir(full_game_path)):
                 if file.endswith(".md"):
                     pages.append({
-                        "title" : file.replace(".md","").replace("_"," ").title(),
-                        "url"   : f"/docs/{game_dir}/{file}".replace(".md","")
+                        "title" : file.replace(".md","").replace("_", " ").title(),
+                        "url"   : f"/docs/{game_dir}/{file}".replace(".md", "")
                     })
             
             if pages:
