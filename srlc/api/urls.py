@@ -8,6 +8,7 @@ from .views import (
     API_Players,
     API_Runs,
     API_Streams,
+    API_Values,
     API_Variables,
 )
 
@@ -18,7 +19,7 @@ urlpatterns = [
     path("games/<str:id>/", API_Games.as_view(), name="Games"),
     path("categories/<str:id>/", API_Categories.as_view(), name="Categories"),
     path("variables/<str:id>/", API_Variables.as_view(), name="Variables"),
-    #path("values/<str:id>/", API_Values.as_view(), name="Values"),
+    path("values/<str:id>/", API_Values.as_view(), name="Values"),
     path("levels/<str:id>/", API_Levels.as_view(), name="Levels"),
     path("live/", API_Streams.as_view(), name="Streams"),
 ]

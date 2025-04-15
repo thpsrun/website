@@ -4,7 +4,16 @@ from django.db.models import Q
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from srl.models import Categories, Games, Levels, NowStreaming, Players, Runs, Variables
+from srl.models import (
+    Categories,
+    Games,
+    Levels,
+    NowStreaming,
+    Players,
+    Runs,
+    Variables,
+    VariableValues,
+)
 
 from api.tasks import normalize_src
 
@@ -16,13 +25,14 @@ from .serializers import (
     RunSerializer,
     StreamSerializer,
     StreamSerializerPost,
+    ValueSerializer,
     VariableSerializer,
 )
 
 
 class API_Runs(APIView):
     ALLOWED_QUERIES = {"status"}
-    ALLOWED_EMBEDS  = {"category", "level", "game", "platform", "players"}
+    ALLOWED_EMBEDS  = {"category", "level", "game", "variables", "platform", "players"}
     def get(self, request, id):
         query_fields    = request.GET.get("query", "").split(",")
         query_fields    = [field.strip() for field in query_fields if field.strip()] 
@@ -40,12 +50,11 @@ class API_Runs(APIView):
 
         if id == "all":
             if "status" in query_fields:
-                m_runs = Runs.objects.filter(vid_status="new")
-
-                main_runs = RunSerializer(m_runs,many=True, context={"embed": embed_fields}).data
+                new_runs = Runs.objects.filter(vid_status="new")
+                runs = RunSerializer(new_runs, many=True, context={"embed": embed_fields}).data
                 
                 return Response({
-                    "main_runs" : main_runs,
+                    "new_runs" : runs,
                 })
             else:
                 return Response({"ERROR": "'all' can only be used with a query (status)."}, status=status.HTTP_400_BAD_REQUEST)
@@ -62,7 +71,7 @@ class API_Runs(APIView):
         
         normalize = normalize_src.delay(id)
         ilcheck = normalize.get()
-        time.sleep(2) ## Sometimes the other celery tasks are slow, so this will allow them to quickly finish before providing a response.
+        time.sleep(2) ### Sometimes the other celery tasks are slow, so this will allow them to quickly finish before providing a response.
 
         if ilcheck == "invalid":
             return Response({"ERROR": "id provided does not belong to this leaderboard's games."}, status=status.HTTP_400_BAD_REQUEST)
@@ -79,7 +88,7 @@ class API_Runs(APIView):
         
         normalize = normalize_src.delay(id)
         ilcheck = normalize.get()
-        time.sleep(2) ## Sometimes the other celery tasks are slow, so this will allow them to quickly finish before providing a response.
+        time.sleep(2) ### Sometimes the other celery tasks are slow, so this will allow them to quickly finish before providing a response.
 
         if ilcheck == "invalid":
             return Response({"ERROR": "id provided does not belong to this leaderboard's games."}, status=status.HTTP_400_BAD_REQUEST)
@@ -116,7 +125,7 @@ class API_Players(APIView):
 
 class API_PlayerRecords(APIView):
     ALLOWED_EMBEDS = {"categories", "levels", "games", "platforms"}
-    def get(self,request,id):
+    def get(self, request, id):
         embed_fields   = request.GET.get("embed", "").split(",")
         embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
         invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
@@ -166,8 +175,8 @@ class API_Games(APIView):
             return Response({"ERROR": "Game ID or slug/abbreviation does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
 class API_Categories(APIView):
-    ALLOWED_EMBEDS = {"games", "variables"}
-    def get(self,request,id):
+    ALLOWED_EMBEDS = {"game", "variables"}
+    def get(self, request, id):
         if len(id) > 15:
             return Response({"ERROR": "Category ID exceeds maximum length."}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -185,8 +194,8 @@ class API_Categories(APIView):
             return Response({"ERROR": "Category ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
             
 class API_Variables(APIView):
-    ALLOWED_EMBEDS = {"games", "values"}
-    def get(self,request,id):
+    ALLOWED_EMBEDS = {"game", "values"}
+    def get(self, request, id):
         if len(id) > 15:
             return Response({"ERROR": "Variable ID exceeds maximum length."}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -203,30 +212,28 @@ class API_Variables(APIView):
         else:
             return Response({"ERROR": "Variable ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
-""" 
-### Going to remove later, probably.
 class API_Values(APIView):
-    def get(self, request, value):
-        serializer = ValueSerializer(data={"value": value})
-        serializer.is_valid(raise_exception=True)
+    ALLOWED_EMBEDS = {"variable"}
+    def get(self, request, id):
+        if len(id) > 15:
+            return Response({"ERROR": "Value ID exceeds maximum length."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        embed_fields   = request.GET.get("embed", "").split(",")
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
-        validated_data = serializer.validated_data
-        validate_val   = validated_data["value"]
-
-        values_data = VariableValues.objects.filter(valueid=validate_val)
-
-        if len(values_data) == 0:
-            return HttpResponseNotFound(f"value id {validate_val} does not exist.")
+        if invalid_embeds:
+            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        value = VariableValues.objects.filter(value__iexact=id).first()
+        if value:
+            return Response(ValueSerializer(value, context={"embed": embed_fields}).data, status=status.HTTP_200_OK)
         else:
-            return Response({
-                "var":      values_data[0].var,
-                "valueid":  values_data[0].value,
-                "name":     values_data[0].name,
-            }) """
+            return Response({"ERROR": "Value ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
             
 class API_Levels(APIView):
-    ALLOWED_EMBEDS = {"games"}
-    def get(self,request,id):
+    ALLOWED_EMBEDS = {"game"}
+    def get(self, request, id):
         if len(id) > 15:
             return Response({"ERROR": "Level ID exceeds maximum length."}, status=status.HTTP_400_BAD_REQUEST)
         

@@ -22,7 +22,7 @@
         {% include 'srl/navbar.html' %}
         <div class="main-page-container">
             <div class="main-table">
-                <table id="leaderboard-table-1" class="table table-striped main-wrs">
+                <table id="leaderboard-table-1" class="table table-striped table-light table-hover main-wrs">
                     <thead>
                         <tr>
                             <th colspan="5"class="bg-info">Current World Records</th>
@@ -86,7 +86,7 @@
             <div class="side-table">
                 {% if streamers.count > 0 %}
                 <div class="now-streaming-table">
-                    <table class="table table-striped">
+                    <table class="table table-striped table-light table-hover">
                         <thead>
                             <tr>
                                 <th colspan="2" class="bg-info">Currently Streaming</th>
@@ -131,7 +131,7 @@
                 </div>
                 {% endif %}
                 <div class="latest-wrs-table">
-                    <table  class="table table-striped">
+                    <table  class="table table-striped table-light table-hover">
                         <thead>
                             <tr>
                                 <th colspan="4" class="bg-info">Latest World Records</th>
@@ -155,7 +155,12 @@
                                     {% else %}
                                         <td class="side-table-td">{{ wr.game.slug|upper }}</td>
                                     {% endif %}
-                                    <td class="side-table-td">{{ wr.subcategory }}</td>
+                                    <td class="side-table-td">
+                                        {% with subcat=wr.subcategory|custom_splitter %}
+                                            {{ subcat.0|trim }}<br />
+                                            {{ subcat.1|trim }}
+                                        {% endwith %}
+                                    </td>
                                     {% if wr.player.countrycode %}
                                         {% if wr.player.countrycode.id == "vh" %}
                                             <td class="side-table-td"><img src="{% static 'srl/misc/vh.png'%}" title="Valhalla" onerror="this.onerror=null; this.src=''" height="15" />
@@ -190,7 +195,7 @@
                 </div>
 
                 <div class="latest-runs-table">
-                    <table id="leaderboard-table-3" class="table table-striped">
+                    <table id="leaderboard-table-3" class="table table-striped table-light table-hover">
                         <thead>
                             <tr>
                                 <th colspan="4" class="bg-info">Latest Runs</th>
@@ -214,7 +219,12 @@
                                     {% else %}
                                         <td class="side-table-td">{{ run.game.slug|upper }}</td>
                                     {% endif %}
-                                    <td class="side-table-td">{{ run.subcategory }}</td>
+                                    <td class="side-table-td">
+                                        {% with subcat=run.subcategory|custom_splitter %}
+                                            {{ subcat.0|trim }}<br />
+                                            {{ subcat.1|trim }}
+                                        {% endwith %}
+                                    </td>
                                     {% if run.player.countrycode %}
                                         <td class="side-table-td"><img src="https://flagcdn.com/h20/{{ run.player.countrycode.id }}.png" title="{{ run.player.countrycode.name }}" onerror="this.onerror=null; this.src=''" height="15" />
                                             {% if run.player.nickname %}

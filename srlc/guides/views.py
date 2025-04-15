@@ -3,6 +3,8 @@ import os
 import markdown
 from django.shortcuts import redirect, render
 
+from .youtube_shortcode import YTEmbedProcessor
+
 #DOCS_PATH = os.path.join(os.path.dirname(__file__), "docs/")
 DOCS_PATH = "/srlc/docs/"
 
@@ -10,7 +12,7 @@ def render_markdown(request,game,doc):
     folder = os.path.join(DOCS_PATH,game)
     file_path = os.path.join(folder,doc+".md")
 
-    if not os.path.exists(file_path):
+    if not os.path.exists(file_path) or ".github" in file_path:
         return redirect("/")
 
     with open(file_path, "r", encoding="utf-8") as f:
@@ -24,7 +26,10 @@ def render_markdown(request,game,doc):
     else:
         md_content = "".join(lines)
 
-    html = markdown.markdown(md_content)
+    html = markdown.markdown(
+        md_content,
+        extensions=["markdown.extensions.extra", YTEmbedProcessor()]
+    )
 
     return render(request, "guides/docs.html", {
         "doc_game"     : game.upper(),

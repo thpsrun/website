@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
@@ -17,31 +18,31 @@ class UpdateSeriesView(View):
             asyncio.run(init_series(series_id))
 
         return redirect("/illiad/srl/games/")
-    
+
 class UpdateGameView(ListView):
-    def get(self,request):
+    def get(self, request):
         game_ids = self.request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
             update_game.delay(game_id)
-            
+
         return redirect("/illiad/srl/games/")
-    
+
 class RefreshGameRunsView(ListView):
-    def get(self,request):
+    def get(self, request):
         game_ids = self.request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
-            update_game_runs.delay(game_id,1)
-        
+            update_game_runs.delay(game_id, 1)
+
         return redirect("/illiad/srl/games/")
 
 class UpdateGameRunsView(ListView):
-    def get(self,request):
+    def get(self, request):
         game_ids = self.request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
-            update_game_runs.delay(game_id,0)
-        
+            update_game_runs.delay(game_id, 0)
+
         return redirect("/illiad/srl/games/")
-    
+
 class UpdatePlayerView(ListView):
     def get(self, request):
         player_ids = self.request.GET.get("player_ids", "").split(",")
@@ -49,11 +50,13 @@ class UpdatePlayerView(ListView):
             update_player.delay(player)
 
         return redirect("/illiad/srl/players/")
-    
+
 class ImportObsoleteView(ListView):
     def get(self, request):
         player_ids = self.request.GET.get("player_ids", "").split(",")
         for player in player_ids:
-            import_obsolete.delay(player)
+            import_obsolete.delay(player, False)
+            print("Speedrun.com is fucking with me... Waiting 15 extra seconds...")
+            time.sleep(15)
 
         return redirect("/illiad/srl/players/")

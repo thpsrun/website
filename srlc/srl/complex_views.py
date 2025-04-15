@@ -387,7 +387,7 @@ def ILGameLeaderboard(request,slug,category=None):
 
     runs_list = []
     
-    if category is not None:
+    if category is None:
         il_categories = sorted([subcategory[0] for subcategory in ilruns.values_list("subcategory").distinct()])
 
         for run in ilruns:
@@ -415,19 +415,19 @@ def ILGameLeaderboard(request,slug,category=None):
                             )
                     
                         run_add = {
-                            "player"      : player.name if player else "Anonymous",
-                            "nickname"    : player.nickname if player.nickname else None,
-                            "countrycode" : player.countrycode.id if player and player.countrycode else None,
-                            "countryname" : player.countrycode.name if player and player.countrycode else None,
-                            "place"       : run.place,
-                            "defaulttime" : defaulttime,
-                            "time"        : run_time,
-                            "points"      : run.points,
-                            "date"        : run.date,
-                            "subcategory" : run.subcategory,
-                            "url"         : run.url,
-                            "video"       : run.video,
-                            "other_video" : run.arch_video
+                            "player"        : player.name if player else "Anonymous",
+                            "nickname"      : player.nickname if player.nickname else None,
+                            "countrycode"   : player.countrycode.id if player and player.countrycode else None,
+                            "countryname"   : player.countrycode.name if player and player.countrycode else None,
+                            "place"         : run.place,
+                            "defaulttime"   : defaulttime,
+                            "time"          : run_time,
+                            "points"        : run.points,
+                            "date"          : run.date,
+                            "subcategory"   : run.subcategory,
+                            "url"           : run.url,
+                            "video"         : run.video,
+                            "other_video"   : run.arch_video
                         }
 
                     runs_list.append(run_add)
@@ -465,7 +465,7 @@ def GameLeaderboard(request,slug,category=None):
     
     runs_list = []
 
-    if category is not None:
+    if category is None:
         #mainruns    = mainruns.exclude(values__in=hidden_cats)
         categories  = sorted([subcategory[0] for subcategory in mainruns.values_list("subcategory").distinct()])
 

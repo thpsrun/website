@@ -1,3 +1,5 @@
+import re
+
 from django import template
 from django.db.models import Sum
 from django.utils.timezone import now
@@ -28,6 +30,24 @@ def get_unique_game_names(main_runs):
 @register.filter
 def filter_game_name(game_runs, game_name):
     return [game for game in game_runs if Games.objects.get(id=game.game.id).name == game_name]
+
+@register.filter
+def custom_splitter(value):
+    match = re.search(r"[-(]", value)
+    if not match:
+        return [value.strip(), ""]
+
+    index = match.start()
+    symbol = value[index]
+
+    first = value[:index].strip()
+    second = value[index:].strip() if symbol == "(" else value[index + 1:].strip()
+
+    return [first, second]
+
+@register.filter
+def trim(value):
+    return value.strip()
 
 @register.filter
 def get_rank(game_name, player_name):

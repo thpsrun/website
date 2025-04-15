@@ -11,6 +11,7 @@ from srl.models import (
     Platforms,
     Players,
     Runs,
+    RunVariableValues,
     Variables,
     VariableValues,
 )
@@ -18,15 +19,19 @@ from srl.models import (
 
 ### Used in GET /runs/ endpoint.
 class RunSerializer(serializers.ModelSerializer):
-    game       = serializers.SerializerMethodField()
-    category   = serializers.SerializerMethodField()
-    level      = serializers.SerializerMethodField()
-    platform   = serializers.SerializerMethodField()
-    times      = serializers.SerializerMethodField()
-    players    = serializers.SerializerMethodField()
+    game        = serializers.SerializerMethodField()
+    category    = serializers.SerializerMethodField()
+    level       = serializers.SerializerMethodField()
+    variables   = serializers.SerializerMethodField()
+    times       = serializers.SerializerMethodField()
+    players     = serializers.SerializerMethodField()
+    system      = serializers.SerializerMethodField()
+    status      = serializers.SerializerMethodField()
+    videos      = serializers.SerializerMethodField()
+    meta        = serializers.SerializerMethodField()
 
     def get_game(self, obj):
-        if "game" in self.context.get("embed", []):
+        if any(item in self.context.get("embed", []) for item in ["games", "game"]):
             return GameSerializer(Games.objects.get(id=obj.game.id)).data
         else:
             return obj.game.id
@@ -44,12 +49,6 @@ class RunSerializer(serializers.ModelSerializer):
             return obj.level.id
         else:
             return None
-
-    def get_platform(self, obj):
-        if "platform" in self.context.get("embed", []):
-            return PlatformSerializer(Platforms.objects.get(id=obj.platform.id)).data
-        else:
-            return obj.platform.id
         
     def get_times(self, obj):
         return ({
@@ -59,7 +58,7 @@ class RunSerializer(serializers.ModelSerializer):
             "timenl"        : obj.timenl,
             "timenl_secs"   : obj.timenl_secs,
             "timeigt"       : obj.timeigt,
-            "timeigt_secs"  : obj.timeigt_secs
+            "timeigt_secs"  : obj.timeigt_secs,
         })
         
     def get_players(self, obj):
@@ -68,14 +67,78 @@ class RunSerializer(serializers.ModelSerializer):
 
             if obj.player2:
                 player2 = PlayerSerializer(Players.objects.get(id=obj.player2.id)).data
-                return player1,player2
+                return player1, player2
             else:
                 return player1
         else:
-            if obj.player2:
-                return obj.player.id, obj.player2.id
+            p1 = obj.player.id if obj.player else "Anonymous"
+
+            if obj.player2 and "co-op" in obj.subcategory.lower():
+                p2 = obj.player2.id
+            elif "co-op" in obj.subcategory.lower():
+                p2 = "Anonymous"
             else:
-                return obj.player.id
+                return p1
+            
+            return p1, p2
+        
+    def get_system(self, obj):
+        if "platform" in self.context.get("embed", []):
+            plat = PlatformSerializer(Platforms.objects.get(id=obj.platform.id)).data
+        else:
+            plat = obj.platform.id
+
+        return ({
+            "platform"      : plat,
+            "emulated"      : obj.emulated,
+        })
+        
+    def get_status(self, obj):
+        return ({
+            "vid_status"    : obj.vid_status,
+            "approver"      : obj.approver.id,
+            "v_date"        : obj.v_date,
+            "obsolete"      : obj.obsolete,
+        })
+    
+    def get_videos(self, obj):
+        return ({
+            "video"         : obj.video,
+            "arch_video"    : obj.arch_video,
+        })
+    
+    def get_variables(self, obj):
+        variable_list = RunVariableValues.objects.only("variable_id", "value_id").filter(run=obj.id).values("variable_id", "value_id")
+        output = {}
+
+        if "variables" in self.context.get("embed", []):
+            for variable in variable_list:
+                var = VariableSerializer(Variables.objects.only("id").get(id=variable["variable_id"])).data
+                val = ValueSerializer(VariableValues.objects.only("value").get(value=variable["value_id"])).data
+                
+                var_id = var["id"]
+                var.pop("id", None)
+
+                output.update({
+                    var_id : {
+                        **var,
+                        "values": val,
+                    }
+                })
+        else:
+            if len(variable_list) > 0:
+                for variable in variable_list:
+                    output.update({
+                        variable["variable_id"] : variable["value_id"]
+                    })
+                
+        return output
+    
+    def get_meta(self, obj):
+        return ({
+            "points"    : obj.points,
+            "url"       : obj.url,
+        })
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -86,12 +149,28 @@ class RunSerializer(serializers.ModelSerializer):
         data.pop("timenl_secs", None)
         data.pop("timeigt", None)
         data.pop("timeigt_secs", None)
+        data.pop("vid_status", None)
+        data.pop("emulated", None)
+        data.pop("approver", None)
+        data.pop("v_date", None)
+        data.pop("platform", None)
+        data.pop("obsolete", None)
+        data.pop("v_date", None)
+        data.pop("video", None)
+        data.pop("arch_video", None)
+        data.pop("points", None)
+        data.pop("url", None)
 
         return data
 
     class Meta:
         model  = Runs
-        fields = ["id", "runtype", "game", "platform", "category", "level", "subcategory", "place", "player", "player2", "players", "url", "video", "arch_video", "date", "v_date", "times", "time_secs", "timenl", "timenl_secs", "timeigt", "timeigt_secs", "points", "emulated", "vid_status", "obsolete"]
+        fields = ["id", "runtype", "game", "platform", "category", "level",
+                "subcategory", "place", "player", "player2", "players", 
+                "url", "video", "arch_video", "date", "v_date", "times", "time_secs",
+                "timenl", "timenl_secs", "timeigt", "timeigt_secs", "points", "emulated", 
+                "vid_status", "obsolete", "system", "status", "videos", "variables", "meta"
+        ]
 
 ### Used with the /platform/ endpoint.
 class PlatformSerializer(serializers.ModelSerializer):
@@ -156,13 +235,15 @@ class PlayerSerializer(serializers.ModelSerializer):
     
     class Meta:
         model  = Players
-        fields = ["id", "name", "nickname", "url", "country", "pronouns", "twitch", "youtube", "twitter", "ex_stream", "awards", "stats"]
+        fields = ["id", "name", "nickname", "url", "country", "pronouns", "twitch", 
+                "youtube", "twitter", "ex_stream", "awards", "stats"
+        ]
 
 ### Used with the /games/ endpoint.
 class GameSerializer(serializers.ModelSerializer):
-    categories = serializers.SerializerMethodField()
-    levels     = serializers.SerializerMethodField()
-    platforms  = serializers.SerializerMethodField()
+    categories  = serializers.SerializerMethodField()
+    levels      = serializers.SerializerMethodField()
+    platforms   = serializers.SerializerMethodField()
 
     def get_categories(self, obj):
         if "categories" in self.context.get("embed", []):
@@ -199,15 +280,17 @@ class GameSerializer(serializers.ModelSerializer):
         
     class Meta:
         model  = Games
-        fields = ["id", "name", "slug", "release", "boxart", "twitch", "defaulttime", "idefaulttime", "pointsmax", "ipointsmax", "categories", "levels", "platforms"]
+        fields = ["id", "name", "slug", "release", "boxart", "twitch", "defaulttime",
+                "idefaulttime", "pointsmax", "ipointsmax", "categories", "levels", "platforms"
+        ]
 
 ### Used with the /levels/ endpoint.
 class LevelSerializer(serializers.ModelSerializer):
-    games = serializers.SerializerMethodField()
+    game = serializers.SerializerMethodField()
 
-    def get_games(self, obj):
-        if "games" in self.context.get("embed", []):
-            return GameSerializer(Games.objects.filter(id=obj.game.id), many=True).data
+    def get_game(self, obj):
+        if "game" in self.context.get("embed", []):
+            return GameSerializer(Games.objects.filter(id=obj.game.id)).data
         else:
             return None
     
@@ -215,23 +298,23 @@ class LevelSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         embed_fields = self.context.get("embed", [])
 
-        if "games" not in embed_fields:
-            data.pop("games", None)
+        if "game" not in embed_fields:
+            data.pop("game", None)
 
         return data
     
     class Meta:
         model  = Levels
-        fields = ["id", "name", "url", "games"]
+        fields = ["id", "name", "url", "game"]
 
 ### Used with the /categories/ endpoint.
 class CategorySerializer(serializers.ModelSerializer):
-    games     = serializers.SerializerMethodField()
-    variables = serializers.SerializerMethodField()
+    game        = serializers.SerializerMethodField()
+    variables   = serializers.SerializerMethodField()
 
-    def get_games(self, obj):
-        if "games" in self.context.get("embed", []):
-            return GameSerializer(Games.objects.filter(id=obj.game.id), many=True).data
+    def get_game(self, obj):
+        if "game" in self.context.get("embed", []):
+            return GameSerializer(Games.objects.filter(id=obj.game.id)).data
         else:
             return None
     
@@ -245,8 +328,8 @@ class CategorySerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         embed_fields = self.context.get("embed", [])
 
-        if "games" not in embed_fields:
-            data.pop("games", None)
+        if "game" not in embed_fields:
+            data.pop("game", None)
 
         if "variables" not in embed_fields:
             data.pop("variables", None)
@@ -255,15 +338,15 @@ class CategorySerializer(serializers.ModelSerializer):
     
     class Meta:
         model  = Categories
-        fields = ["id", "name", "type", "url", "hidden", "games", "variables"]
+        fields = ["id", "name", "type", "url", "hidden", "game", "variables"]
 
 ### Used with the /variables/ endpoint.
 class VariableSerializer(serializers.ModelSerializer):
-    games  = serializers.SerializerMethodField()
-    values = serializers.SerializerMethodField()
+    game    = serializers.SerializerMethodField()
+    values  = serializers.SerializerMethodField()
 
-    def get_games(self, obj):
-        if "games" in self.context.get("embed", []):
+    def get_game(self, obj):
+        if "game" in self.context.get("embed", []):
             return GameSerializer(Games.objects.filter(id=obj.game.id), many=True).data
         else:
             return None
@@ -278,8 +361,8 @@ class VariableSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         embed_fields = self.context.get("embed", [])
 
-        if "games" not in embed_fields:
-            data.pop("games", None)
+        if "game" not in embed_fields:
+            data.pop("game", None)
 
         if "values" not in embed_fields:
             data.pop("values", None)
@@ -288,30 +371,26 @@ class VariableSerializer(serializers.ModelSerializer):
     
     class Meta:
         model  = Variables
-        fields = ["id", "name", "cat", "all_cats", "scope", "hidden", "games", "values"]
+        fields = ["id", "name", "cat", "all_cats", "scope", "hidden", "game", "values"]
 
 ### Used with the /values/ endpoint.
 class ValueSerializer(serializers.ModelSerializer):
-    variables = serializers.SerializerMethodField()
+    variable = serializers.SerializerMethodField()
 
-    def get_variables(self, obj):
-        if "variables" in self.context.get("embed", []):
-            return VariableSerializer(VariableSerializer.objects.filter(cat=obj.cat), many=True).data
+    def get_variable(self, obj):
+        if "variable" in self.context.get("embed", []):
+            return VariableSerializer(Variables.objects.get(id=obj.var.id)).data
         else:
-            return None
+            return obj.var.id
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        embed_fields = self.context.get("embed", [])
-
-        if "variables" not in embed_fields:
-            data.pop("variables", None)
 
         return data
     
     class Meta:
         model  = VariableValues
-        fields = ["value", "name", "hidden", "variables"]
+        fields = ["value", "name", "hidden", "variable"]
 
 class AwardSerializer(serializers.ModelSerializer):
     class Meta:

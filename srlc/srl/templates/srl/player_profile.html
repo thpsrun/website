@@ -107,16 +107,16 @@
                     </div>
                     {% if "/history" not in request.path %}
                         <div class="profile-stats">
-                            <p class="stats">Total Points: {{ total_points }}<br />
+                            Total Points: {{ total_points }}<br />
                             Overall Rank: {{ player_rank }} / {{ player_count }}<br />
-                            Total Runs: {{ total_runs }}</p>
+                            Total Runs: {{ total_runs }}
                         </div>
                     {% endif %}
                 </div>
             </div>
             {% if awards %}
-            <div>
-                <h6 style="text-decoration:underline;">Awards</h6>
+            <div class="profile-awards">
+                <h6 style="text-decoration: underline;text-align: center;padding-top: 10px;">Awards</h6>
                 {% for award in awards %}
                     {{ award.0 }}<br />
                 {% endfor %}
@@ -152,7 +152,14 @@
                                         {% endif %}
                                         <tr>
                                             <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
-                                                <div class="subcategory">{% if game.subcategory %} {{ game.subcategory }} {% endif %}</div>
+                                                <div class="subcategory">
+                                                    {% if game.subcategory %}
+                                                        {% with subcat=game.subcategory|custom_splitter %}
+                                                            {{ subcat.0|trim }}<br />
+                                                            {{ subcat.1|trim }}
+                                                        {% endwith %}
+                                                    {% endif %}
+                                                </div>
                                             </td>
                                             <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
                                                 {% if game.obsolete == False %}
@@ -177,9 +184,6 @@
                                                     {% endif %}
                                                 {% endif %}
                                                 </div>
-                                            </td>
-                                            <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
-                                                <div class="date">{{ game.o_date }}</div>
                                             </td>
                                             <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
                                                 {% if game.obsolete == False %}
@@ -242,7 +246,14 @@
                                             {% endif %}
                                             <tr>
                                                 <td colspan="2" {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
-                                                    <div class="subcategory">{% if game.subcategory %} {{ game.subcategory }} {% endif %}</div>
+                                                    <div class="subcategory">
+                                                        {% if game.subcategory %}
+                                                            {% with subcat=game.subcategory|custom_splitter %}
+                                                                {{ subcat.0|trim }}<br />
+                                                                {{ subcat.1|trim }}
+                                                            {% endwith %}
+                                                        {% endif %}
+                                                    </div>
                                                 </td>
                                                 <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
                                                     {% if game.obsolete == False %}

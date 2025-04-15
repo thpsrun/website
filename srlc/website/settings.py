@@ -89,7 +89,6 @@ if os.getenv("DEBUG_MODE") == "True":
     DEBUG = True
     CSRF_TRUSTED_ORIGINS = ["http://localhost:8001"]
 else:
-    # Security Setttings
     CSRF_COOKIE_SECURE              = True
     SESSION_COOKIE_SECURE           = True
     SECURE_SSL_REDIRECT             = False ## ASSUMES YOU ARE USING NPM

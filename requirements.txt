@@ -4,6 +4,7 @@ celery[redis]
 certifi==2025.1.31
 crispy-bootstrap5==2025.4
 Django>=5.2
+#django-allauth==65.7.0
 django-bootstrap5==25.1
 django-classy-tags==4.1.0
 django-cors-headers==4.7.0

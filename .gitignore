@@ -130,19 +130,19 @@ dmypy.json
 # Other shit to ignore
 */.DS_Store
 .DS_Store
+srlc/website/sqlite3.db
+srlc/srl/static/srl/imgs/awards/
+srlc/db.json
 srlc/srl/static/pfp/*
 srlc/website/static/*
+
+backups/
 bin/
 .vscode/
 include/
 share/man/man1/
 pyvenv.cfg
 typescript
-
 npm/*
-srlc/website/sqlite3.db
-srlc/srl/static/srl/imgs/awards/
-
-srlc/db.json
-NOTES.yaml
 pyproject.toml
+.pylintrc

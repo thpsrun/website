@@ -2,15 +2,24 @@
 ###### April ??, 2025
 *   [!!!!] This project is now open source! For more information on this, please check out the project's GitHub here: [https://github.com/ThePackle/SRLC/](https://github.com/ThePackle/SRLC/)
   
-  
+### Added
+*   Added Guides!
+    *   Guides are .MD files (with some enhancements on-site) that serve to make the webiste the central point of information for the community.
+    *   Guides have been added to the top navigation bar. Once you are in the guides section, you can navigate it with the new breadcrumb bar.
+    *   Guides are 
 *   Added `bluesky` to the `Players` model.
     *   As a note, this is minor change. If you want your Bluesky account added to your profile, contact Packle. A later update will move to SRC's v2 endpoint, which can return Bluesky links; otherwise this must be done manually.
 *   Added `twitch` to the `Games` model.
     *   Added logic so this is imported when a new game is added.
     *   Sometimes, like with handheld leaderboards, an SRC game is appended with "GBC","GBA", "PSP", or others; because of this the default Twitch name will be different than reality (e.g., Tony Hawk's Pro Skater 4 exists, but Tony Hawk's Pro Skater 4 (GBA) does not).
 *   Added Bluesky as an environmental variable to the project that can display on the navbar.
-*   Added support for a run's current run verification status from SRC.
-    *   Runs will be cached from now on when they are awaiting approval. They will be removed if rejected.
+*   Added the following to the `Runs` model:
+    *   `vid_status`: Mirrors what the current verification status is on SRC.
+        *   Runs will be cached from now on when they are awaiting approval. They will be removed if rejected.
+        *   Runs marked as "new" or "rejected" will not appear on the site.
+    *   `approver`: Shows the player who approved the run (marked as None if the runner deleted their account).
+    *   `description`: Shows the comment field of a specific speedrun.
+        *   Right now, this is more for archiving purposes. If runs are eventually given the ability to be submited through this site, this will be available.
 *   Added support for an optional archived videos field to `Runs` model.
 *   [#19](https://github.com/ThePackle/SRLC/issues/19) Added quick-links to Twitch, YouTube, and/or Archived Video to player profiles, leaderboards, and the main page.
 *   Added "Run History" for all players. By navigating to `/player/<NAME>/history/`, you will be able to see ALL current and obsolete speedruns (ordered by date).
@@ -21,34 +30,42 @@
 *   Added the new `Runs` model to replace `MainRuns` and `ILRuns`.
     *   It was frustrating dealing with duplicate code for two nearly identical models (`MainRuns` has support for 2 players; `ILRuns` has support for Levels). This update forced me to change this to a combined model - had to get rid of dumb tech debt!
     *   Each runtype (`main` and `il`) have been given new QuerySet options to better separate them quickly.
+*   Added the `RunVariableValues` model to map out Variable-Value tandems for each run in the `Runs`.
+    *   Later updates will deprecate `subcategory` and make it more automated to find categories and sub-categories for each game.
   
-  
+### Changed
+*   Changed around a lot of CSS values throughout the site.
+    *   Different media queries were created for different screen sizes (definitely should be a lot more responsive on mobile).
+    *   Not CSS, but sub-categories in most areas are now have a line break incldued. For example: "College" is on one line; "Collect the S-K-A-T-E letters" on the other.
 *   Changed the `GameOverview` model to `Games`.
 *   [#12](https://github.com/ThePackle/SRLC/issues/12) Changed the front page to display tied world records on the same table row.
 *   Changed all of the API endpoints so they properly return information. Embed and query support has been added where applicable.
     *   `/runs/<ID>` returns information on a run based on its ID (e.g. SRC).
     *   `/players/<ID>` returns information on a player based on their name or ID.
     *   `/players/all` returns all information on players, but must be given query options.
+        *   Example: `?query=streamexceptions`
     *   `/players/<USER>/pbs` returns all PBs of a player based on their name or ID.
     *   `/games/<ID>` returns information on a game based on their name or abbreviation.
     *   `/games/all` returns information on all games.
     *   `/categories/<ID>` returns information on a category based on its ID.
     *   `/levels/<ID>` returns information on a level based on its ID.
     *   `/variables/<ID>` returns information on a variable based on its ID.
+    *   `/values/<ID>` returns information on a value based on its ID.
     *   `/live/` returns information on active streams.
         *   `/live/` has GET, POST, PUT, and DELETE.
     *   All endpoints have specific query and embed options that are added (TODO) <HERE>.
-*   Changed `/runs/` endpoint to now properly return data upon POST'ing a new run.
+*   Changed `/runs/` endpoint to now properly return data upon POST'ing a new run, while also serving HTTP_200_OK.
 *   Changed `abbr` value in the `Games` model to `slug`.
   
-  
+### Fixed
 *   [#17](https://github.com/ThePackle/SRLC/issues/17) Fixed an issue where the nickname of players would not properly appear in the "Latest Runs" portion of the main page.
 *   [#18](https://github.com/ThePackle/SRLC/issues/18) Fixed an issue where world records were also appearing on the "Latest Runs" portion of the main page.
     *   Also added additional logic to remove obsolete runs, in cases that a player gets multiple WRs in a row in the same game and category.
 *   Fixed an issue where, if a game's timing is set to LRT and no RTA was submitted, it would appear as "0m 00s" on the leaderboard.
     *   Only obsolete runs were really affected, so this is more for the "Runs History" page for players.
+*   Fixed an issue where obsolete runs were counting towards a player's overall totals.
   
-  
+### Removed
 *   Removed `MainRuns` and `ILRuns` models.
 *   Removed Twitter from the navbar.
     *   If you want to use this in your projects, uncomment the code in navbar.html.
@@ -63,6 +80,8 @@
 
 ### v2.2.1.2
 ###### April 3, 2024
+
+### Fixed
 *   [#21](https://github.com/ThePackle/SRLC/issues/21) Fixed an isue where runs were not properly set to obsolete when a new run was uploaded.
   
 * * *
@@ -70,11 +89,13 @@
 ### v2.2.1.1
 ###### March 24, 2025
 
+### Added
 *   Added THPS1+2 Any% Tour Mode (All Tours, New Game) and All Goals & Golds (All Tours, New Game) to the main page.
 *   Added additional logic to properly handle speedruns that have only LRT submitted but not RTA.
-    *   An example speedrun is [neskamikaze's THPS3 Any% - 6th Gen](https://www.speedrun.com/api/v1/runs/8m78g0z0) run. As of writing, the link will give you the raw JSON of the run from the SRC API with incorrect data. Even though the front-end has their LRT set properly, the API has their LRT time set to "realtime" and "realtime\_t".
+    *   An example speedrun is [neskamikaze's THPS3 Any% - 6th Gen](https://speedrun.com/api/v1/runs/8m78g0z0) run. As of writing, the link will give you the raw JSON of the run from the SRC API with incorrect data. Even though the front-end has their LRT set properly, the API has their LRT time set to "realtime" and "realtime\_t".
     *   This logic is temporary and will be removed if the v1 endpoint is fixed or (more likely) when this site uses the v2 endpoint.
 
+### Fixed
 *   Fixed an issue where world records sent through the API could produce errors with point calculations
 
 * * *
@@ -82,6 +103,7 @@
 ### v2.2.1
 ###### March 23, 2025
 
+### Added
 *   Added `idefaulttime` (IL Default Time) attribute to the `GameOverview` model.
     *   One annoying part of SRC is that there is no way to set a specific timing standard (e.g., RTA, IGT, LRT) for full game leaderboards and another standard for ILs.
     *   An example of this is that THPS2 (as of writing) is RTA, but its ILs are set to IGT.
@@ -94,12 +116,12 @@
 *   Added external links to the approved PARTYMOD and ClownJob'd mods.
     *   In a later update, resources will be handled better (to include guides).
   
-
+### Changed
 *   Changed dropdowns for all categories to be alphabetized.
     *   Need to work on a better system for showing categories (especially showing default categories first).
 *   Changed `date` in `MainRuns` and `ILRuns` models from a regular date field to date and time field.
   
-
+### Fixed
 *   Fixed an issue where some runs that did not have a "submitted" or "verified" date would return as null.
     *   Because of this, the website would return a date of "January 1, 1970" (beginning of Unix epoch time). The games didn't exist back then.
     *   `v-date` can return as Null in some cases from the SRC API. The `date` field from SRC, however, always returns at least the date it was added to the SRC leaderboards. So, if the submitted date doesn't exist, it will use this date at midnight UTC as the time.
@@ -115,7 +137,7 @@
 *   Fixed an issue where profile pictures were calling an incorrect player ID.
 *   Fixed an issue where obsolete runs were still counting towards a player's overall total in the overall IL leaderboards.
   
-
+### Removed
 *   Removed `NewRuns` and `NewWRs` models.
 *   Removed a lot of libraries and dependencies that were no longer in use/needed.
 
@@ -124,6 +146,7 @@
 ### v2.2 - The BIG Update
 ###### December 25, 2024
 
+### Added
 *   Added the `Awards` model.
     *   Awards granted by the community (The Tony's, tournament victors, etc.) will be given special entries, which can the be associated with a player.
     *   When an award is given, they will appear on that player's profile in a new section. In the future, awards can also change the look of the profile (i.e. different colors).
@@ -136,14 +159,12 @@
     *   Before, obsolete runs were considered obsolete when their Points were set to zero. However, this could cause potential issues in the future and was just a poor way to mark runs as old.
     *   This also allows for all obsolete runs to be added to the database, without issue.
   
-
+### Changed
 *   Changed the URLs for all leaderboards (again) so they make more sense:
     *   /lbs/thps1/ -> [/thps1/](/thps1/) -- Primary RTA leaderboard
     *   /lbs/ils/thps1/ -> [/thps1/ils/](/thps1/ils) -- Primary IL leaderboard
     *   /lbs/all/thps1/ -> [/thps1/all/](/thps1/all) -- Game Points Leaderboard
 *   With this change, there will be no redirects; please update your links accordingly.
-  
-
 *   Updated the flag icons throughout the website to display hover-over text in compliance with accessibility standards.
     *   The otherworldly country known as Valhalla has been added to the list, as well. It's flag will also now display properly.
 *   Updated the API `/players` endpoint so it can provide a list of users with YouTube and/or Twitch streams.
@@ -151,13 +172,13 @@
 *   Updated a bunch of Models in the database to feature heavier use of Foreign Keys to link data more dynamically together.
     *   This change will reduce on the number of overall requests a bit, while also making it easier to manage for future releases.
   
-
+### Fixed
 *   Fixed an issue where obsolete runs would fail to be added.
 *   Fixed an issue where country codes were being set as the profile picture for users.
 *   Fixed an issue where the profile pictures of users weren't being saved properly in some cases, causing errors.
 *   Fixed an issue where, in some cases, new categories or levels would not be properly added to the database.
    
-
+### Removed
 *   Removed the "THP8 - Rank 1" category from the main page.
 
 * * *
@@ -172,6 +193,7 @@
 ### v2.1.6
 ###### January 15, 2023
 
+### Fixed
 *   Fixed an issue where unknown country names would crash [the regional leaderboard](/regional).
 *   Fixed an issue where unknown country names would show up as broken images on the main page, player profile, and individual leaderboards.
 
@@ -180,6 +202,7 @@
 ### v2.1.5
 ###### December 21, 2023
 
+### Fixed
 *   Fixed an issue where the THPS1+2 full game categories names were not properly associated with newly approved speedruns.
 
 * * *
@@ -187,6 +210,7 @@
 ### v2.1.4
 ###### December 2, 2023
 
+### Removed
 *   Removed the overall Individual Level rankings on player profiles; load times for player profiles have been cut roughly in half.
     *   Previous behavior showed the game (i.e. Tony Hawk's Pro Skater 2) then a rank compared to other runners.
     *   The code utilized in this routine was inefficient, resulting in severe slowdown for all profiles who have IL times (especially THPS4).
@@ -198,6 +222,7 @@
 ### v2.1.3
 ###### November 26, 2023
 
+### Fixed
 *   Fixed an issue where obsolete world records would show up on the website's home page.
 
 * * *
@@ -205,9 +230,10 @@
 ### v2.1.2
 ###### November 2, 2023
 
+### Added
 *   Added dates for when updates were applied from v2 to current day.
   
-
+### Fixed
 *   Fixed an issue where the THPS4 IL Oldest Record board was accounting for the previous world record instead of the current one.
 *   Fixed an issue where dates on the IL leaderboards were set to one day backwards than their actual ones.
 
@@ -216,11 +242,12 @@
 ### v2.1.1
 ###### October 30, 2023
 
+### Added
 *   Added the THPS4CE Overall IL Leaderboard to the navigation bar.
 *   Added a disclaimer to the THPS4 IL Leaderboards to show that the WR Count table doesn't account for the "Zoo - Feed the Hippos" goal.
 *   Added a basic FAQ portion of the webiste to explain some things on how the website functions; more questions will be added over time.
   
-
+### Changed
 *   Changed the following URL patterns to shorten the links by a good bit and make them less confusing. The mappings are as follows:
     *   /lbs/ -> /overall
     *   /lbs/all/ -> /fullgame
@@ -230,7 +257,7 @@
     *   /lbs/game/(ABBR) -> /lbs/(ABBR)
     *   /lbs/ils/game/(ABBR) -> /lbs/ils/(ABBR)
   
-
+### Fixed
 *   Fixed an issue where the webpage titles had the wrong formatting for some games.
 *   Fixed an issue where placement logic would become out of sync when a new run was added to a leaderboard, especially when ties are involved.
     *   Note: Points were always accurate; this is a visual fix to show placements/ranks on a category while also ensuring they are accurate in the API.
@@ -240,11 +267,12 @@
 ### v2.1.0.1
 ###### October 27, 2023
 
+### Added
 *   Added a filter in the Regional Leaderboard that shows you all runners who have no country association known.
 *   Added a default "Internal Server Error" message page when server errors occur.
 *   Added a default "Resource Does Not Exist" message when the requested resource could not be found.
   
-
+### Fixed
 *   Fixed an issue where ILs would sometimes fail to be registered in the database.
 
 * * *
@@ -252,6 +280,7 @@
 ### v2.1 - The API Update
 ###### October 26, 2023
 
+### Added
 *   Added Sentry.io for troubleshooting purposes.
 *   Added a website privacy policy.
 *   Added administrator feature to "hide" categories.
@@ -272,7 +301,7 @@
     *   Again, only for THPS4 ILs but can easily be added to other games as requested.
 *   Added a footer to the bottom of the website with a disclaimer about the website.
   
-
+### Changed
 *   Changed "THPS12" to display as "THPS1+2" on the home page.
 *   Changed the social icons on the navigation bar to be more stylized.
 *   Changed the formula so it only accounts for the highest placed speedrun in Co-Op leaderboards (rip Infinite Packle Points).
@@ -280,7 +309,7 @@
     *   Reduced the amount of white space on the top panel.
     *   Changed the social icons to match the navigation bar.
   
-
+### Fixed
 *   Fixed an issue where names were case sensitive, leading to issues where "username" didn't equal "UserName" and errors were raised.
 *   Fixed an issue where the entire leaderboard would be shown with no pagination if nothing was searched.
 *   Fixed an issue where the searchbar on Full Game and IL leaderboards would show all points for all runners instead of their specific sections.
@@ -296,6 +325,7 @@
 ### v2.0.5.1
 ###### August 18, 2023
 
+### Fixed
 *   Fixed an issue where new sub-categories would not be automatically added to the website, resulting in a desync error.
 *   Fixed an issue where new runs would not be properly added to the "New Runs" or "New WRs" tab.
 
@@ -304,25 +334,27 @@
 ### v2.0.5
 ###### August 14, 2023
 
+### Added
 *   Added an additional ability for administrators to completely refresh a leaderboard from scratch.
 *   Added additional calls as setup for the upcoming API Update.
-  
 
+### Changed
+*   Updated Django and all libraries to their latest versions.
+
+### Fixed
 *   Fixed an issue where the THAW leaderboards did not properly separate the Difficulty and NG+ sub-categories and instead combined them.
 *   Fixed an issue where API calls were not properly updating speedruns that have two non-global sub-categories.
 *   Fixed a rare issue where the API will fail, even if an API key is properly given.
   
-  
-*   Updated Django and all libraries to their latest versions.
-
 * * *
 
 ### v2.0.4
 ###### August 10, 2023
 
+### Added
 *   Added automation in the background to check for new static images every 5 minutes in Django.
   
-
+### Fixed
 *   Fixed an issue where only the very last obsolete speedrun would be set to 0 points.
 *   Fixed an issue where the real placing of tied runs would not be displayed properly.
     *   Before: the earliest runs held tiebreakers and all subsequent runs were incremented by 1.
@@ -335,6 +367,7 @@
 ### v2.0.3
 ###### August 5, 2023
 
+### Fixed
 *   Fixed an issue where non-World Records would somehow appear on the Latest WRs leaderboard.
 
 * * *
@@ -342,6 +375,7 @@
 ### v2.0.2
 ###### July 13, 2023
 
+### Fixed
 *   Fixed an issue where non-World Record speedruns would not properly be added to the Latest Runs leaderboard.
 *   Fixed an issue where adding anonymous-only runs via the API would cause a crash.
 
@@ -350,6 +384,7 @@
 ### v2.0.1
 ###### July 12, 2023
 
+### Fixed
 *   Fixed an issue where the wrong category would be assigned to runs imported from the thps.run API.
 *   Fixed an issue where World Records would not start the function that would change all point totals for subsequent runs.
     *   Also fixed a related issue where those same runs would not have their placings updated.

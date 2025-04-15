@@ -93,7 +93,7 @@ class RunVariableValuesInline(admin.TabularInline):
 class SpeedrunAdmin(admin.ModelAdmin):
     list_display    = ["id"]
     search_fields   = ["id"]
-    list_filter     = ["obsolete", "game", "platform"]
+    list_filter     = ["runtype", "obsolete", "game", "platform"]
     inlines         = [RunVariableValuesInline]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
@@ -110,23 +110,6 @@ class SpeedrunAdmin(admin.ModelAdmin):
                     pass
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-
-    """ actions             = ["update_runs"]
-
-    def update_runs(self, request, queryset):
-        run_ids = [obj.id for obj in queryset]
-        return redirect(reverse("admin:update_runs") + f"?run_ids={','.join(run_ids)}")
-
-    update_runs.short_description = "Update Run Metadata"
-
-
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path("update-runs/", self.admin_site.admin_view(ImportSRLTimes.as_view()), name="update_runs"),
-        ]
-        return custom_urls + urls """
 
 class PlayersAdmin(admin.ModelAdmin):
     list_display    = ["name"]
@@ -160,6 +143,7 @@ admin.site.register(Categories, CategoriesAdmin)
 admin.site.register(Levels, CategoriesAdmin)
 admin.site.register(Variables, DefaultAdmin)
 admin.site.register(VariableValues, DefaultAdmin)
+admin.site.register(RunVariableValues)
 admin.site.register(Runs, SpeedrunAdmin)
 admin.site.register(Players, PlayersAdmin)
 admin.site.register(Platforms, DefaultAdmin)

@@ -282,6 +282,7 @@ class Runs(models.Model):
                     default="verified",
                     help_text="This is the current status of the run, according to Speedrun.com. It should be updated whenever the run is approved. Runs set as \"Unverified\" or \"Rejected\" do not appear anywhere on this site."
     )
+    approver        = models.ForeignKey(Players, verbose_name="Approver", blank=True, null=True, on_delete=models.SET_NULL, related_name="approver")
     obsolete        = models.BooleanField(
                     verbose_name="Obsolete?",
                     default=False,
@@ -293,6 +294,7 @@ class Runs(models.Model):
                     null=True,
                     help_text="Optional field. If you have a mirrored link to a video, you can input it here."
     )
+    description     = models.TextField(max_length=1000, verbose_name="Description", blank=True, null=True)
 
     def __str__ (self):
         return self.id

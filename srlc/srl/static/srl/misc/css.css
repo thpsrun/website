@@ -1,19 +1,19 @@
 body {
-    /* background: url("../imgs/background2.jpg") no-repeat fixed center; */
+    background: url("../imgs/background.jpg") no-repeat fixed center;
     background-color: #000000;
     background-size: cover;
     font-size: larger;
-    width: 1300px;
+    width: 1400px;
     margin-left: auto;
     margin-right: auto;
 }
 
 footer {
-    width: 1300px;
+    width: 1400px;
     margin-left: auto;
     margin-right: auto;
     border: 5px solid;
-    border-width: 5px;
+    border-width: 3px;
 }
 
 form.search-bar {
@@ -21,7 +21,7 @@ form.search-bar {
     text-align: center;
     margin-left: auto;
     margin-right: auto;
-    border-width: 5px;
+    border-width: 3px;
 }
 
 th {
@@ -49,16 +49,15 @@ td {
     margin-right: auto;
     background-color: rgba(255, 255, 255, .85);
     border: 5px solid;
-    border-width: 5px;
+    border-width: 3px;
 }
 
 .privacy {
-    padding: 0.5%;
     margin-left: auto;
     margin-right: auto;
     background-color: rgba(255, 255, 255, .85);
     border: 5px solid;
-    border-width: 5px;
+    border-width: 3px;
 }
 
 .navbar-nav.social.ml-autio {
@@ -81,7 +80,7 @@ td {
     background-color: rgba(255, 255, 255, .85);
     margin-left: auto;
     margin-right: auto;
-    padding: 1%;
+    padding: 5px;
 }
 
 .drops {
@@ -122,7 +121,7 @@ td {
     margin: auto;
 
     position: relative;
-    justify-content: flex-start;
+    justify-content: space-evenly;
     margin-top: 1%;
 }
 
@@ -147,8 +146,8 @@ td.side-table-td {
 }
 
 .pfp-img-streaming {
-    width: 50px;
-    height: 50px;
+    width: 100px;
+    height: 100px;
     vertical-align: top;
 }
 
@@ -157,35 +156,38 @@ td.side-table-td {
 }
 
 .stream-title {
-    width: 300px;
+    width: 450px;
     word-wrap: break-word;
 }
 
 .markdown-body {
-    width: 1300px;
     word-wrap: break-word;
+    padding: 5px;
 }
 
 /*PROFILE CSS*/
 .super-container {
     background-color: rgba(255, 255, 255, .85);
     border: 5px solid;
-    border-width: 5px;
+    border-width: 3px;
     box-shadow: 0px 15px 6px 7px rgb(0 0 0 / 23%);
     margin: 0 auto;
     margin-top: 1%;
     margin-bottom: 1%;
     flex-wrap: wrap;
-    font-size: medium;
     display: flex;
     justify-content: center;
     text-align: center;
-    width: 60%;
+    width: 70%;
 }
 
 .profile-container {
     letter-spacing: .4px;
     padding: 10px;
+    vertical-align: middle;
+    display: flex;
+    align-content: center;
+    flex-wrap: wrap;
 }
 
 .pfp-img {
@@ -223,10 +225,19 @@ td.side-table-td {
 .profile-stats {
     vertical-align: middle;
     padding: 0 50px;
+    line-height: 40px;
 }
 
 .obsolete-tr {
     background-color: #00cc66 !important;
+}
+
+.il-table {
+    width: 45%;
+}
+
+.fg-table {
+    width: 45%;
 }
 
 /*COOKIE BANNER*/
@@ -244,81 +255,148 @@ body.with-cookie-bar {
     background: #eee;
 }
 
-@media only screen and (max-width: 900px) {
-    body {
-        width: 100%;
-        font-size: small;
-        text-align: unset;
-    }
+/*MARKDOWN GUIDES*/
+.youtube-embed {
+    margin: 1.5rem 0;
+}
 
-    h5 {
-        font-size: small;
-    }
+.youtube-embed iframe {
+    max-width: 100%;
+}
 
+.youtube-embed.align-center {
+    display: flex;
+    justify-content: center;
+}
+
+.youtube-embed.align-left {
+    float: left;
+    margin-right: 1rem;
+}
+
+.youtube-embed.align-right {
+    float: right;
+    margin-left: 1rem;
+}
+
+
+@media screen and (min-width: 1400px) {
+    body,
+    footer {
+        width: 1400px;
+    }
+}
+
+@media screen and (max-width: 1024px) {
+    body,
     footer {
         width: 100%;
-        border: unset;
-    }
-
-    th {
-        font-size: small;
-    }
-
-    td {
-        font-size: small;
-    }
-
-    .super-container {
-        border: 5px solid;
-        border-width: 5px;
-        box-shadow: 0px 15px 6px 7px rgb(0 0 0 / 23%);
-        margin: 0 auto;
-        margin-top: 1%;
-        margin-bottom: 1%;
-        flex-wrap: wrap;
-        font-size: small;
-        display: flex;
-        justify-content: center;
-        text-align: unset;
-        width: 95%;
-    }
-
-    .pfp-img {
-        height: 50px;
-        width: 50px;
-    }
-
-    .profile-username {
-        font-size: small;
-    }
-
-    .profile-container {
-        font-size: small;
-    }
-
-    .profile-stats {
-        justify-content: center;
+        font-size: medium;
         padding: 0 10px;
     }
 
-    .table {
-        border: unset;
-    }
-
     .main-page-container {
-        display: block;
+        flex-direction: column;
+        align-items: center;
     }
 
+    .main-wrs,
     .side-table {
-        margin-left: unset;
-    }
-
-    .flag-streaming {
-        width: 5%;
+        width: 100%;
+        margin-left: 0;
     }
 
     .stream-title {
-        width: 400px;
-        word-wrap: break-word;
+        width: 100%;
+    }
+
+    .super-container {
+        width: 90%;
+    }
+
+    .pfp-img,
+    .pfp-img-streaming {
+        width: 80px;
+        height: 80px;
+    }
+
+    .flag-streaming {
+        width: 10%;
+    }
+
+    .il-table,
+    .fg-table {
+        width: 100%;
     }
 }
+
+@media screen and (max-width: 768px) {
+    body,
+    footer {
+        width: 100%;
+        font-size: small;
+        padding: 0 5px;
+    }
+
+    th,
+    td {
+        font-size: medium;
+    }
+
+    .main-page-container,
+    .profile-container,
+    .profile-info {
+        align-items: center;
+    }
+
+    .profile-pfp,
+    .profile-stats {
+        text-align: center;
+    }
+
+    .profile-awards {
+        display: none;
+    }
+
+    .super-container {
+        width: 100%;
+    }
+
+    .pfp-img,
+    .pfp-img-streaming {
+        width: 60px;
+        height: 60px;
+    }
+
+    .flag-streaming {
+        width: 12%;
+    }
+
+    .stream-title {
+        width: 100%;
+    }
+
+    .cookie-bar {
+        font-size: smaller;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .navbar-brand {
+        padding: 2%;
+    }
+
+    .profile-username {
+        font-size: 16px;
+    }
+
+    .profile-stats {
+        padding: 0 10px;
+        font-size: small;
+        line-height: 30px;
+    }
+
+    .cookie-bar {
+        font-size: x-small;
+    }
+}   

@@ -52,6 +52,7 @@ def src_api(url,paginate=False):
     
     if response.status_code != 200:
         print(f"Error: {response}")
+        print(url)
 
         response = response.status_code
         return response
