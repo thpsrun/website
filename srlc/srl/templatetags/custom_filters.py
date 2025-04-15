@@ -88,10 +88,10 @@ def time_since(value):
         hours += delta.days * 24
 
     if hours and minutes:
-        return f"Started {hours} hours and {minutes} minutes ago"
+        return f"{hours} hours and {minutes} minutes ago"
     elif hours:
-        return f"Started {hours} hours ago"
+        return f"{hours} hours ago"
     elif minutes:
-        return f"Started {minutes} minutes ago"
+        return f"{minutes} minutes ago"
     else:
         return "Just now"

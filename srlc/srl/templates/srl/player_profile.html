@@ -128,7 +128,7 @@
                 {% if il_runs.count > 0 %}
                     <div class="fg-table">
                 {% endif %}
-                <table id="leaderboard-table-1" class="table table-striped">
+                <table id="leaderboard-table-1" class="table table-striped table-hover">
                     <thead class="bg-info">
                         <tr class="bg-info">
                             {% if "/history" in request.path %}
@@ -169,18 +169,18 @@
                                                 {% endif %}
                                                 <br />
                                                 {% if game.game.defaulttime == "realtime"%}
-                                                    <a href="{{ game.url }}">{{ game.time }}</a>
+                                                    <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
                                                 {% elif game.game.defaulttime == "realtime_noloads" %}
                                                     {% if game.timenl_secs == 0 %}
-                                                        <a href="{{ game.url }}">{{ game.time }}</a>
+                                                        <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
                                                     {% else %}
-                                                        <a href="{{ game.url }}">{{ game.timenl }}</a>
+                                                        <a href="{{ game.url }}" target="_blank">{{ game.timenl }}</a>
                                                     {% endif %}
                                                 {% else %}
                                                     {% if game.timeigt_secs == 0 %}
-                                                        <a href="{{ game.url }}">{{ game.time }}</a>
+                                                        <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
                                                     {% else %}
-                                                        <a href="{{ game.url }}">{{ game.timeigt }}</a>
+                                                        <a href="{{ game.url }}" target="_blank">{{ game.timeigt }}</a>
                                                     {% endif %}
                                                 {% endif %}
                                                 </div>
@@ -197,13 +197,13 @@
                                             </td>
                                             <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
                                                 {% if game.arch_video %}
-                                                    <div class="videos"><a href="{{ game.arch_video }}" target="_blank"><i class="fa-solid fa-cloud" alt="Archived Video" title="Archived Video"></i></a><br />
+                                                    <div class="videos"><a href="{{ game.arch_video }}" alt="Archived Video" target="_blank"><i class="fa-solid fa-cloud" alt="Archived Video" title="Archived Video"></i></a><br />
                                                 {% endif %}
                                                 {% if "yout" in game.video %}
-                                                    <div class="videos"><a href="{{ game.video }}" target="_blank"><i class="fab fa-youtube fa-lg" alt="YouTube Video" title="YouTube Video"></i></a><br />
+                                                    <div class="videos"><a href="{{ game.video }}" alt="YouTube" target="_blank"><i class="fab fa-youtube fa-lg" alt="YouTube Video" title="YouTube Video"></i></a><br />
                                                 {% endif %}
                                                 {% if "twitch" in game.video %}
-                                                    <div class="videos"><a href="{{ game.video }}" target="_blank"><i class="fab fa-twitch fa-lg" alt="Twitch Video" title="Twitch Video"></i></a>
+                                                    <div class="videos"><a href="{{ game.video }}" alt="Twitch" target="_blank"><i class="fab fa-twitch fa-lg" alt="Twitch Video" title="Twitch Video"></i></a>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -219,7 +219,7 @@
                 {% if main_runs.count > 0 %}
                     <div class ="il-table">
                 {% endif %}
-                    <table id="leaderboard-table-3" class="table table-striped">
+                    <table id="leaderboard-table-3" class="table table-striped table-hover">
                         <thead>
                             <tr>
                                 {% if "/history" in request.path %}
@@ -263,18 +263,18 @@
                                                     {% endif %}
                                                     <br />
                                                     {% if game.game.idefaulttime == "realtime" %}
-                                                        <a href="{{ game.url }}">{{ game.time }}</a>
+                                                        <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
                                                     {% elif game.game.idefaulttime == "realtime_noloads" %}
                                                         {% if game.timenl_secs == 0 %}
-                                                            <a href="{{ game.url }}">{{ game.time }}</a>
+                                                            <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
                                                         {% else %}
-                                                            <a href="{{ game.url }}">{{ game.timenl }}</a>
+                                                            <a href="{{ game.url }}" target="_blank">{{ game.timenl }}</a>
                                                         {% endif %}
                                                     {% else %}
                                                         {% if game.timeigt_secs == 0%}
-                                                            <a href="{{ game.url }}">{{ game.time }}</a>
+                                                            <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
                                                         {% else %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
+                                                            <a href="{{ game.url }}" target="_blank">{{ game.timeigt }}</a>
                                                         {% endif %}
                                                     {% endif %}
                                                     </div>
@@ -291,13 +291,13 @@
                                                 </td>
                                                 <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
                                                     {% if game.arch_video %}
-                                                        <div class="videos"><a href="{{ game.arch_video }}" target="_blank"><i class="fa-solid fa-cloud"></i></a><br />
+                                                        <div class="videos"><a href="{{ game.arch_video }}" alt="Archived Video" target="_blank"><i class="fa-solid fa-cloud"></i></a><br />
                                                     {% endif %}
                                                     {% if "yout" in game.video %}
-                                                        <div class="videos"><a href="{{ game.video }}" target="_blank"><i class="fab fa-youtube fa-lg"></i></a><br />
+                                                        <div class="videos"><a href="{{ game.video }}" alt="YouTube" arget="_blank"><i class="fab fa-youtube fa-lg"></i></a><br />
                                                     {% endif %}
                                                     {% if "twitch" in game.video %}
-                                                        <div class="videos"><a href="{{ game.video }}" target="_blank"><i class="fab fa-twitch fa-lg"></i></a>
+                                                        <div class="videos"><a href="{{ game.video }}" alt="Twitch" target="_blank"><i class="fab fa-twitch fa-lg"></i></a>
                                                     {% endif %}
                                                 </td>
                                             </tr>

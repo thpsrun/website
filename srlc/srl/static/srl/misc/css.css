@@ -1,19 +1,28 @@
+/* GLOBAL RESET */
+* {
+    box-sizing: border-box;
+}
+
 body {
     background: url("../imgs/background.jpg") no-repeat fixed center;
     background-color: #000000;
     background-size: cover;
     font-size: larger;
-    width: 1400px;
+    max-width: 1400px;
+    width: 100%;
     margin-left: auto;
     margin-right: auto;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 footer {
-    width: 1400px;
+    max-width: 1400px;
+    width: 100%;
     margin-left: auto;
     margin-right: auto;
-    border: 5px solid;
-    border-width: 3px;
+    border: 3px solid;
+    box-sizing: border-box;
 }
 
 form.search-bar {
@@ -48,16 +57,14 @@ td {
     margin-left: auto;
     margin-right: auto;
     background-color: rgba(255, 255, 255, .85);
-    border: 5px solid;
-    border-width: 3px;
+    border: 3px solid;
 }
 
 .privacy {
     margin-left: auto;
     margin-right: auto;
     background-color: rgba(255, 255, 255, .85);
-    border: 5px solid;
-    border-width: 3px;
+    border: 3px solid;
 }
 
 .navbar-nav.social.ml-autio {
@@ -115,11 +122,9 @@ td {
     padding: 5%;
 }
 
-/*MAIN PAGE CSS*/
 .main-page-container {
     display: flex;
     margin: auto;
-
     position: relative;
     justify-content: space-evenly;
     margin-top: 1%;
@@ -165,11 +170,9 @@ td.side-table-td {
     padding: 5px;
 }
 
-/*PROFILE CSS*/
 .super-container {
     background-color: rgba(255, 255, 255, .85);
-    border: 5px solid;
-    border-width: 3px;
+    border: 3px solid;
     box-shadow: 0px 15px 6px 7px rgb(0 0 0 / 23%);
     margin: 0 auto;
     margin-top: 1%;
@@ -240,7 +243,6 @@ td.side-table-td {
     width: 45%;
 }
 
-/*COOKIE BANNER*/
 body.with-cookie-bar {
     padding-top: 35px;
 }
@@ -255,7 +257,10 @@ body.with-cookie-bar {
     background: #eee;
 }
 
-/*MARKDOWN GUIDES*/
+.guides-list {
+    width: 65%;
+}
+
 .youtube-embed {
     margin: 1.5rem 0;
 }
@@ -279,11 +284,10 @@ body.with-cookie-bar {
     margin-left: 1rem;
 }
 
-
 @media screen and (min-width: 1400px) {
     body,
     footer {
-        width: 1400px;
+        max-width: 1400px;
     }
 }
 
@@ -399,4 +403,4 @@ body.with-cookie-bar {
     .cookie-bar {
         font-size: x-small;
     }
-}   
+}

@@ -122,7 +122,7 @@
                                         <br />
                                         <div class="stream-game">{{ streamer.game.name }}</div>
                                         <div class="stream-title">{{ streamer.title }}</div>
-                                        <div class="stream-time">{{ streamer.stream_time|time_since }}</div>
+                                        <div class="stream-time">Started {{ streamer.stream_time|time_since }}</div>
                                     </td>
                                 </tr>
                             {% endfor %}

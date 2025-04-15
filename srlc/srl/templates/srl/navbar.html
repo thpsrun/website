@@ -113,13 +113,7 @@
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Guides</a>
                     <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
                         {% for game in navbar_docs %}
-                            <li class="dropdown-submenu"><a class="dropdown-item dropdown-toggle" href="#">{{ game.game|upper }}</a>
-                                <ul class="dropdown-menu dropdown-submenu">
-                                {% for page in game.pages%}
-                                    <li><a class="dropdown-item" href="{{ page.url }}">{{ page.title }}</a></li>
-                                {% endfor %}
-                                </ul>
-                            </li>
+                            <li><a class="dropdown-item" href="/docs/{{ game.game }}">{{ game.game|upper }}</a></li>
                         {% endfor %}
                     </ul>
                 </li>

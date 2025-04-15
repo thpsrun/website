@@ -68,7 +68,7 @@
 ### Removed
 *   Removed `MainRuns` and `ILRuns` models.
 *   Removed Twitter from the navbar.
-    *   If you want to use this in your projects, uncomment the code in navbar.html.
+    *   Changed some logic around to make it an optional environmental variable.
 *   Removed `Location` field from the Players model.
     *   `CountryCode` does a similar thing. `Location` was a remnant from the refactor.
 *   Removed the website's changelog to appear on this GitHub repo.
