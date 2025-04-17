@@ -11,6 +11,7 @@ from .models import Games
 def test_ping():
     print(f"Ping! This is a test! {datetime.utcnow()}")
 
+
 @shared_task
 def src_check():
     headers = {}
@@ -21,4 +22,7 @@ def src_check():
 
         if len(newruns) > 0:
             for run in newruns:
-                requests.post(f"http://localhost:8001/api/runs/{run['id']}", headers=headers)
+                requests.post(
+                    f"http://localhost:8001/api/runs/{run['id']}",
+                    headers=headers
+                )

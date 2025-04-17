@@ -19,6 +19,7 @@ class UpdateSeriesView(View):
 
         return redirect("/illiad/srl/games/")
 
+
 class UpdateGameView(ListView):
     def get(self, request):
         game_ids = self.request.GET.get("game_ids", "").split(",")
@@ -26,6 +27,7 @@ class UpdateGameView(ListView):
             update_game.delay(game_id)
 
         return redirect("/illiad/srl/games/")
+
 
 class RefreshGameRunsView(ListView):
     def get(self, request):
@@ -35,6 +37,7 @@ class RefreshGameRunsView(ListView):
 
         return redirect("/illiad/srl/games/")
 
+
 class UpdateGameRunsView(ListView):
     def get(self, request):
         game_ids = self.request.GET.get("game_ids", "").split(",")
@@ -43,6 +46,7 @@ class UpdateGameRunsView(ListView):
 
         return redirect("/illiad/srl/games/")
 
+
 class UpdatePlayerView(ListView):
     def get(self, request):
         player_ids = self.request.GET.get("player_ids", "").split(",")
@@ -50,6 +54,7 @@ class UpdatePlayerView(ListView):
             update_player.delay(player)
 
         return redirect("/illiad/srl/players/")
+
 
 class ImportObsoleteView(ListView):
     def get(self, request):

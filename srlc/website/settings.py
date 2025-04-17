@@ -3,13 +3,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv() 
+load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(",")
-#ALLOWED_IPS = ["127.0.0.1"]
+# ALLOWED_IPS = ["127.0.0.1"]
 
 INSTALLED_APPS = [
     # PRE-INSTALLED
@@ -91,11 +91,11 @@ if os.getenv("DEBUG_MODE") == "True":
 else:
     CSRF_COOKIE_SECURE              = True
     SESSION_COOKIE_SECURE           = True
-    SECURE_SSL_REDIRECT             = False ## ASSUMES YOU ARE USING NPM
+    SECURE_SSL_REDIRECT             = False  # ASSUMES YOU ARE USING NPM
     SECURE_HSTS_SECONDS             = 3600
     SECURE_HSTS_INCLUDE_SUBDOMAINS  = True
     SECURE_HSTS_PRELOAD             = True
-    SECURE_SSL_HOST                 = False ## ASSUMES YOU ARE USING NPM
+    SECURE_SSL_HOST                 = False  # ASSUMES YOU ARE USING NPM
     SECURE_CONTENT_TYPE_NOSNIFF     = True
     SECURE_BROWSER_XSS_FILTER       = True
     X_FRAME_OPTIONS                 = "DENY"

@@ -1,15 +1,26 @@
 from django.urls import path
-from .complex_views import MainPage,PlayerProfile,PlayerHistory,Leaderboard,GameLeaderboard,IL_Leaderboard,FG_Leaderboard,search_leaderboard,ILGameLeaderboard
-from .static_views import PrivacyPolicy,Changelog,FAQ
+
+from .complex_views import (
+    FG_Leaderboard,
+    GameLeaderboard,
+    IL_Leaderboard,
+    ILGameLeaderboard,
+    Leaderboard,
+    MainPage,
+    PlayerHistory,
+    PlayerProfile,
+    search_leaderboard,
+)
+from .static_views import FAQ, Changelog, PrivacyPolicy
 
 urlpatterns = [
     path("", MainPage, name="Leaderboard"),
     path("privacy", PrivacyPolicy, name="PrivacyPolicy"),
-    path("changelog", Changelog ,name="Changelog"),
+    path("changelog", Changelog, name="Changelog"),
     path("faq", FAQ, name="FAQ"),
     path("overall", Leaderboard, name="Leaderboard"),
-    #path("overall/<int:year>/", MonthlyLeaderboard, name="YearlyLeaderboard"),
-    #path("overall/<int:year>/<int:month>", MonthlyLeaderboard, name="MonthlyLeaderboard"),
+    # path("overall/<int:year>/", MonthlyLeaderboard, name="YearlyLeaderboard"),
+    # path("overall/<int:year>/<int:month>", MonthlyLeaderboard, name="MonthlyLeaderboard"),
     path("fullgame", FG_Leaderboard, name="FullGameLeaderboard"),
     path("player/<str:name>", PlayerProfile, name="PlayerProfile"),
     path("player/<str:name>/history", PlayerHistory, name="PlayerHistory"),

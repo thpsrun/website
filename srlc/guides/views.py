@@ -11,6 +11,7 @@ from .youtube_shortcode import YTEmbedProcessor
 
 DOCS_PATH = "/srlc/docs/"
 
+
 def parse_md_file(file_path):
     title   = os.path.basename(file_path).replace(".md", "").replace("_", " ").title()
     author  = None
@@ -24,13 +25,16 @@ def parse_md_file(file_path):
             title = line.split(":", 1)[1].strip()
         elif "website tags:" in line.lower().replace("**", ""):
             continue
-        elif "created by:" in line.lower().replace("**", "") or "discovered by:" in line.lower().replace("**", ""):
+        elif "created by:" in line.lower().replace("**", ""):
+            author = line.split(":", 1)[1].strip()
+        elif "discovered by:" in line.lower().replace("**", ""):
             author = line.split(":", 1)[1].strip()
         else:
             content.append(line)
 
     content_output = "".join(content)
     return title, author, content_output
+
 
 def render_guides_list(request, game):
     folder = os.path.join(DOCS_PATH, game)
@@ -45,13 +49,21 @@ def render_guides_list(request, game):
             file_path = os.path.join(folder, filename)
             doc_title, doc_author, _ = parse_md_file(file_path)
 
-            player_get = Players.objects.only("name", "nickname").filter(Q(name__iexact=doc_author) | Q(nickname__iexact=doc_author)).first()
+            player_get = (
+                Players.objects.only("name", "nickname")
+                .filter(Q(name__iexact=doc_author) | Q(nickname__iexact=doc_author))
+                .first()
+            )
+
+            last_modified = (
+                timezone.make_aware(datetime.datetime.fromtimestamp(os.path.getmtime(file_path)))
+            )
 
             guides.append({
                 "title"     : doc_title,
                 "author"    : player_get if player_get else doc_author,
                 "url"       : (f"/docs/{game}/{filename}").replace(".md", ""),
-                "last_mod"  : timezone.make_aware(datetime.datetime.fromtimestamp(os.path.getmtime(file_path)))
+                "last_mod"  : last_modified,
             })
 
     guides.sort(key=lambda x: x["title"].lower())
@@ -63,6 +75,7 @@ def render_guides_list(request, game):
         "game_name" : game_get.name if game_get else None,
         "guides"    : guides
     })
+
 
 def render_markdown(request, game, doc):
     folder = os.path.join(DOCS_PATH, game)

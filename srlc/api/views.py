@@ -31,83 +31,313 @@ from .serializers import (
 
 
 class API_Runs(APIView):
+    """Viewset for viewing, creating, or editing speedruns.
+
+    This viewset provides the standard actions for creating, editing, or viewing speedruns,
+    including any embeds passed into the query.
+
+    Methods:
+        get:
+            Returns a speedrun based on its ID.
+        post:
+            Creates a new speedrun based upon the ID after it has been properly queried through
+            the Speedrun.com API.
+        put:
+            Updates (or creates) a new speedrun based upon the ID after it has been properly
+            queried through the Speedrun.com API.
+
+    Permissions:
+        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+
+    Model: `Runs`
+
+    Allowed Queries:
+        - `status`: Returns a list of speedruns awaiting verification (if the run has `new` as its
+        `vid_status`).
+            Example: `/runs/all?query=status`
+
+    Embeds:
+        - `category`: Embeds the related category into the response.
+        - `level`: Embeds the related level into the response (only for individual-level speedruns).
+        - `game`: Embeds the related game into the response.
+        - `variables`: Embeds all related variables and values into the response.
+        - `platform`: Embeds the related platform into the response.
+        - `players`: Embeds all related players into the response.
+
+    Embed Examples:
+        - `/runs/123456?embed=category,level,game`
+        - `/runs/123456?embed=players`
+
+    Example Response (JSON):
+        ```
+        {
+            "id": "z5l9eljy",
+            "runtype": "main",
+            "game": "xldeeed3",
+            "category": "rklge08d",
+            "level": null,
+            "subcategory": "Any% (5th Gen)",
+            "place": 1,
+            "players": "68w4mqxg",
+            "date": "2025-04-16T06:08:44Z",
+            "times": {
+                "defaulttime": "ingame",
+                "time": "25m 42s",
+                "time_secs": 1542.0,
+                "timenl": "0",
+                "timenl_secs": 0.0,
+                "timeigt": "0",
+                "timeigt_secs": 0.0
+            },
+            "system": {
+                "platform": "wxeod9rn",
+                "emulated": true
+            },
+            "status": {
+                "vid_status": "verified",
+                "approver": "pj0v90mx",
+                "v_date": "2025-04-16T22:09:46Z",
+                "obsolete": false
+            },
+            "videos": {
+                "video": "https://youtu.be/Xay5dWSfDQY",
+                "arch_video": null
+            },
+            "variables": {
+                "ylq9qkv8": "rqv4kprq"
+            },
+            "meta": {
+                "points": 1000,
+                "url": "https://www.speedrun.com/thps4/run/z5l9eljy"
+            }
+        }
+        ```
+    """
     ALLOWED_QUERIES = {"status"}
     ALLOWED_EMBEDS  = {"category", "level", "game", "variables", "platform", "players"}
+
     def get(self, request, id):
-        query_fields    = request.GET.get("query", "").split(",")
-        query_fields    = [field.strip() for field in query_fields if field.strip()] 
+        """Returns a speedrun based on its ID.
+
+        Args:
+            request (Request): The request object containing the information, queries, or embeds.
+            id (str): The exact ID of th speedrun requesting to be returned.
+                - "all" is a valid `id`, but must be used in conjunction with a query.
+
+        Returns:
+            Response: A response object containing the JSON data of a speedrun.
+        """
+
+        if len(id) > 10:
+            return Response(
+                {"ERROR": "id must be less than 10 characters."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        query_fields = request.GET.get("query", "").split(",")
+        query_fields = [field.strip() for field in query_fields if field.strip()]
         invalid_queries = [field for field in query_fields if field not in self.ALLOWED_QUERIES]
 
         if invalid_queries:
-            return Response({"ERROR": f"Invalid queries: {', '.join(invalid_queries)}"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+            return Response(
+                {"ERROR": f"Invalid queries: {', '.join(invalid_queries)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        embed_fields = request.GET.get("embed", "").split(",")
+        embed_fields = [field.strip() for field in embed_fields if field.strip()]
         invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
         if invalid_embeds:
-            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         if id == "all":
             if "status" in query_fields:
                 new_runs = Runs.objects.filter(vid_status="new")
                 runs = RunSerializer(new_runs, many=True, context={"embed": embed_fields}).data
-                
-                return Response({
-                    "new_runs" : runs,
-                })
+
+                return Response(
+                    {"new_runs" : runs, }
+                )
             else:
-                return Response({"ERROR": "'all' can only be used with a query (status)."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"ERROR": "'all' can only be used with a query (status)."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         else:
             run = Runs.objects.filter(id__iexact=id).first()
             if run:
-                return Response(RunSerializer(run,context={"embed": embed_fields}).data, status=status.HTTP_200_OK)
+                return Response(
+                    RunSerializer(run, context={"embed": embed_fields}).data,
+                    status=status.HTTP_200_OK
+                )
             else:
-                return Response({"ERROR": "run id provided does not exist."}, status=status.HTTP_200_OK)
+                return Response(
+                    {"ERROR": "run id provided does not exist."},
+                    status=status.HTTP_200_OK
+                )
 
     def post(self, request, id):
+        """Creates a new speedrun object based on its ID.
+
+        After the `id` is given, the data is normalized, processed, and validated before it is
+        added as a new `Runs` model object.
+
+        Args:
+            id (str): The exact ID of th speedrun requesting to be added to the database.
+
+        Returns:
+            Response: A response object containing the JSON data of a speedrun.
+        """
+
         if len(id) > 10:
-            return Response({"ERROR": "id must be less than 10 characters."}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {"ERROR": "id must be less than 10 characters."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         normalize = normalize_src.delay(id)
         ilcheck = normalize.get()
-        time.sleep(2) ### Sometimes the other celery tasks are slow, so this will allow them to quickly finish before providing a response.
+
+        # Sometimes the other celery tasks are slow, so this will allow them to quickly
+        # finish before providing a response.
+        time.sleep(2)
 
         if ilcheck == "invalid":
-            return Response({"ERROR": "id provided does not belong to this leaderboard's games."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"ERROR": "id provided does not belong to this leaderboard's games."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         else:
             run = Runs.objects.filter(id=id).first()
             if run:
                 return Response(RunSerializer(run).data, status=status.HTTP_201_CREATED)
             else:
-                return Response({"ERROR": f"Unknown error - The run id {id} could not be called."}, status=status.HTTP_400_BAD_REQUEST)
-              
+                return Response(
+                    {"ERROR": f"Unknown error - The run id {id} could not be called."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
     def put(self, request, id):
+        """Updates (or creates) a speedrun object based on its ID.
+
+        After the `id` is given, the data is normalized, processed, and validated before it is
+        updated in the `Runs` model. If the `id` does not exist already, it is added.
+
+        Args:
+            id (str): The exact ID of th speedrun requesting to be updated or added to the database.
+
+        Returns:
+            Response: A response object containing the JSON data of a speedrun.
+        """
+
         if len(id) > 10:
-            return Response({"ERROR": "id must be less than 10 characters."}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {"ERROR": "id must be less than 10 characters."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         normalize = normalize_src.delay(id)
         ilcheck = normalize.get()
-        time.sleep(2) ### Sometimes the other celery tasks are slow, so this will allow them to quickly finish before providing a response.
+
+        # Sometimes the other celery tasks are slow, so this will allow them to quickly
+        # finish before providing a response.
+        time.sleep(2)
 
         if ilcheck == "invalid":
-            return Response({"ERROR": "id provided does not belong to this leaderboard's games."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"ERROR": "id provided does not belong to this leaderboard's games."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         else:
             run = Runs.objects.filter(id=id).first()
             if run:
                 return Response(RunSerializer(run).data, status=status.HTTP_201_CREATED)
             else:
-                return Response({"ERROR": f"Unknown error - The run id {id} could not be called."}, status=status.HTTP_400_BAD_REQUEST)
-    
+                return Response(
+                    {"ERROR": f"Unknown error - The run id {id} could not be called."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+
 class API_Players(APIView):
+    """Viewset for viewing a specific player.
+
+    This viewset provides the standard actions for viewing a specific player.
+
+    Methods:
+        get:
+            Returns information on a player based on their username or ID.
+
+    Permissions:
+        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+
+    Model: `Players`
+
+    Allowed Queries:
+        - `streamexceptions`: Returns a list of users who are marked as exempt and wishing to not
+        appear on streams.
+            Example: `/players/all?query=streamexceptions`
+
+    Example Response (JSON):
+        ```
+        {
+            "id": "e8ew5p80",
+            "name": "ThePackle",
+            "nickname": "Packle",
+            "url": "https://www.speedrun.com/user/ThePackle",
+            "country": "United States",
+            "pronouns": "He/Him",
+            "twitch": "https://www.twitch.tv/ThePackle",
+            "youtube": "https://www.youtube.com/user/ThePackle",
+            "twitter": null,
+            "ex_stream": false,
+            "awards": [
+                {
+                    "name": "Most Helpful (2022)"
+                }
+            ],
+            "stats": {
+                "total_pts": 16389,
+                "main_pts": 15251,
+                "il_pts": 1138,
+                "total_runs": 50
+            }
+        }
+        ```
+    """
+
     ALLOWED_QUERIES = {"streamexceptions"}
+
     def get(self, request, id):
+        """Returns a specific player's information based on its ID.
+
+        Args:
+            request (Request): The request object containing the information, queries, or embeds.
+            id (str): The exact ID or username of the player requesting to be returned.
+
+        Returns:
+            Response: A response object containing the JSON data of a player.
+        """
+
+        if len(id) > 10:
+            return Response(
+                {"ERROR": "id must be less than 10 characters."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         query_fields    = request.GET.get("query", "").split(",")
-        query_fields    = [field.strip() for field in query_fields if field.strip()] 
+        query_fields    = [field.strip() for field in query_fields if field.strip()]
         invalid_queries = [field for field in query_fields if field not in self.ALLOWED_QUERIES]
 
         if invalid_queries:
-            return Response({"ERROR": f"Invalid queries: {', '.join(invalid_queries)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"ERROR": f"Invalid queries: {', '.join(invalid_queries)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         if id == "all":
             players = Players.objects.all()
@@ -117,23 +347,155 @@ class API_Players(APIView):
 
             return Response(PlayerSerializer(players, many=True).data)
 
-        player = Players.objects.filter(id__iexact=id).first() or Players.objects.filter(name__iexact=id).first()
+        player = (
+            Players.objects.filter(id__iexact=id).first()
+            or Players.objects.filter(name__iexact=id).first()
+        )
+
         if player:
             return Response(PlayerSerializer(player).data)
         else:
-            return Response({"ERROR": "Player ID or Name does not exist."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"ERROR": "Player ID or Name does not exist."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 
 class API_PlayerRecords(APIView):
+    """Viewset for viewing all records of a specific player.
+
+    This viewset returns all main and IL runs associated with a player, including any embeds passed
+    into the query.
+
+    Methods:
+        get:
+            Returns a list of all speedruns for the given player, separated by main and IL.
+
+    Permissions:
+        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+
+    Model: `Runs`, `Players`
+
+    Allowed Embeds:
+        - `categories`: Embeds each run's associated category into the response.
+        - `levels`: Embeds each run's associated level into the response.
+        - `games`: Embeds each run's associated game into the response.
+        - `platforms`: Embeds each run's associated platform into the response.
+
+    Embed Examples:
+        `/players/123456/pbs?embed=games,categories`
+
+    Example Response (JSON):
+        ```
+        {
+            "id": "e8ew5p80",
+            "name": "ThePackle",
+            "nickname": "Packle",
+            "url": "https://www.speedrun.com/user/ThePackle",
+            "country": "United States",
+            "pronouns": "He/Him",
+            "twitch": "https://www.twitch.tv/ThePackle",
+            "youtube": "https://www.youtube.com/user/ThePackle",
+            "twitter": null,
+            "ex_stream": false,
+            "awards": [
+                {
+                    "name": "Most Helpful (2022)"
+                }
+            ],
+            "stats": {
+                "total_pts": 16389,
+                "main_pts": 15251,
+                "il_pts": 1138,
+                "total_runs": 50
+            },
+            "main_runs": [
+                {
+                    "id": "2yw311nm",
+                    "runtype": "main",
+                    "game": "ok6qq06g",
+                    "category": "5dwjv0kg",
+                    "level": null,
+                    "subcategory": "Classic (Normal, NG+)",
+                    "place": 9,
+                    "players": "e8ew5p80",
+                    "date": "2016-02-06T02:22:10Z",
+                    "times": {
+                        "defaulttime": "realtime",
+                        "time": "3m 17s",
+                        "time_secs": 197.0,
+                        "timenl": "0",
+                        "timenl_secs": 0.0,
+                        "timeigt": "3m 14s",
+                        "timeigt_secs": 194.0
+                    },
+                    "system": {
+                        "platform": "8gej2n93",
+                        "emulated": false
+                    },
+                    "status": {
+                        "vid_status": "verified",
+                        "approver": "e8ew5p80",
+                        "v_date": "2016-02-06T02:22:11Z",
+                        "obsolete": false
+                    },
+                    "videos": {
+                        "video": "http://www.twitch.tv/thepackle/v/41034089",
+                        "arch_video": null
+                    },
+                    "variables": {
+                        "gnxwz48v": "jqz2e2qp",
+                        "5lyjpxgl": "21ge0vml"
+                    },
+                    "meta": {
+                        "points": 375,
+                        "url": "https://www.speedrun.com/thug2/run/2yw311nm"
+                    }
+                },
+            ...
+        }
+        ```
+    """
+
     ALLOWED_EMBEDS = {"categories", "levels", "games", "platforms"}
+
     def get(self, request, id):
+        """Returns a player's full record history based on its ID.
+
+        This endpoint returns all full-game and individual level speedruns for a specific player.
+        These runs are separated into `main_runs` and `il_runs`. The player can be looked up by
+        either username or their ID. Results can include embedded data using the `embed` query
+        parameter.
+
+        Args:
+            request (Request): The request object containing the information, queries, or embeds.
+            id (str): The exact ID or username of the player requesting to be returned.
+
+        Returns:
+            Response: A response object containing the JSON data of a player's speedruns.
+        """
+
+        if len(id) > 10:
+            return Response(
+                {"ERROR": "id must be less than 10 characters."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
         invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
         if invalid_embeds:
-            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        player = Players.objects.filter(id__iexact=id).first() or Players.objects.filter(name__iexact=id).first()
+        player = (
+            Players.objects.filter(id__iexact=id).first()
+            or Players.objects.filter(name__iexact=id).first()
+        )
+
         if player:
             player_data = PlayerSerializer(player).data
 
@@ -149,145 +511,518 @@ class API_PlayerRecords(APIView):
                 "il_runs"   : il_data
             })
         else:
-            return Response({"ERROR": "Player ID or Name does not exist."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"ERROR": "Player ID or Name does not exist."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 
 class API_Games(APIView):
+    """Viewset for viewing a specific game or all games.
+
+    This viewset provides game information, including any embeds passed into the query.
+
+    Methods:
+        get:
+            Returns game information based on a game ID or slug, or all games if "all" is used.
+
+    Permissions:
+        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+
+    Model: `Games`
+
+    Allowed Embeds:
+        - `categories`: Embeds all categories associated with the game into the response.
+        - `levels`: Embeds all levels associated with the game into the response.
+        - `platforms`: Embeds all supported platforms for the game into the response.
+
+    Embed Example:
+        `/games/thps4?embed=categories,platforms`
+        `/games/all?embed=categories,levels,platforms`
+
+    Example Response (JSON):
+        ```
+        {
+            "id": "n2680o1p",
+            "name": "Tony Hawk's Underground",
+            "slug": "thug1",
+            "release": "2003-10-28",
+            "boxart": "https://www.speedrun.com/static/game/n2680o1p/cover?v=16c7cc8",
+            "twitch": "Tony Hawk's Underground",
+            "defaulttime": "ingame",
+            "idefaulttime": "ingame",
+            "pointsmax": 1000,
+            "ipointsmax": 100
+        }
+        ```
+    """
+
     ALLOWED_EMBEDS = {"categories", "levels", "platforms"}
+
     def get(self, request, id):
-        if len(id) > 15:
-            return Response({"ERROR": "Game ID exceeds maximum length."}, status=status.HTTP_400_BAD_REQUEST)
+        """Returns a specific game's metadata based on its ID.
+
+        If a game ID or slug is provided, returns that specific game's details. "All" can also be
+        used to return a list for all games.Results can include embedded data using the `embed`
+        query parameter.
+
+        Args:
+            request (Request): The request object containing the information, queries, or embeds.
+            id (str): The exact ID of the game to be returned, or
+
+        Returns:
+            Response: A response object containing the JSON data of a game.
+        """
+        if len(id) > 10:
+            return Response(
+                {"ERROR": "id must be less than 10 characters."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
         invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
         if invalid_embeds:
-            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         if id == "all":
             games = Games.objects.all().order_by("release")
-            return Response(GameSerializer(games, many=True, context={"embed": embed_fields}).data, status=status.HTTP_200_OK)
-        
-        game = Games.objects.filter(id__iexact=id).first() or Games.objects.filter(slug__iexact=id).first()
+            return Response(
+                GameSerializer(games, many=True, context={"embed": embed_fields}).data,
+                status=status.HTTP_200_OK
+            )
+
+        game = (
+            Games.objects.filter(id__iexact=id).first()
+            or Games.objects.filter(slug__iexact=id).first()
+        )
+
         if game:
-            return Response(GameSerializer(game, context={"embed": embed_fields}).data, status=status.HTTP_200_OK)
+            return Response(
+                GameSerializer(game, context={"embed": embed_fields}).data,
+                status=status.HTTP_200_OK
+            )
         else:
-            return Response({"ERROR": "Game ID or slug/abbreviation does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"ERROR": "Game ID or slug/abbreviation does not exist"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 
 class API_Categories(APIView):
+    """Viewset for viewing a specific category.
+
+    This viewset returns information on a single category, including any embeds passed into the
+    query.
+
+    Methods:
+        get:
+            Returns category information based on its ID.
+
+    Permissions:
+        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+
+    Model: `Categories`
+
+    Allowed Embeds:
+        - `game`: Embeds the game associated with the category into the response.
+        - `variables`: Embeds all variables related to the category into the response.
+
+    Embed Example:
+        `/categories/123456?embed=variables`
+
+    Example Response (JSON):
+        ```
+        {
+            "id": "rklge08d",
+            "name": "Any%",
+            "type": "per-game",
+            "url": "https://www.speedrun.com/thps4#Any",
+            "hidden": false
+        }
+        ```
+    """
+
     ALLOWED_EMBEDS = {"game", "variables"}
+
     def get(self, request, id):
-        if len(id) > 15:
-            return Response({"ERROR": "Category ID exceeds maximum length."}, status=status.HTTP_400_BAD_REQUEST)
-        
+        """Returns a single category and its metadata based on its ID.
+
+        Parameters:
+            request (Request): The request object containing the information, queries, or embeds.
+            id (str): The exact ID of the category to be returned.
+
+        Returns:
+            Response: A response object containing the JSON data of a category.
+        """
+        if len(id) > 10:
+            return Response(
+                {"ERROR": "id must be less than 10 characters."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
         invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
         if invalid_embeds:
-            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"}, status=status.HTTP_400_BAD_REQUEST)
-    
+            return Response(
+                {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         category = Categories.objects.filter(id__iexact=id).first()
         if category:
-            return Response(CategorySerializer(category, context={"embed": embed_fields}).data, status=status.HTTP_200_OK) 
+            return Response(
+                CategorySerializer(category, context={"embed": embed_fields}).data,
+                status=status.HTTP_200_OK
+            )
         else:
-            return Response({"ERROR": "Category ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
-            
+            return Response(
+                {"ERROR": "Category ID does not exist"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
 class API_Variables(APIView):
+    """Viewset for viewing a specific variable.
+
+    This viewset returns information on a single variable, including any embeds passed into the
+    query.
+
+    Methods:
+        get:
+            Returns variable information based on its ID.
+
+    Permissions:
+        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+
+    Model: `Variables`
+
+    Allowed Embeds:
+        - `game`: Embeds the game associated with the variable into the response.
+        - `values`: Embeds all values available for the variable into the response.
+
+    Example:
+        `/variables/123456?embed=values`
+
+    Example Response (JSON):
+        ```
+        {
+            "id": "ylq9qkv8",
+            "name": "Version",
+            "cat": "rklge08d",
+            "all_cats": false,
+            "scope": "full-game",
+            "hidden": false
+        }
+        ```
+    """
+
     ALLOWED_EMBEDS = {"game", "values"}
+
     def get(self, request, id):
-        if len(id) > 15:
-            return Response({"ERROR": "Variable ID exceeds maximum length."}, status=status.HTTP_400_BAD_REQUEST)
-        
+        """Returns a single variable's metadata and values based on its ID.
+
+        Parameters:
+            request (Request): The request object containing the information, queries, or embeds.
+            id (str): The exact ID of the variable to be returned.
+
+        Returns:
+            Response: A response object containing the JSON data of a variable.
+        """
+        if len(id) > 10:
+            return Response(
+                {"ERROR": "id must be less than 10 characters."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
         invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
         if invalid_embeds:
-            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"}, status=status.HTTP_400_BAD_REQUEST)
-    
+            return Response(
+                {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         variables = Variables.objects.filter(id__iexact=id).first()
         if variables:
-            return Response(VariableSerializer(variables, context={"embed": embed_fields}).data, status=status.HTTP_200_OK) 
+            return Response(
+                VariableSerializer(variables, context={"embed": embed_fields}).data,
+                status=status.HTTP_200_OK
+            )
         else:
-            return Response({"ERROR": "Variable ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"ERROR": "Variable ID does not exist"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 
 class API_Values(APIView):
+    """Viewset for viewing a specific value.
+
+    This viewset returns a value's data, including any embeds passed into the query.
+
+    Methods:
+        get:
+            Returns value info based on its ID.
+
+    Permissions:
+        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+
+    Model: `VariableValues`
+
+    Allowed Embeds:
+        - `variable`: Embeds the full variable metadata associated with this value into the
+        response.
+
+    Embed Example:
+        `/values/123456?embed=variable`
+
+    Example Response (JSON):
+        ```
+        {
+            "value": "5lek6rml",
+            "name": "6th Gen",
+            "hidden": false,
+            "variable": "ylq9qkv8"
+        }
+        ```
+    """
+
     ALLOWED_EMBEDS = {"variable"}
+
     def get(self, request, id):
-        if len(id) > 15:
-            return Response({"ERROR": "Value ID exceeds maximum length."}, status=status.HTTP_400_BAD_REQUEST)
-        
+        """Returns a single value's metadata and related variable based on its ID.
+
+        Parameters:
+            request (Request): The request object containing the information, queries, or embeds.
+            id (str): The exact ID of the value to be returned.
+
+        Returns:
+            Response: A response object containing the JSON data of a value.
+        """
+        if len(id) > 10:
+            return Response(
+                {"ERROR": "id must be less than 10 characters."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
         invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
         if invalid_embeds:
-            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         value = VariableValues.objects.filter(value__iexact=id).first()
+
         if value:
-            return Response(ValueSerializer(value, context={"embed": embed_fields}).data, status=status.HTTP_200_OK)
+            return Response(
+                ValueSerializer(value, context={"embed": embed_fields}).data,
+                status=status.HTTP_200_OK
+            )
         else:
             return Response({"ERROR": "Value ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
-            
+
+
 class API_Levels(APIView):
+    """Viewset for viewing a specific level and its metadta.
+
+    This viewset provides level metadata, including any embeds passed into the query.
+
+    Methods:
+        get:
+            Returns level information based on its ID.
+
+    Permissions:
+        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+
+    Model: `Levels`
+
+    Allowed Embeds:
+        - `game`: Embeds the game associated with the category into the response.
+
+    Embed Example:
+        `/levels/123456?embed=game`
+
+    Example Response (JSON):
+        ```
+        {
+            "id": "29vkxe3d",
+            "name": "Slam City Jam",
+            "url": "https://www.speedrun.com/thug1/Slam_City_Jam"
+        }
+        ```
+    """
     ALLOWED_EMBEDS = {"game"}
+
     def get(self, request, id):
-        if len(id) > 15:
-            return Response({"ERROR": "Level ID exceeds maximum length."}, status=status.HTTP_400_BAD_REQUEST)
-        
+        """Returns a single level based on its ID.
+
+        Parameters:
+            request (Request): The request object containing the information, queries, or embeds.
+            id (str): The exact ID of the level to be returned.
+
+        Returns:
+            Response: A response object containing the JSON data of a level.
+        """
+        if len(id) > 10:
+            return Response(
+                {"ERROR": "id must be less than 10 characters."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()] 
+        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
         invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
 
         if invalid_embeds:
-            return Response({"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"}, status=status.HTTP_400_BAD_REQUEST)
-    
+            return Response(
+                {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         levels = Levels.objects.filter(id__iexact=id).first()
+
         if levels:
-            return Response(LevelSerializer(levels, context={"embed": embed_fields}).data, status=status.HTTP_200_OK) 
+            return Response(
+                LevelSerializer(levels, context={"embed": embed_fields}).data,
+                status=status.HTTP_200_OK
+            )
         else:
             return Response({"ERROR": "Level ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
-        
+
+
 class API_Streams(APIView):
-    def get(self,request):
-        return Response(StreamSerializer(NowStreaming.objects.all(),many=True).data, status=status.HTTP_200_OK)
-    
-    def post(self,request):
+    """Viewset for viewing, creating, editing, or deleting a user's livestream status.
+
+    This viewset provides the standard actions for creating, editing, or viewing a user's livestream
+    status.
+
+    Methods:
+        get:
+            Returns all currently available livestreams (no ID provided).
+        post:
+            Creates a new livestream entry after it passes validation.
+        put:
+            Updates (or creates) a new livestream entry after it passes validation.
+        delete:
+            Removes a livestream entry completely.
+
+    Permissions:
+        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+
+    Model: `NowStreaming`
+
+    Example Response (JSON):
+        ```
+        [
+            {
+                "streamer": {
+                    "player": "TH126",
+                    "twitch": "https://www.twitch.tv/TH126",
+                    "youtube": "https://www.youtube.com/user/TH126"
+                },
+                "game": {
+                    "id": "w6jgk3x6",
+                    "name": "Tony Hawk's Pro Skater 3+4",
+                    "twitch": "Tony Hawk's Pro Skater 3+4"
+                },
+                "title": "THPS3+4 Speedruns for World Record",
+                "offline_ct": 1,
+                "stream_time": "2025-04-17T18:00:00Z"
+            }
+        ]
+        ```
+    """
+    def get(self, request):
+        """Returns a list of all available streams currently in the database."""
+        return Response(
+            StreamSerializer(NowStreaming.objects.all(), many=True).data,
+            status=status.HTTP_200_OK
+        )
+
+    def post(self, request):
+        """Creates a new livestream object.
+
+        Args:
+            request (Request): JSON information that must pass validation before being added.
+        """
         serializer = StreamSerializerPost(data=request.data)
 
-        if not NowStreaming.objects.filter(Q(streamer__name__iexact=request.data["streamer"]) | Q(streamer__id__iexact=request.data["streamer"])).exists():
+        streamcheck = (
+            NowStreaming.objects.filter(
+                Q(streamer__name__iexact=request.data["streamer"])
+                | Q(streamer__id__iexact=request.data["streamer"])
+            ).exists()
+        )
+
+        if not streamcheck:
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
-                return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({"ERROR": "Stream from this player already exists."}, status=status.HTTP_409_CONFLICT)
-    
-    def put(self,request):
-        stream = NowStreaming.objects\
-                .filter(Q(streamer__name__iexact=request.data["streamer"])\
-                | Q(streamer__id__iexact=request.data["streamer"])\
-                | Q(streamer__twitch__icontains=request.data["streamer"])).first()
-        
-        serializer = StreamSerializerPost(instance=stream,data=request.data)
+            return Response(
+                {"ERROR": "Stream from this player already exists."},
+                status=status.HTTP_409_CONFLICT
+            )
+
+    def put(self, request):
+        """Updates (or creates) a livestream object.
+
+        Args:
+            request (Request): JSON information that must pass validation before being added.
+        """
+        stream = (
+            NowStreaming.objects.filter(
+                Q(streamer__name__iexact=request.data["streamer"])
+                | Q(streamer__id__iexact=request.data["streamer"])
+                | Q(streamer__twitch__icontains=request.data["streamer"])
+            ).first()
+        )
+
+        serializer = StreamSerializerPost(instance=stream, data=request.data)
 
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=(status.HTTP_202_ACCEPTED if stream else status.HTTP_201_CREATED))
+            return Response(
+                serializer.data,
+                status=(status.HTTP_202_ACCEPTED if stream else status.HTTP_201_CREATED)
+            )
         else:
-            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self,request):
-        stream = NowStreaming.objects\
-                .filter(Q(streamer__name__iexact=request.data["streamer"]) \
-                | Q(streamer__id__iexact=request.data["streamer"]) \
-                | Q(streamer__twitch__icontains=request.data["streamer"])).first()
+    def delete(self, request):
+        """Removes a livestream object.
+
+        Args:
+            request (Request): JSON information that must pass validation before being deleted.
+        """
+        stream = (
+            NowStreaming.objects.filter(
+                Q(streamer__name__iexact=request.data["streamer"])
+                | Q(streamer__id__iexact=request.data["streamer"])
+                | Q(streamer__twitch__icontains=request.data["streamer"])
+            ).first()
+        )
 
         if stream:
             stream.delete()
             return Response(status=status.HTTP_200_OK)
         else:
-            return Response({"ERROR":"request.data['streamer'] is not in the model."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"ERROR": f"{request.data['streamer']} is not in the model."},
+                status=status.HTTP_400_BAD_REQUEST
+            )

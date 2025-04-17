@@ -4,10 +4,15 @@ from xml.etree.ElementTree import Element
 from markdown.extensions import Extension
 from markdown.inlinepatterns import InlineProcessor
 
-# Regex: [youtube align=center width=560 height=315]video_id[/youtube]
-YOUTUBE_RE = r"\[youtube(?:\s+align=(center|left|right))?(?:\s+width=(\d+))?(?:\s+height=(\d+))?\](.*?)\[/youtube\]"
+YOUTUBE_RE = (
+    r"\[youtube(?:\s+align=(center|left|right))?(?:\s+width=(\d+))?"
+    r"(?:\s+height=(\d+))?\](.*?)\[/youtube\]"
+)
 
-YOUTUBE_URL_RE = re.compile(r"(?:https?://)?(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([\w-]{11})")
+YOUTUBE_URL_RE = (
+    re.compile(r"(?:https?://)?(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([\w-]{11})")
+)
+
 
 class YTInlineProcessor(InlineProcessor):
     def handleMatch(self, m, data):
@@ -17,7 +22,7 @@ class YTInlineProcessor(InlineProcessor):
         raw_video = m.group(4).strip()
 
         match = YOUTUBE_URL_RE.match(raw_video)
-        video_id = match.group(1) if match else raw_video  # assume it's already the ID
+        video_id = match.group(1) if match else raw_video
 
         wrapper = Element("div")
         wrapper.set("class", f"youtube-embed align-{align}")
@@ -27,11 +32,17 @@ class YTInlineProcessor(InlineProcessor):
         iframe.set("height", height)
         iframe.set("src", f"https://www.youtube.com/embed/{video_id}")
         iframe.set("frameborder", "0")
-        iframe.set("allow", "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture")
+        iframe.set(
+            ("allow", "accelerometer;"
+            "autoplay; clipboard-write;"
+            "encrypted-media; gyroscope;"
+            "picture-in-picture")
+        )
         iframe.set("allowfullscreen", "true")
 
         wrapper.append(iframe)
         return wrapper, m.start(0), m.end(0)
+
 
 class YTEmbedProcessor(Extension):
     def extendMarkdown(self, md):

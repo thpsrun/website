@@ -17,8 +17,24 @@ from srl.models import (
 )
 
 
-### Used in GET /runs/ endpoint.
 class RunSerializer(serializers.ModelSerializer):
+    """Serializer for run metadata.
+
+    This serializer is used to return structured information about a specific speedrun, including
+    optional metadata from other models.
+
+    SerializerMethodField:
+        game (dict): Contains information about the associated speedrun's game.
+        category (dict): Contains information about the associated speedrun's category.
+        level (dict): Contains information about the associated speedrun's level.
+        variables (dict) Contains information about the associated speedrun's variables.
+        times (dict): Contains information about the associated speedrun's times.
+        players (dict): Contains information about the associated speedrun's variables.
+        status (dict): Contains information about the associated speedrun's status.
+        videos (dict): Contains information about the associated speedrun's videos.
+        meta (dict): Contains information about the associated speedrun's  metadata.
+    """
+
     game        = serializers.SerializerMethodField()
     category    = serializers.SerializerMethodField()
     level       = serializers.SerializerMethodField()
@@ -31,26 +47,30 @@ class RunSerializer(serializers.ModelSerializer):
     meta        = serializers.SerializerMethodField()
 
     def get_game(self, obj):
+        """Serailizes game information, to include optional embeds."""
         if any(item in self.context.get("embed", []) for item in ["games", "game"]):
             return GameSerializer(Games.objects.get(id=obj.game.id)).data
         else:
             return obj.game.id
-        
+
     def get_category(self, obj):
+        """Serailizes category information, to include optional embeds."""
         if "category" in self.context.get("embed", []):
             return CategorySerializer(Categories.objects.get(id=obj.category.id)).data
         else:
             return obj.category.id
-        
+
     def get_level(self, obj):
+        """Serailizes level information, to include optional embeds."""
         if "level" in self.context.get("embed", []):
             return LevelSerializer(Levels.objects.get(id=obj.level.id)).data
         elif obj.level:
             return obj.level.id
         else:
             return None
-        
+
     def get_times(self, obj):
+        """Serailizes time information."""
         return ({
             "defaulttime"   : obj.game.defaulttime,
             "time"          : obj.time,
@@ -60,8 +80,9 @@ class RunSerializer(serializers.ModelSerializer):
             "timeigt"       : obj.timeigt,
             "timeigt_secs"  : obj.timeigt_secs,
         })
-        
+
     def get_players(self, obj):
+        """Serailizes player information, to include optional embeds."""
         if "players" in self.context.get("embed", []):
             player1 = PlayerSerializer(Players.objects.get(id=obj.player.id)).data
 
@@ -79,10 +100,11 @@ class RunSerializer(serializers.ModelSerializer):
                 p2 = "Anonymous"
             else:
                 return p1
-            
+
             return p1, p2
-        
+
     def get_system(self, obj):
+        """Serailizes platform information, to include optional embeds."""
         if "platform" in self.context.get("embed", []):
             plat = PlatformSerializer(Platforms.objects.get(id=obj.platform.id)).data
         else:
@@ -92,30 +114,47 @@ class RunSerializer(serializers.ModelSerializer):
             "platform"      : plat,
             "emulated"      : obj.emulated,
         })
-        
+
     def get_status(self, obj):
+        """Serailizes run status information."""
         return ({
             "vid_status"    : obj.vid_status,
             "approver"      : obj.approver.id,
             "v_date"        : obj.v_date,
             "obsolete"      : obj.obsolete,
         })
-    
+
     def get_videos(self, obj):
+        """Serializes video information."""
         return ({
             "video"         : obj.video,
             "arch_video"    : obj.arch_video,
         })
-    
+
     def get_variables(self, obj):
-        variable_list = RunVariableValues.objects.only("variable_id", "value_id").filter(run=obj.id).values("variable_id", "value_id")
+        """Serailizes variable information, to include optional embeds."""
+
+        variable_list = (
+            RunVariableValues.objects.only("variable_id", "value_id")
+            .filter(run=obj.id).values("variable_id", "value_id")
+        )
+
         output = {}
 
         if "variables" in self.context.get("embed", []):
             for variable in variable_list:
-                var = VariableSerializer(Variables.objects.only("id").get(id=variable["variable_id"])).data
-                val = ValueSerializer(VariableValues.objects.only("value").get(value=variable["value_id"])).data
-                
+                var = (
+                    VariableSerializer(
+                        Variables.objects.only("id").get(id=variable["variable_id"])
+                    ).data
+                )
+
+                val = (
+                    ValueSerializer(
+                        VariableValues.objects.only("value").get(value=variable["value_id"])
+                    ).data
+                )
+
                 var_id = var["id"]
                 var.pop("id", None)
 
@@ -131,16 +170,30 @@ class RunSerializer(serializers.ModelSerializer):
                     output.update({
                         variable["variable_id"] : variable["value_id"]
                     })
-                
+
         return output
-    
+
     def get_meta(self, obj):
+        """Serailizes the run's metadata."""
+
         return ({
             "points"    : obj.points,
             "url"       : obj.url,
         })
-    
+
     def to_representation(self, instance):
+        """Customizes the serialized output of the object.
+
+        This method overrides default fields normally returned by the JSON object. All of these
+        fields are customized or nested into other fields, so the default response isn't needed.
+
+        Args:
+            instance (Model): The instanced information being serialized.
+
+        Returns:
+            dict: The final serialized representation in JSON form.
+
+        """
         data = super().to_representation(instance)
         data.pop("player", None)
         data.pop("player2", None)
@@ -165,24 +218,46 @@ class RunSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = Runs
-        fields = ["id", "runtype", "game", "platform", "category", "level",
-                "subcategory", "place", "player", "player2", "players", 
-                "url", "video", "arch_video", "date", "v_date", "times", "time_secs",
-                "timenl", "timenl_secs", "timeigt", "timeigt_secs", "points", "emulated", 
-                "vid_status", "obsolete", "system", "status", "videos", "variables", "meta"
+        fields = [
+            "id", "runtype", "game", "platform", "category", "level",
+            "subcategory", "place", "player", "player2", "players",
+            "url", "video", "arch_video", "date", "v_date", "times", "time_secs",
+            "timenl", "timenl_secs", "timeigt", "timeigt_secs", "points", "emulated",
+            "vid_status", "obsolete", "system", "status", "videos", "variables", "meta"
         ]
 
-### Used with the /platform/ endpoint.
+
 class PlatformSerializer(serializers.ModelSerializer):
+    """Serializer for platform metadata.
+
+    This serializer is used to return structured information about a specific platform, including
+    optional metadata from the `Games` model.
+
+    SerializerMethodField:
+        games (dict): Contains information about games that belong to that platform.
+    """
     games = serializers.SerializerMethodField()
 
     def get_games(self, obj):
+        """Serializes game information, to include optional embeds."""
         if "games" in self.context.get("embed", []):
             return GameSerializer(obj.game).data if obj.game else None
         else:
             return None
-    
+
     def to_representation(self, instance):
+        """Customizes the serialized output of the object.
+
+        This method overrides default fields normally returned by the JSON object. All of these
+        fields are customized or nested into other fields, so the default response isn't needed.
+
+        Args:
+            instance (Model): The instanced information being serialized.
+
+        Returns:
+            dict: The final serialized representation in JSON form.
+
+        """
         data = super().to_representation(instance)
         embed_fields = self.context.get("embed", [])
 
@@ -190,19 +265,33 @@ class PlatformSerializer(serializers.ModelSerializer):
             data.pop("games", None)
 
         return data
-    
+
     class Meta:
         model  = Platforms
         fields = ["id", "name", "games"]
 
-### Used with the /players/ endpoint
+
 class PlayerSerializer(serializers.ModelSerializer):
+    """Serializer for player metadata.
+
+    This serializer is used to return structured information about a specific player.
+
+    SerializerMethodField:
+        stats (dict): Contains information about the associated player's stats.
+        country (dict): Contains information about the associated player's country.
+        awards (dict): Contains information about the associated player's awards.
+    """
     stats   = serializers.SerializerMethodField()
     country = serializers.SerializerMethodField()
     awards  = serializers.SerializerMethodField()
 
     def get_stats(self, obj):
-        main_runs   = Runs.objects.filter(runtype="main", points__gt=0).filter(Q(player=obj.id) | Q(player2=obj.id))
+        """Serializes basic stats for the player, including rankings and points."""
+        main_runs   = (
+            Runs.objects.filter(runtype="main", points__gt=0)
+            .filter(Q(player=obj.id) | Q(player2=obj.id))
+        )
+
         il_runs     = Runs.objects.filter(runtype="il", player=obj.id, points__gt=0)
 
         main_points = sum(run.points for run in main_runs.filter(obsolete=False))
@@ -217,53 +306,93 @@ class PlayerSerializer(serializers.ModelSerializer):
             "il_pts"    : il_points,
             "total_runs": total_runs
         }
-    
+
     def get_country(self, obj):
+        """Serializes country information."""
         if obj.countrycode:
             return obj.countrycode.name
         else:
             return None
-        
+
     def get_awards(self, obj):
+        """Serializes award information."""
         if obj.awards:
             return AwardSerializer(obj.awards, many=True).data
         else:
             return None
-    
+
     def to_representation(self, instance):
+        """Customizes the serialized output of the object.
+
+        This method overrides default fields normally returned by the JSON object. All of these
+        fields are customized or nested into other fields, so the default response isn't needed.
+
+        Args:
+            instance (Model): The instanced information being serialized.
+
+        Returns:
+            dict: The final serialized representation in JSON form.
+
+        """
         return super().to_representation(instance)
-    
+
     class Meta:
         model  = Players
-        fields = ["id", "name", "nickname", "url", "country", "pronouns", "twitch", 
-                "youtube", "twitter", "ex_stream", "awards", "stats"
+        fields = [
+            "id", "name", "nickname", "url", "country", "pronouns", "twitch",
+            "youtube", "twitter", "ex_stream", "awards", "stats"
         ]
 
-### Used with the /games/ endpoint.
+
 class GameSerializer(serializers.ModelSerializer):
+    """Serializer for game metadata.
+
+    This serializer is used to return structured information about a specific game, including
+    optional metadata from other models.
+
+    SerializerMethodField:
+        categories (dict): Contains information about the associated game's categories.
+        levels (dict): Contains information about the associated game's levels.
+        platforms (dict): Contains information about the associated game's variables.
+    """
     categories  = serializers.SerializerMethodField()
     levels      = serializers.SerializerMethodField()
     platforms   = serializers.SerializerMethodField()
 
     def get_categories(self, obj):
+        """Serializes category information, to include optional embeds."""
         if "categories" in self.context.get("embed", []):
             return CategorySerializer(Categories.objects.filter(game=obj), many=True).data
         else:
             return None
-    
+
     def get_levels(self, obj):
+        """Serializes level information, to include optional embeds."""
         if "levels" in self.context.get("embed", []):
             return LevelSerializer(Levels.objects.filter(game=obj), many=True).data
         else:
             return None
-    
+
     def get_platforms(self, obj):
+        """Serializes platform information, to include optional embeds."""
         if "platforms" in self.context.get("embed", []):
             return PlatformSerializer(obj.platforms, many=True).data
         else:
             return None
-        
+
     def to_representation(self, instance):
+        """Customizes the serialized output of the object.
+
+        This method overrides default fields normally returned by the JSON object. All of these
+        fields are customized or nested into other fields, so the default response isn't needed.
+
+        Args:
+            instance (Model): The instanced information being serialized.
+
+        Returns:
+            dict: The final serialized representation in JSON form.
+
+        """
         data = super().to_representation(instance)
         embed_fields = self.context.get("embed", [])
 
@@ -272,29 +401,51 @@ class GameSerializer(serializers.ModelSerializer):
 
         if "levels" not in embed_fields:
             data.pop("levels", None)
-        
+
         if "platforms" not in embed_fields:
             data.pop("platforms", None)
 
         return data
-        
+
     class Meta:
         model  = Games
-        fields = ["id", "name", "slug", "release", "boxart", "twitch", "defaulttime",
-                "idefaulttime", "pointsmax", "ipointsmax", "categories", "levels", "platforms"
+        fields = [
+            "id", "name", "slug", "release", "boxart", "twitch", "defaulttime",
+            "idefaulttime", "pointsmax", "ipointsmax", "categories", "levels", "platforms"
         ]
 
-### Used with the /levels/ endpoint.
+
 class LevelSerializer(serializers.ModelSerializer):
+    """Serializer for level metadata.
+
+    This serializer is used to return structured information about a specific level, including
+    optional metadata from other models.
+
+    SerializerMethodField:
+        game (dict): Contains information about the associated level's game.
+    """
     game = serializers.SerializerMethodField()
 
     def get_game(self, obj):
+        """Serializes game information, to include optional embeds."""
         if "game" in self.context.get("embed", []):
-            return GameSerializer(Games.objects.filter(id=obj.game.id)).data
+            return GameSerializer(Games.objects.get(id=obj.game.id)).data
         else:
             return None
-    
+
     def to_representation(self, instance):
+        """Customizes the serialized output of the object.
+
+        This method overrides default fields normally returned by the JSON object. All of these
+        fields are customized or nested into other fields, so the default response isn't needed.
+
+        Args:
+            instance (Model): The instanced information being serialized.
+
+        Returns:
+            dict: The final serialized representation in JSON form.
+
+        """
         data = super().to_representation(instance)
         embed_fields = self.context.get("embed", [])
 
@@ -302,29 +453,52 @@ class LevelSerializer(serializers.ModelSerializer):
             data.pop("game", None)
 
         return data
-    
+
     class Meta:
         model  = Levels
         fields = ["id", "name", "url", "game"]
 
-### Used with the /categories/ endpoint.
+
 class CategorySerializer(serializers.ModelSerializer):
+    """Serializer for category metadata.
+
+    This serializer is used to return structured information about a specific category, including
+    optional metadata from other models.
+
+    SerializerMethodField:
+        game (dict): Contains information about the associated category's game.
+        variables (dict): Contains information about the associated category's variables.
+    """
     game        = serializers.SerializerMethodField()
     variables   = serializers.SerializerMethodField()
 
     def get_game(self, obj):
+        """Serializes game information, to include optional embeds."""
         if "game" in self.context.get("embed", []):
             return GameSerializer(Games.objects.filter(id=obj.game.id)).data
         else:
             return None
-    
+
     def get_variables(self, obj):
+        """Serializes variable information, to include optional embeds."""
         if "variables" in self.context.get("embed", []):
             return VariableSerializer(Variables.objects.filter(cat=obj.id), many=True).data
         else:
             return None
-    
+
     def to_representation(self, instance):
+        """Customizes the serialized output of the object.
+
+        This method overrides default fields normally returned by the JSON object. All of these
+        fields are customized or nested into other fields, so the default response isn't needed.
+
+        Args:
+            instance (Model): The instanced information being serialized.
+
+        Returns:
+            dict: The final serialized representation in JSON form.
+
+        """
         data = super().to_representation(instance)
         embed_fields = self.context.get("embed", [])
 
@@ -335,29 +509,52 @@ class CategorySerializer(serializers.ModelSerializer):
             data.pop("variables", None)
 
         return data
-    
+
     class Meta:
         model  = Categories
         fields = ["id", "name", "type", "url", "hidden", "game", "variables"]
 
-### Used with the /variables/ endpoint.
+
 class VariableSerializer(serializers.ModelSerializer):
+    """Serializer for variable metadata.
+
+    This serializer is used to return structured information about a specific variable, including
+    optional metadata from other models.
+
+    SerializerMethodField:
+        game (dict): Contains information about the associated game.
+        values (dict): Contains information about the associated category.
+    """
     game    = serializers.SerializerMethodField()
     values  = serializers.SerializerMethodField()
 
     def get_game(self, obj):
+        """Serializes game information, to include optional embeds."""
         if "game" in self.context.get("embed", []):
             return GameSerializer(Games.objects.filter(id=obj.game.id), many=True).data
         else:
             return None
 
     def get_values(self, obj):
+        """Serializes value information, to include optional embeds."""
         if "values" in self.context.get("embed", []):
             return ValueSerializer(VariableValues.objects.filter(var=obj.id), many=True).data
         else:
             return None
-    
+
     def to_representation(self, instance):
+        """Customizes the serialized output of the object.
+
+        This method overrides default fields normally returned by the JSON object. All of these
+        fields are customized or nested into other fields, so the default response isn't needed.
+
+        Args:
+            instance (Model): The instanced information being serialized.
+
+        Returns:
+            dict: The final serialized representation in JSON form.
+
+        """
         data = super().to_representation(instance)
         embed_fields = self.context.get("embed", [])
 
@@ -368,47 +565,82 @@ class VariableSerializer(serializers.ModelSerializer):
             data.pop("values", None)
 
         return data
-    
+
     class Meta:
         model  = Variables
         fields = ["id", "name", "cat", "all_cats", "scope", "hidden", "game", "values"]
 
-### Used with the /values/ endpoint.
+
 class ValueSerializer(serializers.ModelSerializer):
+    """Serializer for value metadata.
+
+    This serializer is used to return structured information about a specific value, including
+    optional metadata from other models.
+
+    SerializerMethodField:
+        variable (dict): Contains information about the associated value's variable.
+    """
     variable = serializers.SerializerMethodField()
 
     def get_variable(self, obj):
+        """Serializes variable information, to include optional embeds."""
         if "variable" in self.context.get("embed", []):
             return VariableSerializer(Variables.objects.get(id=obj.var.id)).data
         else:
             return obj.var.id
-    
+
     def to_representation(self, instance):
+        """Customizes the serialized output of the object.
+
+        This method overrides default fields normally returned by the JSON object. All of these
+        fields are customized or nested into other fields, so the default response isn't needed.
+
+        Args:
+            instance (Model): The instanced information being serialized.
+
+        Returns:
+            dict: The final serialized representation in JSON form.
+
+        """
         data = super().to_representation(instance)
 
         return data
-    
+
     class Meta:
         model  = VariableValues
         fields = ["value", "name", "hidden", "variable"]
 
+
 class AwardSerializer(serializers.ModelSerializer):
+    """Serializer for awards metadata."""
     class Meta:
         model  = Awards
         fields = ["name"]
 
+
 class StreamSerializer(serializers.ModelSerializer):
+    """Serializer for stream metadata.
+
+    This serializer is used to return structured information about a specific stream, including
+    optional metadata from other models.
+
+    SerializerMethodField:
+        streamer (dict): Contains information about the associated stream's streamer.
+        game (dict): Contains information about the associated stream's game.
+    """
     streamer  = serializers.SerializerMethodField()
     game      = serializers.SerializerMethodField()
 
     def get_streamer(self, obj):
+        """Serializes streamer information."""
         return {
             "player"    : obj.streamer.name,
             "twitch"    : obj.streamer.twitch,
             "youtube"   : obj.streamer.youtube,
         }
-    
+
     def get_game(self, obj):
+        """Serializes game information."""
         return {
             "id"      : obj.game.id,
             "name"    : obj.game.name,
@@ -419,7 +651,20 @@ class StreamSerializer(serializers.ModelSerializer):
         model  = NowStreaming
         fields = ["streamer", "game", "title", "offline_ct", "stream_time"]
 
+
 class StreamSerializerPost(serializers.ModelSerializer):
+    """Serializer for POST'ing stream metadata..
+
+    This serializer is used to POST structured information about a specific stream, including
+    optional metadata from other models.
+
+    SerializerMethodField:
+        streamer (str): Contains information about the associated stream's streamer name.
+        game (str): Contains information about the associated stream's game name.
+        title (str):  Contains information about the associated stream's title.
+        offline_ct (int):  Contains information about the associated stream's offline counter.
+        stream_time (date):  Contains information about the associated stream's start stream time.
+    """
     streamer    = serializers.CharField()
     game        = serializers.CharField()
     title       = serializers.CharField()
@@ -427,24 +672,40 @@ class StreamSerializerPost(serializers.ModelSerializer):
     stream_time = serializers.CharField()
 
     def validate_streamer(self, streamer):
+        """Validates if the streamer exists in the `Streamer` model."""
         try:
-            return Players.objects.get(Q(id__iexact=streamer) | Q(name__iexact=streamer) | Q(twitch__icontains=streamer))
+            return (
+                Players.objects.get(
+                    Q(id__iexact=streamer)
+                    | Q(name__iexact=streamer)
+                    | Q(twitch__icontains=streamer)
+                )
+            )
         except Players.DoesNotExist:
             raise serializers.ValidationError("streamer name or ID does not exist.")
-        
+
     def validate_game(self, gameid):
+        """Validates if the game exists in the `Games` model."""
         try:
-            return Games.objects.get(Q(id__iexact=gameid) | Q(name__iexact=gameid) | Q(slug__iexact=gameid))
+            return (
+                Games.objects.get(
+                    Q(id__iexact=gameid)
+                    | Q(name__iexact=gameid)
+                    | Q(slug__iexact=gameid)
+                )
+            )
         except Games.DoesNotExist:
             raise serializers.ValidationError("game name, ID, or slug/abbreviation does not exist.")
-        
+
     def validate_title(self, title):
+        """Validates if the stream's title is above 0 and below 100."""
         if len(title) == 0 or len(title) > 100:
             raise serializers.ValidationError("title length is 0 or greater than 100.")
         else:
             return title
-    
+
     def validate_offline_ct(self, count):
+        """Validates if the offline counter is an integer and above 0."""
         try:
             if count < 0:
                 raise serializers.ValidationError("offline_ct must be a positive integer.")
@@ -452,17 +713,23 @@ class StreamSerializerPost(serializers.ModelSerializer):
                 return count
         except Exception:
             raise serializers.ValidationError("offline_ct must be an integer.")
-        
+
     def validate_stream_time(self, streamtime):
+        """Validates if the stream start time is a valid date/time field."""
         try:
-            correct_time = datetime.fromisoformat(streamtime.replace("Z", "+00:00")).replace(tzinfo=None)
+            correct_time = (
+                datetime.fromisoformat(streamtime.replace("Z", "+00:00")).replace(tzinfo=None)
+            )
+
             if correct_time > datetime.now():
                 raise serializers.ValidationError("stream_time cannot be in the future.")
             else:
                 return correct_time
         except Exception:
-            raise serializers.ValidationError("Invalid date time format --- Example: '2024-12-31T06:23:51.188Z'")
-    
-    class Meta: 
+            raise serializers.ValidationError(
+                "Invalid date time format --- Example: '2024-12-31T06:23:51.188Z'"
+            )
+
+    class Meta:
         model  = NowStreaming
         fields = ["streamer", "game", "title", "offline_ct", "stream_time"]

@@ -5,8 +5,9 @@
 ### Added
 *   Added Guides!
     *   Guides are .MD files (with some enhancements on-site) that serve to make the webiste the central point of information for the community.
-    *   Guides have been added to the top navigation bar. Once you are in the guides section, you can navigate it with the new breadcrumb bar.
-    *   Guides are 
+    *   Guides have been added to the top navigation bar. If a game has a guide, it will appear after you go to it's view.
+    *   If you wana contribute, you can contribute to the [new thps-guide GitHub repo](https://github.com/thpsrun/thps-guides)!
+        *   Approved pull requests will have its files automatically appear on this site.
 *   Added `bluesky` to the `Players` model.
     *   As a note, this is minor change. If you want your Bluesky account added to your profile, contact Packle. A later update will move to SRC's v2 endpoint, which can return Bluesky links; otherwise this must be done manually.
 *   Added `twitch` to the `Games` model.
@@ -56,6 +57,10 @@
     *   All endpoints have specific query and embed options that are added (TODO) <HERE>.
 *   Changed `/runs/` endpoint to now properly return data upon POST'ing a new run, while also serving HTTP_200_OK.
 *   Changed `abbr` value in the `Games` model to `slug`.
+
+### Other
+*   Practically every major class, method, and function within this project is documented to a decent degree.
+    *   Tried to also add some in-line comments wherever I could to explain rationale aout some lines of code.
   
 ### Fixed
 *   [#17](https://github.com/ThePackle/SRLC/issues/17) Fixed an issue where the nickname of players would not properly appear in the "Latest Runs" portion of the main page.
