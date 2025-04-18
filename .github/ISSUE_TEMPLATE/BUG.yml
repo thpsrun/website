@@ -1,0 +1,106 @@
+name: Bug Report
+description: Report a problem or bug you have encountered!
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for submitting! :blue_heart:
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Guidelines
+      description: By submitting this issue, you agree to follow the [thps.run Contributing Guidelines](https://github.com/thpsrun/website/.github/blob/main/CONTRIBUTING.md).
+      options:
+        - label: I agree to follow this project's Contributing Guidelines.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Which version is affected?
+      placeholder: 3.0, 3.0.1, 3.1, ...
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform/OS Version
+      description: Which operating systems and/or devices are affected?
+      placeholder: iOS 15.4, Windows 11 25H2, popOS! 22.04, ...
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: What browser was the bug/issue found in?
+      placeholder: Mozilla Firefox 133.0, Google Chrome 126.0.6478.270, ...
+
+  - type: input
+    id: devices
+    attributes:
+      label: Devices
+      description: Does this affect SPECIFIC devices? If so, what?
+      placeholder: All, iPhone Pro Max 15, iPad Air, MacBook Pro M1, ...
+    validations:
+      required: true
+  - type: input
+    id: existing-issues
+    attributes:
+      label: Existing Issues
+      description: Are there any similar existing issues?
+      placeholder: "#420"
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe what happened.
+      placeholder: I did the thing and somehow the thing blew up and then Tony appeared!?
+    validations:
+      required: true
+  - type: textarea
+    id: repro-steps
+    attributes:
+      label: Steps to Reproduce the Issue
+      value: |
+        1. 
+        2. 
+        3. 
+        ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+      placeholder: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Attachments
+      description: Please include code snippets, stack traces, or compiler errors. Please include if you have special changes or settings!
+      placeholder: Paste code, stack traces, and whatever else needed here! The more, the better!
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or Videos
+      description: Add screenshots, gifs, or videos to help explain your problem.
+      placeholder: Upload screenshots, gifs, and videos here
+    validations:
+      required: false
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information
+      description: Add any other useful information about the problem here.
+      placeholder: And then everyone clapped...
+    validations:
+      required: false
