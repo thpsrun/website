@@ -33,10 +33,8 @@ class YTInlineProcessor(InlineProcessor):
         iframe.set("src", f"https://www.youtube.com/embed/{video_id}")
         iframe.set("frameborder", "0")
         iframe.set(
-            ("allow", "accelerometer;"
-            "autoplay; clipboard-write;"
-            "encrypted-media; gyroscope;"
-            "picture-in-picture")
+            "allow", "accelerometer; autoplay;"
+            "clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         )
         iframe.set("allowfullscreen", "true")
 

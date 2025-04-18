@@ -255,6 +255,7 @@ def update_category_runs(game_id, category, il_check):
             through to pass into `invoke_runs`.
 
     Calls:
+        - `src_api`
         - `invoke_runs`
     """
     var_ids = Variables.objects.only("id").filter(cat=category["id"])
@@ -384,7 +385,6 @@ def update_category_runs(game_id, category, il_check):
 
                 if leaderboard != 400:
                     invoke_runs.delay(game_id, category, leaderboard, var_name_list[index])
-
     elif len(var_ids) > 1:
         var_value_one = (
             VariableValues.objects.select_related("var")
@@ -612,6 +612,11 @@ def invoke_runs(game_id, category, leaderboard, var_name=None):
             to include the world record and subsequent speedruns.
         var_name (str): None is default. This is the full "name" for the category and/or subcategory
             combination. This will be deprecated in a future release.
+
+    Calls:
+        - `invoke_players`
+        - `points_formula`
+        - `time_conversion`
     """
     if len(leaderboard["runs"]) > 0:
         wr_records = leaderboard["runs"][0]

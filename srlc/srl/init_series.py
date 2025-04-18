@@ -12,6 +12,7 @@ from .tasks import (
 
 
 def init_series(series_id):
+    """Initializes the gathering of all data for the entire Series from the Speedrun.com API"""
     # Removes all objects from all of the listed models below.
     # Initialize Series should only be performed by the superadmin.
     # It also removes all objects in all models, then re-creates them.
@@ -64,15 +65,15 @@ def init_series(series_id):
     # somehow missed the first time. Good website.
     # This may take a while...
     redo = 0
-    while redo < 3:
+    while redo < 2:
         for player in Players.objects.only("id").values_list("id", flat=True):
             import_obsolete.delay(player)
 
             redo = redo + 1
 
-# Actually kicks off the initialization of the code.
-# Kinda ass, should be fixed sometime. But, if it ain't broke...
-
 
 async def init_series_async(series_id):
+    """Asynchronously starts the data collection from the Series."""
+    # Actually kicks off the initialization of the code.
+    # Kinda ass, should be fixed sometime. But, if it ain't broke...
     init_series(series_id)

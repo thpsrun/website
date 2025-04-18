@@ -34,6 +34,14 @@ def normalize_src(id):
         id (str): Unique Speedrun.com identifier for a specific speedrun. This ID is what you see
             at the end of a URL for a game (e.g. `12345678` at the end of
             `https://speedrun.com/game/run/<ID>`)
+
+    Calls:
+        - `update_game_runs`
+        - `update_player`
+        - `update_level`
+        - `update_variable`
+        - `update_category`
+        - `add_run`
     """
     run_info = src_api(f"https://speedrun.com/api/v1/runs/{id}?embed=players")
     try:

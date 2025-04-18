@@ -5,7 +5,7 @@ labels: ["bug"]
 body:
   - type: markdown
     attributes:
-      value: Thanks for submitting! :blue_heart:
+      value: Thanks for submitting!
   - type: checkboxes
     id: terms
     attributes:
