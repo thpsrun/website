@@ -59,7 +59,7 @@
 *   Changed `abbr` value in the `Games` model to `slug`.
 
 ### Other
-*   Practically every major class, method, and function within this project is documented to a decent degree.
+*   Practically every major class, method, and function within this project is documented to a decent degree using python docstrings.
     *   Tried to also add some in-line comments wherever I could to explain rationale aout some lines of code.
   
 ### Fixed

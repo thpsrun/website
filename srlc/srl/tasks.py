@@ -128,7 +128,7 @@ def update_game_runs(game_id, reset):
 
 @shared_task
 def update_category(category, game_id):
-    """Creates or updates a `Categories` model object based on the `category` variable.
+    """Creates or updates a `Categories` model object based on the `category` argument.
 
     Args:
         category (dict): Usually from Speedrun.com's API. Includes information about a specific
@@ -150,7 +150,7 @@ def update_category(category, game_id):
 
 @shared_task
 def update_platform(platform):
-    """Creates or updates a `Platforms` model object based on the `platform` variable.
+    """Creates or updates a `Platforms` model object based on the `platform` argument.
 
     Args:
         platform (dict): Usually from Speedrun.com's API. Includes information about a specific
@@ -167,7 +167,7 @@ def update_platform(platform):
 
 @shared_task
 def update_level(level, game_id):
-    """Creates or updates a `Levels` model object based on the `level` variable.
+    """Creates or updates a `Levels` model object based on the `level` argument.
 
     Args:
         level (dict): Usually from Speedrun.com's API. Includes information about a specific level
@@ -188,7 +188,7 @@ def update_level(level, game_id):
 
 @shared_task
 def update_variable(gameid, variable):
-    """Creates or updates a `Variables` model object based on the `variable` variable.
+    """Creates or updates a `Variables` model object based on the `variable` argument.
 
     Args:
         gameid (str): Used to call the specific `Games` object for the category.
@@ -223,7 +223,7 @@ def update_variable(gameid, variable):
 
 @shared_task
 def update_variable_value(variable, value):
-    """Creates or updates a `VariableValues` model object based on the `value` variable.
+    """Creates or updates a `VariableValues` model object based on the `value` argument.
 
     Args:
         variable (dict): Usually from Speedrun.com's API. Includes information about a specific

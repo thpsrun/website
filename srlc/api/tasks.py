@@ -22,12 +22,19 @@ from srl.tasks import (
 )
 
 
-# normalize_src is the beginning of a chain of functions used to normalize the data from SRC and put
-# them into the database. It performs checks to see if it is a new game, category, sub-category, and
-# so on. It also checks if the run is a world record, before importing, so it knows to complete
-# additional functions and checks and balances.
 @shared_task
 def normalize_src(id):
+    """Normalizes information about a specific speedrun from the Speedrun.com API.
+
+    Normalizes all information and metadata about a speedrun from the Speedrun.com API based on its
+    ID. This also sets up a chain of functions to import this data into all related models within
+    the database, including creating new objects as needed.
+
+    Args:
+        id (str): Unique Speedrun.com identifier for a specific speedrun. This ID is what you see
+            at the end of a URL for a game (e.g. `12345678` at the end of
+            `https://speedrun.com/game/run/<ID>`)
+    """
     run_info = src_api(f"https://speedrun.com/api/v1/runs/{id}?embed=players")
     try:
         if "speedrun.com/th" in run_info["weblink"]:
@@ -83,10 +90,13 @@ def normalize_src(id):
                     )
                     finish = 1
 
+            # Games can have the option so that speedruns from other platforms or regions
+            # do not offset and obsolete if they are slower. They are still in the SRC leaderboard
+            # endpoint, but they are marked as a place of 0. This just helps set them up properly
+            # to be imported and properly excluded later.
             if finish == 0:
                 run_info["place"] = 0
                 add_run.delay(
-
                     lb_info["game"]["data"],
                     run_info,
                     lb_info["category"]["data"],
@@ -95,6 +105,8 @@ def normalize_src(id):
                     True
                 )
 
+            # Simple check to see if the run has information on individual levels. If not,
+            # it returns False so the serializer better processes it.
             if run_info["level"]:
                 return True
             else:
@@ -110,8 +122,9 @@ def normalize_src(id):
 # Part of the normalization is taking the categories and sub-categories and sub-sub-categories and
 # properly formatting them before handing them to invoke_run.
 @shared_task
-def add_run(game, run, category, level, run_variables, obsolete=False, point_reset=True,
-            download_pfp=True):
+def add_run(
+    game, run, category, level, run_variables, obsolete=False, point_reset=True, download_pfp=True
+):
     var_ids = Variables.objects.only("id").filter(cat=category["id"])
     global_cats = Variables.objects.only("id").filter(all_cats=True, game=game["id"])
 
@@ -124,12 +137,25 @@ def add_run(game, run, category, level, run_variables, obsolete=False, point_res
 
         if len(per_level_check) > 1:
             var_name = level["name"] + " (" + category["name"] + ")"
-            invoke_single_run.delay(game["id"], category, run, var_name, obsolete, point_reset,
-                                    download_pfp)
+            invoke_single_run.delay(
+                game["id"],
+                category,
+                run,
+                var_name,
+                obsolete,
+                point_reset,
+                download_pfp
+            )
         else:
-            invoke_single_run.delay(game["id"], category, run, level["name"], obsolete, point_reset,
-                                    download_pfp)
-
+            invoke_single_run.delay(
+                game["id"],
+                category,
+                run,
+                level["name"],
+                obsolete,
+                point_reset,
+                download_pfp
+            )
     elif len(var_ids) == 1:
         var_value = VariableValues.objects.only("name", "value").filter(var=var_ids[0].id)
 
@@ -162,7 +188,6 @@ def add_run(game, run, category, level, run_variables, obsolete=False, point_res
                             var_name2 = f", {global_value.name}"
 
                             var_name = category["name"] + " (" + var_name + var_name2 + ")"
-
                 else:
                     var_name = category["name"] + " (" + var_name + ")"
 
@@ -175,7 +200,6 @@ def add_run(game, run, category, level, run_variables, obsolete=False, point_res
                     point_reset,
                     download_pfp
                 )
-
     elif len(var_ids) > 1:
         var_name = ""
 
@@ -200,7 +224,6 @@ def add_run(game, run, category, level, run_variables, obsolete=False, point_res
                         var_name2 = f"{global_value.name}"
 
                         var_name = category["name"] + " " + var_name + "(" + var_name2 + ")"
-
         elif len(global_cats) == 1:
             global_values = (
                 VariableValues.objects.only("name", "value")
@@ -212,7 +235,6 @@ def add_run(game, run, category, level, run_variables, obsolete=False, point_res
                     var_name2 = f", {global_value.name}"
 
                     var_name = category["name"] + " (" + var_name + var_name2 + ")"
-
         else:
             var_name = category["name"] + " (" + var_name.rstrip(", ") + ")"
 
@@ -225,7 +247,6 @@ def add_run(game, run, category, level, run_variables, obsolete=False, point_res
             point_reset,
             download_pfp
         )
-
     elif category["type"] == "per-game" and len(var_ids) == 0:
         if len(global_cats) > 0:
             var_name = ""

@@ -42,7 +42,7 @@ The points system utilized within this project was created by ibeechu and goatro
 8.  Go to `http://localhost:8001/illiad` and login. Afterward, go to the `Series` section and click on the "Add Series" option on the top-right. Fill in the sections provided, then click "SAVE".
 9.  Select your new `Series` object, go to the "Action" drop-down, and select "Initialze Series Data".
   
-##### NOTE: Depending on the size of your community, this may take a while! You should only have to do this once, but this will begin to crawl your community to gather the metadata for EVERY game, category, subcategory, platform, player, and speedrun and import them into your database. You will be heavily rate limited by Speedrun.com. BE PATIENT!!!!!!!!
+**NOTE: Depending on the size of your community, this may take a while! You should only have to do this once, but this will begin to crawl your community to gather the metadata for EVERY game, category, subcategory, platform, player, and speedrun and import them into your database. You will be heavily rate limited by Speedrun.com. BE PATIENT!!!!!!!! If in doubt, check the Django logs to see if there are any workers reporting issues or updates in the last ~5 minutes.**
 
 ### Post-Installation Steps
 * Create Super User
