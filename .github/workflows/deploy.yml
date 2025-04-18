@@ -4,9 +4,37 @@ on:
   push:
     branches:
       - main
+      - dev
 
 jobs:
-  deploy:
+  deploy-dev:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Pull Latest Changes
+        run: |
+          cd ~/deploy
+          git pull origin dev
+
+      - name: Build and Restart Docker Containers
+        run: |
+          cd ~/deploy
+          docker compose down
+          docker compose pull
+          docker compose up -d --build
+
+      - name: Cleanup Unused Docker Resources
+        run: 
+          docker system prune -f
+
+  deploy-main:
+    if: github.ref == 'refs/heads/main'
     runs-on: self-hosted
 
     steps:
