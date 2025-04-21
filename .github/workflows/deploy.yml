@@ -7,25 +7,29 @@ on:
       - dev
 
 jobs:
-  #deploy-dev-flake8:
-    #if: github.ref == 'refs/heads/dev'
-    #runs-on: ubuntu-latest
+  deploy-dev-flake8:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
 
-    #steps:
-      #- name: Checkout Repository
-        #uses: actions/checkout@v4
-        #with:
-          #ref: dev
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: dev
 
-      #- name "Setup Python Environment"
-        #uses: actions/setup-python@v5
-        #with:
-          #python-version: "3.11"
+      - name: "Setup Python Environment"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install Flake8
+        run: |
+          python -m pip install --upgrade flake8
 
-      #- name: "Run Flake8 for Linting"
-        #continue-on-error: true
-        #run: |
-          #flake8 --extend-ignore=E126,E127,E128,E203,E221,W503,W504 --max-line-length=100 `git ls-files | grep py$`
+      - name: "Run Flake8 for Linting"
+        continue-on-error: true
+        run: |
+          flake8 --extend-ignore=E126,E127,E128,E203,E221,W503,W504 --max-line-length=100 `git ls-files | grep py$`
 
   #deploy-dev-test:
     #if: github.ref == 'refs/heads/dev'

@@ -6,6 +6,7 @@ body:
   - type: markdown
     attributes:
       value: Thanks for considering improvements to the project!
+
   - type: checkboxes
     id: terms
     attributes:
@@ -14,6 +15,7 @@ body:
       options:
         - label: I agree to follow this project's Contributing Guidelines.
           required: true
+
   - type: textarea
     id: description
     attributes:
@@ -22,6 +24,7 @@ body:
       placeholder: What is your idea??
     validations:
       required: true
+
   - type: textarea
     id: problem
     attributes:
@@ -30,6 +33,7 @@ body:
       placeholder: What problem?
     validations:
       required: true
+
   - type: textarea
     id: solution
     attributes:
@@ -38,6 +42,7 @@ body:
       placeholder: How should this be implemented?
     validations:
       required: true
+
   - type: textarea
     id: alternatives
     attributes:
