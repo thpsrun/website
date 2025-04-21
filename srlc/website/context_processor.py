@@ -8,6 +8,7 @@ environ.Env.read_env()
 
 
 def global_name(request):
+    """Returns global metadata variables from `.env` to be used in Django templates."""
     return {
         "ENV_WEBSITE_NAME"        : env("SITE_NAME"),
         "ENV_WEBSITE_AUTHOR"      : env("SITE_AUTHOR"),
@@ -17,6 +18,7 @@ def global_name(request):
 
 
 def global_social_media(request):
+    """Returns social media links from `.env` to be rendered on a webpage."""
     return {
         "ENV_DISCORD"   : env("DISCORD_URL"),
         "ENV_TWITCH"    : env("TWITCH_URL"),
@@ -28,10 +30,12 @@ def global_social_media(request):
 
 
 def navbar_docs(request):
-    base_docs_path  = "/srlc/docs/"
-    navbar_docs     = []
-    game_list       = Games.objects.only("name", "slug", "release")\
-                    .all().order_by("release")
+    """If the `/srlc/docs/` directory is used, renders guides list to the navbar."""
+    base_docs_path = "/srlc/docs/"
+    navbar_docs = []
+    game_list = (
+        Games.objects.only("name", "slug", "release").all().order_by("release")
+    )
 
     if not os.path.exists(base_docs_path):
         return {"navbar_docs": []}

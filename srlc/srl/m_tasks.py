@@ -5,8 +5,7 @@ import requests
 
 
 def convert_time(secs):
-    """
-    Converts the time given into a string.
+    """Converts the time given into a string.
 
     Args:
         secs (float): The seconds of a speedrun time.
@@ -48,8 +47,7 @@ def convert_time(secs):
 
 
 def src_api(url, paginate=False):
-    """
-    Processes a Speedrun.com API GET request to return values from any of its endpoints.
+    """Processes a Speedrun.com API GET request to return values from any of its endpoints.
 
     This function is primarily used to connect to a Speedrun.com API endpoint via GET. However,
     this can be used if the API call returns valid HTTP Request Codes for `420: Enhance Your Calm`
@@ -86,8 +84,7 @@ def src_api(url, paginate=False):
 
 
 def points_formula(wr, run, max_points):
-    """
-    Processes points based on algorithmic formula
+    """Processes points based on algorithmic formula
 
     Args:
         wr (float): The world record time (as a float).
@@ -101,8 +98,7 @@ def points_formula(wr, run, max_points):
 
 
 def time_conversion(time):
-    """
-    Processes the returned time values of a run entry in a string.
+    """Processes the returned time values of a run entry in a string.
 
     Args:
         time (dict): Raw run dictionary from the Speedrun.com API.

@@ -27,7 +27,7 @@ services:
     volumes:
       - ./srlc:/srlc
       - ./static:/srlc/static
-      - /home/thepackle/repos/thps-guides:/srlc/docs
+      - /home/thepackle/repos/guides:/srlc/docs
     networks:
       - srlc
 

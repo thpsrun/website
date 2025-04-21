@@ -125,14 +125,31 @@ def normalize_src(id):
         return "invalid"
 
 
-# add_run starts to gathers information about the approved run from the SRC API.
-# The biggest thing here is that it will normalize the data so it can be properly stored in your API
-# Part of the normalization is taking the categories and sub-categories and sub-sub-categories and
-# properly formatting them before handing them to invoke_run.
 @shared_task
 def add_run(
     game, run, category, level, run_variables, obsolete=False, point_reset=True, download_pfp=True
 ):
+    """Retrieves and normalizes Speedrun.com API data before importing it into the database.
+
+    Continues normalization of SRC API data from `normalize_src`, this is used to normalize the data
+    for a single run before forwarding it to `invoke_single_run`.
+
+    Args:
+        game (dict): Speedrun.com information on a specific game.
+        run (dict): Speedrun.com information on a specific run.
+        category (dict): Speedrun.com information on a specific category.
+        level (dict): Speedrun.com information on a specific level.
+        run_variables (dict): Speedrun.com information on specific variables.
+        obsolete (bool): Default is False. Determines if the runs should be marked as obsolete when
+            they are imported into the database.
+        point_reset (bool): Default is True. Determines if additonal functions should be ran to
+            reset the point values of a specific subcategory.
+        download_pfp (bool): Default is True. Determines if the profile pictures of the imported
+            speedrun's player should also be downloaded locally.
+
+    Calls:
+        - `invoke_single_run`
+    """
     var_ids = Variables.objects.only("id").filter(cat=category["id"])
     global_cats = Variables.objects.only("id").filter(all_cats=True, game=game["id"])
 
@@ -295,9 +312,28 @@ def add_run(
 
 @shared_task
 def invoke_single_run(
-    game_id, category, run, var_name=None,
-    obsolete=False, point_reset=True, download_pfp=True
+    game_id, category, run, var_name=None, obsolete=False, point_reset=True, download_pfp=True
 ):
+    """Creates or updates a `Runs` object with Speedrun.com API information.
+
+    Args:
+        game (dict): Speedrun.com information on a specific game.
+        run (dict): Speedrun.com information on a specific run.
+        category (dict): Speedrun.com information on a specific category.
+        var_name (str): Full subcategory name to be imported into the `subcategory` field.
+        obsolete (bool): Default is False. Determines if the runs should be marked as obsolete when
+            they are imported into the database.
+        point_reset (bool): Default is True. Determines if additonal functions should be ran to
+            reset the point values of a specific subcategory.
+        download_pfp (bool): Default is True. Determines if the profile pictures of the imported
+            speedrun's player should also be downloaded locally.
+
+    Calls:
+        - `convert_time`
+        - `points_formula`
+        - `remove_obsolete`
+        - `update_points`
+    """
     if not obsolete:
         players = run["run"]["players"]
         place = run["place"]
@@ -398,7 +434,7 @@ def invoke_single_run(
             default["timenl_secs"]  = run["run"]["times"]["realtime_t"]
 
         if category["type"] == "per-game":
-            reset_points    = "Game"
+            reset_points    = "Main"
             wr_pull         = (
                 Runs.objects.main()
                 .filter(game=game_id, subcategory=var_name, obsolete=False, place=1)
@@ -495,6 +531,20 @@ def invoke_single_run(
 
 @shared_task
 def update_points(game_id, subcategory, max_points, reset_points):
+    """Retrieves all speedruns within a game and subcategory and resets placings and points.
+
+    Retrieves all speedruns within a game's subcateogyr and resets the `place` field for that run,
+    and updates their point totals whenever a new world record is achieved.
+
+    Args:
+        game_id (str): Speedrun.com ID for the game that `subcategory` belongs to.
+        subcategory (str): Full category and subcategory name (e.g. `Any% (Beginner)` or `Any% No
+            Warp Normal`).
+        max_points (int): Maximum point total for a speedrun (usually 1000 for full-game and 100 for
+            individual levels).
+        reset_points (str): Can be `Main` or `IL`. This assists in determining type of query to be
+            ran.
+    """
     place = 1
     old_time = 0
     old_points = 0
@@ -507,11 +557,12 @@ def update_points(game_id, subcategory, max_points, reset_points):
         "ingame"            : "timeigt_secs",
     }
 
-    if reset_points == "Game":
+    if reset_points == "Main":
         all_runs = (
             Runs.objects
             .only("place", "points", "time_secs", "timenl_secs", "timeigt_secs")
-            .filter(runtype="main", game=game_id, subcategory=subcategory, obsolete=False)
+            .main()
+            .filter(game=game_id, subcategory=subcategory, obsolete=False)
         )
 
         default_time = Games.objects.only("defaulttime").get(id=game_id).defaulttime
@@ -519,7 +570,8 @@ def update_points(game_id, subcategory, max_points, reset_points):
         all_runs = (
             Runs.objects
             .only("place", "points", "time_secs", "timenl_secs", "timeigt_secs")
-            .filter(runtype="il", game=game_id, subcategory=subcategory, obsolete=False)
+            .il()
+            .filter(game=game_id, subcategory=subcategory, obsolete=False)
         )
 
         default_time = Games.objects.only("idefaulttime").get(id=game_id).idefaulttime
@@ -569,6 +621,18 @@ def update_points(game_id, subcategory, max_points, reset_points):
 
 @shared_task
 def remove_obsolete(game_id, subcategory, players, run_type):
+    """Updates speedrun entries that should be obsolete.
+
+    Retrieves all current runs by the player (depending on `game_id`, `subcategory`, and `run_type`)
+    and marks all slower runs as obsolete.
+
+    Args:
+        game_id (str): Speedrun.com ID for the game that `subcategory` belongs to.
+        subcategory (str): Full category and subcategory name (e.g. `Any% (Beginner)` or `Any% No
+            Warp Normal`).
+        players (dict): Player(s) who are having their speedruns marked as obsolete.
+        run_type (str): Can be `Main` or `IL`. This assists in determining type of query to be ran.
+    """
     time_columns = {
         "realtime"          : "time_secs",
         "realtime_noloads"  : "timenl_secs",

@@ -15,6 +15,7 @@ YOUTUBE_URL_RE = (
 
 
 class YTInlineProcessor(InlineProcessor):
+    """Custom processor class that turns the [youtube] tag in .MD into embedded YouTube videos."""
     def handleMatch(self, m, data):
         align = m.group(1) or "center"
         width = m.group(2) or "560"
@@ -43,5 +44,6 @@ class YTInlineProcessor(InlineProcessor):
 
 
 class YTEmbedProcessor(Extension):
+    """Processor for the [youtube] tag in .MD files."""
     def extendMarkdown(self, md):
         md.inlinePatterns.register(YTInlineProcessor(YOUTUBE_RE, md), "youtube_shortcode", 175)

@@ -14,6 +14,7 @@ admin.site.index_title = "Admin Panel"
 
 
 def discord_redirect(request):
+    """Return Discord when accessing `WEBSITE.com/discord`."""
     if env("DISCORD_URL"):
         return redirect(env("DISCORD_URL"))
     else:
@@ -21,6 +22,7 @@ def discord_redirect(request):
 
 
 def twitch_redirect(request):
+    """Return Twitch when accessing `WEBSITE.com/twitch`."""
     if env("TWITCH_URL"):
         return redirect(env("TWITCH_URL"))
     else:
@@ -28,6 +30,7 @@ def twitch_redirect(request):
 
 
 def twitter_redirect(request):
+    """Return Twitter when accessing `WEBSITE.com/twitter`."""
     if env("TWITTER_URL"):
         return redirect(env("TWITTER_URL"))
     else:
@@ -35,6 +38,7 @@ def twitter_redirect(request):
 
 
 def youtube_redirect(request):
+    """Return YouTube when accessing `WEBSITE.com/youtube`."""
     if env("YOUTUBE_URL"):
         return redirect(env("YOUTUBE_URL"))
     else:
@@ -42,6 +46,7 @@ def youtube_redirect(request):
 
 
 def bluesky_redirect(request):
+    """Return Bluesky when accessing `WEBSITE.com/bluesky`."""
     if env("BLUESKY_URL"):
         return redirect(env("BLUESKY_URL"))
     else:
@@ -49,6 +54,7 @@ def bluesky_redirect(request):
 
 
 def src_redirect(request):
+    """Returns Speedrun.com when accessing `WEBSITE.com/src`."""
     return redirect(env("SRC_URL"))
 
 
@@ -56,7 +62,7 @@ urlpatterns = [
     path("illiad/", admin.site.urls),
     path("api/", include("api.urls")),
     path("", include("srl.urls")),
-    path("docs/", include("guides.urls")),
+    path("guides/", include("guides.urls")),
     # REDIRECTS
     path("discord", discord_redirect, name="discord_redirect"),
     path("twitch", twitch_redirect, name="twitch_redirect"),
