@@ -29,7 +29,7 @@ jobs:
       - name: "Run Flake8 for Linting"
         continue-on-error: true
         run: |
-          flake8 --extend-ignore=E126,E127,E128,E203,E221,W503,W504 --max-line-length=100 `git ls-files | grep py$`
+          flake8 --extend-ignore=E126,E127,E128,E203,E221,W503,W504 --extend-exclude=*/migrations/*.py --max-line-length=100 `git ls-files | grep py$`
 
   #deploy-dev-test:
     #if: github.ref == 'refs/heads/dev'
