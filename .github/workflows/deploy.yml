@@ -7,35 +7,64 @@ on:
       - dev
 
 jobs:
-  deploy-dev:
-    if: github.ref == 'refs/heads/dev'
-    runs-on: self-hosted
+  #deploy-dev-flake8:
+    #if: github.ref == 'refs/heads/dev'
+    #runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          ref: dev
+    #steps:
+      #- name: Checkout Repository
+        #uses: actions/checkout@v4
+        #with:
+          #ref: dev
 
-      - name: Pull Latest Changes
-        run: |
-          cd ~/deploy
-          git pull origin dev
+      #- name "Setup Python Environment"
+        #uses: actions/setup-python@v5
+        #with:
+          #python-version: "3.11"
 
-      - name: Build and Restart Docker Containers
-        run: |
-          cd ~/deploy
-          docker compose down
-          docker compose pull
-          docker compose up -d --build
+      #- name: "Run Flake8 for Linting"
+        #continue-on-error: true
+        #run: |
+          #flake8 --extend-ignore=E126,E127,E128,E203,E221,W503,W504 --max-line-length=100 `git ls-files | grep py$`
 
-      - name: Cleanup Unused Docker Resources
-        run: 
-          docker system prune -f
+  #deploy-dev-test:
+    #if: github.ref == 'refs/heads/dev'
+      #- name: Tailscale
+        #uses: tailscale/github-action@v3
+        #with:
+          #oauth-client-id: ${{ secrets.DEV_TS_OAUTH_CLIENT_ID }}
+          #oauth-secret: ${{ secrets.DEV_TS_OAUTH_SECRET }}
+          #tags: tag:ci
+          #version: 1.52.0
+
+      #- name: SSH - Deploy - Restart Docker
+        #uses: appleboy/ssh-action@v1.0.3
+        #with:
+          #host: ${{ secrets.DEV_SERVER_IP }}
+          #username: ${{ secrets.DEV_SERVER_USER }}
+          #key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          #port: 22
+          #run: |
+            #cd ~/deploy
+            #git checkout dev
+            #git pull origin dev
+
+            #echo "Restarting Docker containers..."
+            #docker compose down
+            #docker compose up -d --build
+
+      #- name: Run Docker Tests
+        #run: 
+          #docker compose exec -T django python3 manage.py test
+
+      #- name: Cleanup Docker
+        #run:
+          #echo "Cleaning up Docker system..."
+          #docker system prune -af --volumes
 
   deploy-main:
     if: github.ref == 'refs/heads/main'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository

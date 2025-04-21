@@ -16,7 +16,7 @@ $(document).ready(function () {
             }
 
             const countryFlag = countrycode === "vh" ?
-                `<img src="https://speedrun.com/images/flags/vh.png" alt="${run.countryname}" title="${run.countryname}" height="15" />` :
+                `<img src="../srl/misc/vh.png" alt="${run.countryname}" title="${run.countryname}" height="15" />` :
                 `<img src="https://flagcdn.com/h20/${countrycode}.png" alt="${run.countryname}" title="${run.countryname}" height="15" />`;
 
             return countryFlag;

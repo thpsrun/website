@@ -62,7 +62,7 @@ urlpatterns = [
     path("illiad/", admin.site.urls),
     path("api/", include("api.urls")),
     path("", include("srl.urls")),
-    path("guides/", include("guides.urls")),
+    path("docs/", include("guides.urls")),
     # REDIRECTS
     path("discord", discord_redirect, name="discord_redirect"),
     path("twitch", twitch_redirect, name="twitch_redirect"),

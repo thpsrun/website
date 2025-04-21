@@ -148,6 +148,8 @@ td.now-streaming {
 
 td.side-table-td {
     font-size: medium !important;
+    min-height: 65px;
+    height: 65px;
 }
 
 .pfp-img-streaming {

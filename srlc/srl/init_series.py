@@ -13,6 +13,7 @@ from .tasks import (
 
 def init_series(series_id):
     """Initializes the gathering of all data for the entire Series from the Speedrun.com API"""
+
     # Removes all objects from all of the listed models below.
     # Initialize Series should only be performed by the superadmin.
     # It also removes all objects in all models, then re-creates them.

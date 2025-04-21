@@ -21,25 +21,30 @@
     *   `approver`: Shows the player who approved the run (marked as None if the runner deleted their account).
     *   `description`: Shows the comment field of a specific speedrun.
         *   Right now, this is more for archiving purposes. If runs are eventually given the ability to be submited through this site, this will be available.
-*   Added support for an optional archived videos field to `Runs` model.
-*   [#19](https://github.com/ThePackle/SRLC/issues/19) Added quick-links to Twitch, YouTube, and/or Archived Video to player profiles, leaderboards, and the main page.
-*   Added "Run History" for all players. By navigating to `/player/<NAME>/history/`, you will be able to see ALL current and obsolete speedruns (ordered by date).
-    *   Quick-links to Twitch, YouTube, and/or Archived Videos are also here!
-*   Added more alt and title tags through the site for accessibility.
-*   Added a new panel on the main page to show who is actively streaming.
-    *   Also added the `/live/` endpoint, more information below.
+    *   `arch_video`: Optional field that holds archived/mirrored videos. This field is not automated, so it must be updated dynamically outside of the program or done manually.
 *   Added the new `Runs` model to replace `MainRuns` and `ILRuns`.
     *   It was frustrating dealing with duplicate code for two nearly identical models (`MainRuns` has support for 2 players; `ILRuns` has support for Levels). This update forced me to change this to a combined model - had to get rid of dumb tech debt!
     *   Each runtype (`main` and `il`) have been given new QuerySet options to better separate them quickly.
 *   Added the `RunVariableValues` model to map out Variable-Value tandems for each run in the `Runs`.
     *   Later updates will deprecate `subcategory` and make it more automated to find categories and sub-categories for each game.
-  
+*   Added quick-links to Twitch, YouTube, and/or Archived Video to player profiles, leaderboards, and the main page. [#19](https://github.com/ThePackle/SRLC/issues/19)
+*   Added "Run History" for all players. By navigating to `/player/<NAME>/history/`, you will be able to see ALL current and obsolete speedruns (ordered by date).
+    *   Quick-links to Twitch, YouTube, and/or Archived Videos are also here!
+*   Added more alt and title tags through the site for accessibility.
+*   Added the `NowStreaming` model.
+    *   Added a new panel on the main page to show who is actively streaming.
+    *   Also added the `/live/` endpoint.
+        *   Pretty much the only endpoint that has full CRUD support.
+
+
 ### Changed
 *   Changed around a lot of CSS values throughout the site.
     *   Different media queries were created for different screen sizes (definitely should be a lot more responsive on mobile).
     *   Not CSS, but sub-categories in most areas are now have a line break incldued. For example: "College" is on one line; "Collect the S-K-A-T-E letters" on the other.
 *   Changed the `GameOverview` model to `Games`.
-*   [#12](https://github.com/ThePackle/SRLC/issues/12) Changed the front page to display tied world records on the same table row.
+*   Changed the front page to display tied world records on the same table row. [#12](https://github.com/ThePackle/SRLC/issues/12)
+*   Changed the logic of the "Latest World Records" has been updated so that in cases that one runner has multiple world records in a row in the same category, only the most recent is shown. [#13](https://github.com/ThePackle/SRLC/issues/13)
+    *   Also changed the logic for "Latest Runs" so world records do not appear there.
 *   Changed all of the API endpoints so they properly return information. Embed and query support has been added where applicable.
     *   `/runs/<ID>` returns information on a run based on its ID (e.g. SRC).
     *   `/players/<ID>` returns information on a player based on their name or ID.
@@ -53,25 +58,23 @@
     *   `/variables/<ID>` returns information on a variable based on its ID.
     *   `/values/<ID>` returns information on a value based on its ID.
     *   `/live/` returns information on active streams.
-        *   `/live/` has GET, POST, PUT, and DELETE.
     *   All endpoints have specific query and embed options that are added (TODO) <HERE>.
 *   Changed `/runs/` endpoint to now properly return data upon POST'ing a new run, while also serving HTTP_200_OK.
 *   Changed `abbr` value in the `Games` model to `slug`.
-
-### Other
-*   Practically every major class, method, and function within this project is documented to a decent degree using python docstrings.
-    *   Tried to also add some in-line comments wherever I could to explain rationale aout some lines of code.
+  
   
 ### Fixed
-*   [#17](https://github.com/ThePackle/SRLC/issues/17) Fixed an issue where the nickname of players would not properly appear in the "Latest Runs" portion of the main page.
-*   [#18](https://github.com/ThePackle/SRLC/issues/18) Fixed an issue where world records were also appearing on the "Latest Runs" portion of the main page.
+*   Fixed an issue where the nickname of players would not properly appear in the "Latest Runs" portion of the main page. [#17](https://github.com/ThePackle/SRLC/issues/17)
+*   Fixed an issue where world records were also appearing on the "Latest Runs" portion of the main page. [#18](https://github.com/ThePackle/SRLC/issues/18)
     *   Also added additional logic to remove obsolete runs, in cases that a player gets multiple WRs in a row in the same game and category.
+*   Fixed an issue where games with multiple global categories (e.g., THPS1+2) would not have their new speedruns updated automatically; only the first global category would be given, not all. [#27](https://github.com/ThePackle/SRLC/issues/27)
 *   Fixed an issue where, if a game's timing is set to LRT and no RTA was submitted, it would appear as "0m 00s" on the leaderboard.
     *   Only obsolete runs were really affected, so this is more for the "Runs History" page for players.
 *   Fixed an issue where obsolete runs were counting towards a player's overall totals.
   
+
 ### Removed
-*   Removed `MainRuns` and `ILRuns` models.
+*   Removed `MainRuns` and `ILRuns` models. [#28](https://github.com/ThePackle/SRLC/issues/28)
 *   Removed Twitter from the navbar.
     *   Changed some logic around to make it an optional environmental variable.
 *   Removed `Location` field from the Players model.
@@ -81,13 +84,18 @@
     *   This was a fragment from the earlier days of the project when I - quite frankly - did not know what I was doing.
         * Clarification: I still don't.
   
+  
+### Other
+*   Practically every major class, method, and function within this project is documented to a decent degree using python docstrings.
+    *   Tried to also add some in-line comments wherever I could to explain rationale aout some lines of code.
+  
 * * *
 
 ### v2.2.1.2
 ###### April 3, 2024
 
 ### Fixed
-*   [#21](https://github.com/ThePackle/SRLC/issues/21) Fixed an isue where runs were not properly set to obsolete when a new run was uploaded.
+*   Fixed an isue where runs were not properly set to obsolete when a new run was uploaded. [#21](https://github.com/ThePackle/SRLC/issues/21)
   
 * * *
   
