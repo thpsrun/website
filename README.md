@@ -2,7 +2,7 @@
 ## Version 3.0
 
 ![Django](https://img.shields.io/badge/Django-5.2-green.svg?logo=django&logoColor=white)
-![DjangoREST](https://img.shields.io/badge/django--rest--framework-3.16.0-blue?labelColor=333333&logo=django&logoColor=white&color=green)
+![DjangoREST](https://img.shields.io/badge/django--rest--framework-3.16-blue?labelColor=333333&logo=django&logoColor=white&color=green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.4-green?logo=postgresql&logoColor=white)
 
 ### What the heck is this??
@@ -31,6 +31,30 @@ Will this work for everyone? No. Can you curate it to fit your community? Yes!
 ### Note on Points
 The points system utilized within this project was created by ibeechu and goatrope of the [HaloRuns](https://haloruns.com) speedrun community. For the use of thps.run, they are used with permission; if you wish to use this points system, then contact them on their official Discord for permission. This project assumes that you already have permission of some kind to use it, so please ask!
 
+Points (referred to lovingly as Packle Points by the THPS community) is a score given to all speedruns. It incentivites players into trying out different speedruns or categories within the series.
+
+This is how points are distributed when you have a world record:
+*   Full-game (non-Category Extensions): 1000 points
+*   Individual Levels: 100 points
+*   Category Extensions: 25 points
+
+All subsequent runs that are slower than the world record will receive reduced points. It is an algorithmic formula, but here is how it looks with Python:
+*   `math.floor((0.008 * math.pow(math.e, (4.8284 * (wr_time/secs)))) * run_type)`  
+  
+And how it looks in a simple formula: 
+*   P = 0.008 * e<sup>4.8284x</sup> * y
+    *   x = World Record Seconds (as a float) divided by Personal Best Seconds (as a float)
+    *   y = Points based on the type of run it belogns to (see above).
+  
+As an example of how points are reduced, how is a sample based on if a category's world record is 1:20:00:
+*   1:20:00 = 1000 points (maximum for full-game)
+*   1:25:00 = 752 points
+*   1:30:00 = 584 points
+*   1:40:00 = 380 points
+*   3:00:00 = 68 points
+*   4:00:00 = 40 points
+*   5:00:00 = 28 points
+  
 ### Installation
 1.  Install the requirements above to your computer or server.
 2.  Git clone this repo or download a copy with the .ZIP.
