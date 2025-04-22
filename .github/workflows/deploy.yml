@@ -20,7 +20,7 @@ jobs:
       - name: "Setup Python Environment"
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
       
       - name: Install Flake8
         run: |
