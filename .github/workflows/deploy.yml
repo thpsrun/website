@@ -1,4 +1,4 @@
-name: Deploy to thps.run Server
+name: thps.run CI/CD Pipeline
 
 on:
   push:

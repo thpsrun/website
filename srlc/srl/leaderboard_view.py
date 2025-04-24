@@ -1,5 +1,7 @@
+from django.core.paginator import Paginator
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncDate
+from django.shortcuts import render
 
 from .models import Games, Players, Runs
 
@@ -128,6 +130,29 @@ def profile_four(players_all, games_all, runs_list, game):
     return il_wr_counts, il_runs_old
 
 
+def overall_leaderboard(request, players_all, main_runs_all, il_runs_all):
+    """Returns the "overall" leaderboard that combines all non-obsolete points for all players."""
+    leaderboard = []
+
+    for player in players_all:
+        main_points = get_main_points(player, main_runs_all)
+        il_points = get_il_points(player, None, il_runs_all)
+        total_points = main_points + il_points
+        leaderboard.append(leaderboard_entry(player, total_points))
+
+    leaderboard = sorted(leaderboard, key=lambda x: x["total_points"], reverse=True)
+    paginator = Paginator(leaderboard, 50)
+    page_number = request.GET.get("page")
+    leaderboard_page = paginator.get_page(page_number)
+
+    for i, item in enumerate(leaderboard_page, start=leaderboard_page.start_index()):
+        item["rank"] = i
+
+    return render(
+        request, "srl/leaderboard.html", {"leaderboard": leaderboard_page}
+    )
+
+
 def Leaderboard(request, profile=None, game=None):
     """Returns information depending upon the `profile` argument to be rendered dynamically.
 
@@ -148,6 +173,7 @@ def Leaderboard(request, profile=None, game=None):
         - `profile_two`
         - `profile_three`
         - `profile_four`
+        - `overall_leaderboard`
     """
     players_all = Players.objects.only("id", "name", "nickname", "url", "countrycode").all()
 
@@ -157,12 +183,18 @@ def Leaderboard(request, profile=None, game=None):
 
     main_runs_all = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"], place=0)
+        .select_related(
+            "game", "category", "player", "player_countrycode", "player2", "player2_countrycode"
+        )
         .main()
         .filter(obsolete=False)
     )
 
     il_runs_all = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"], place=0)
+        .select_related(
+            "game", "category", "player", "player_countrycode", "player2", "player2_countrycode"
+        )
         .il()
         .filter(obsolete=False)
     )
@@ -176,4 +208,4 @@ def Leaderboard(request, profile=None, game=None):
     elif profile == 4:
         return profile_four(players_all, games_all, il_runs_all, game)
     else:
-        pass
+        return overall_leaderboard(request, players_all, main_runs_all, il_runs_all)

@@ -26,8 +26,8 @@ services:
       - redis
     volumes:
       - ./srlc:/srlc
-      - ./static:/srlc/static
-      - /home/thepackle/repos/guides:/srlc/docs
+      - ./static:/srlc/website/static
+      - ../guides:/srlc/docs
     networks:
       - srlc
 

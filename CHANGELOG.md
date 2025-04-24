@@ -1,4 +1,4 @@
-### v3.0 - The Open Source Update
+## v3.0 - The Open Source Update
 ###### April ??, 2025
 *   [!!!!] This project is now open source! For more information on this, please check out the project's GitHub here: [https://github.com/ThePackle/SRLC/](https://github.com/ThePackle/SRLC/)
   
@@ -6,7 +6,7 @@
 *   Added Guides!
     *   Guides are .MD files (with some enhancements on-site) that serve to make the webiste the central point of information for the community.
     *   Guides have been added to the top navigation bar. If a game has a guide, it will appear after you go to it's view.
-    *   If you wana contribute, you can contribute to the [new thps-guide GitHub repo](https://github.com/thpsrun/thps-guides)!
+    *   If you wana contribute, you can contribute to the [new thps-guide GitHub repo](https://github.com/thpsrun/guides)!
         *   Approved pull requests will have its files automatically appear on this site.
 *   Added `bluesky` to the `Players` model.
     *   As a note, this is minor change. If you want your Bluesky account added to your profile, contact Packle. A later update will move to SRC's v2 endpoint, which can return Bluesky links; otherwise this must be done manually.
@@ -35,8 +35,8 @@
     *   Added a new panel on the main page to show who is actively streaming.
     *   Also added the `/live/` endpoint.
         *   Pretty much the only endpoint that has full CRUD support.
-
-
+  
+  
 ### Changed
 *   Changed around a lot of CSS values throughout the site.
     *   Different media queries were created for different screen sizes (definitely should be a lot more responsive on mobile).
@@ -90,6 +90,9 @@
     *   Tried to also add some in-line comments wherever I could to explain rationale aout some lines of code.
   
 * * *
+  
+
+## Older Versions (v2)
 
 ### v2.2.1.2
 ###### April 3, 2024
