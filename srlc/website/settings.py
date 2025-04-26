@@ -1,10 +1,17 @@
 import os
 from pathlib import Path
 
+import sentry_sdk
 from dotenv import load_dotenv
 
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+if os.getenv("SENTRY_ENABLED") == "True":
+    sentry_sdk.init(
+        dsn=os.getenv("SENTRY_DSN"),
+        send_default_pii=True,
+    )
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 

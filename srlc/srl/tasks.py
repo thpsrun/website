@@ -93,7 +93,16 @@ def update_game_runs(game_id, reset):
         - `update_level`
         - `update_variable`
         - `update_category_runs`
+        - `normalize_src`
     """
+    from api.tasks import normalize_src
+
+    # Within the Admin Panel, you will select "Reset Game Runs" if you want to reset all
+    # non-obsolete runs. This essentially is a hard reset, and shouldn't be used often. When that
+    # is selected, reset is set to 1, which deletes all related Categories, Levels, Variables,
+    # VariableValues, RunVariableValues, and Runs.
+    # However, if you choose "Update Game Runs" it will iterate through ALL runs within the game
+    # (including obsolete) and update things accordingly.
     if reset == 1:
         Categories.objects.filter(game=game_id).delete()
         Levels.objects.filter(game=game_id).delete()
@@ -102,28 +111,34 @@ def update_game_runs(game_id, reset):
         RunVariableValues.objects.filter(run__game__id=game_id).delete()
         Runs.objects.filter(game=game_id, obsolete=False).delete()
 
-    game_check = src_api(
-        f"https://speedrun.com/api/v1/games/"
-        f"{game_id}?embed=platforms,levels,categories,variables"
-    )
+        game_check = src_api(
+            f"https://speedrun.com/api/v1/games/"
+            f"{game_id}?embed=platforms,levels,categories,variables"
+        )
 
-    if isinstance(game_check, dict):
-        cat_check = game_check["categories"]["data"]
-        for check in cat_check:
-            update_category.delay(check, game_id)
+        if isinstance(game_check, dict):
+            cat_check = game_check["categories"]["data"]
+            for check in cat_check:
+                update_category.delay(check, game_id)
 
-        il_check = game_check["levels"]["data"]
-        if len(il_check) > 0:
-            for level in il_check:
-                update_level.delay(level, game_id)
+            il_check = game_check["levels"]["data"]
+            if len(il_check) > 0:
+                for level in il_check:
+                    update_level.delay(level, game_id)
 
-        var_check = game_check["variables"]["data"]
-        if len(var_check) > 0:
-            for variable in var_check:
-                update_variable.delay(game_id, variable)
+            var_check = game_check["variables"]["data"]
+            if len(var_check) > 0:
+                for variable in var_check:
+                    update_variable.delay(game_id, variable)
 
-        for category in cat_check:
-            update_category_runs.delay(game_id, category, il_check)
+            for category in cat_check:
+                update_category_runs.delay(game_id, category, il_check)
+    else:
+        all_runs = Runs.objects.only("id").filter(game=game_id)
+
+        for run in all_runs:
+            print(f"!!!! DEBUG - {run.id}")
+            normalize_src.delay(run.id)
 
 
 @shared_task
