@@ -41,4 +41,3 @@ The best way to think of this project is that it is a "cache" for your community
 *   All responses from the API responds with either raw JSON and the HTTP status code. While this API mimics a lot of things from the [SRC API](https://github.com/speedruncomorg/api), there are no such things like a `data` key.
 *   As of writing (version 3.0), there is no limitations on returned elements. Later versions *may* introduce pagination, but will be projected ahead of time and easily disabled.
 *   The API will require that you create an API Key through the Admin Panel. This is explained in the [Admin Panel](AdminPanel.md) section.
-

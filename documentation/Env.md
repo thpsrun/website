@@ -3,18 +3,20 @@
 This project uses environmental variables to ensure that secrets and customizable information are not hard-coded. If you have absolutely no clue what they are, check out this [Wikpedia article](https://en.wikipedia.org/wiki/Environment_variable).
 
 This section has broken up the environmental variables into loose sections:
-- [Setup](#setup)
-- [Section 1: Secrets](#secrets)
-- [Section 2: Backblaze](#backblaze-b2-bucket-optional) (optional)
-- [Section 3: Sentry.io](#sentryio-support-optional) (optional)
-- [Section 4: Metadata](#metadata)
-- [Section 5: Social Media](#social-media)
-- [.env.example](#copy-of-envexample)
+-   [Setup](#setup)
+-   [Section 1: Secrets](#secrets)
+-   [Section 2: Backblaze](#backblaze-b2-bucket-optional) (optional)
+-   [Section 3: Sentry.io](#sentryio-support-optional) (optional)
+-   [Section 4: Metadata](#metadata)
+-   [Section 5: Social Media](#social-media)
+-   [.env.example](#copy-of-envexample)
+
 
 ## Setup
 When you initially pull this project, you should see a `.env.example` file. Open this file in your text editor or IDE of choice, and modify the variables you see within it. Afterwards, save it as a `.env` (get rid of `.example`). If you do not do this, your project will fail to start since it needs that `.env` to load the variables.
 
 If you need a new template, it is at the bottom of this page!
+
 
 ## Secrets
 ```
@@ -65,6 +67,23 @@ ALLOWED_HOSTS=<IP>,localhost
 -   Must equal a string in quotes. Remove `<WEBSITE_URL>` and put your domain name in here.
     -   Example: `SSL_HOST="twitch.tv"`
 
+### DEBUG_MODE
+**THIS IS A DANGEROUS VARIABLE!** Please read this seciton especially.
+-   DEBUG_MODE should **ONLY** be set in a development environment. If this is set to "True", then additional debugging functionality is enabled across the ENTIRE site. This includes dumps of all of your environmental variables, and snippets of your code. In the wrong hands, this can bring dangerous security implications. For more information on this, [please read it here](https://docs.djangoproject.com/en/5.2/ref/settings/#debug).
+-   Must equal a string in quotes. If you are in a production environment, set it to `"False"`.
+    -   Alternatively, DEBUG_MODE is only enabled if it is set to `"True"` - all other words (to include `"False"`) you put here will default to `"False"`.
+    -   Example: `DEBUG_MODE="True"`
+
+### ALLOWED_HOSTS
+-   A list of strings representing the sites/domains that the Django project can serve. This is a security feature to prevent HTTP Header Attacks. For more information on this, [please read it here](https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-ALLOWED_HOSTS).
+-   Must be equal to a string without quotes. All keywords must be separated by a comma. Remove `"<IP>,localhost` and input your domains here.
+-   Must be equal to a string without quotes. All keywords must be separated by a comma. Remove `"<IP>,localhost` and input your domains here.
+-   Must be equal to a string without quotes. All keywords must be separated by a comma. Remove `"<IP>,localhost` and input your domains here.
+    -   Example: `ALLOWED_HOSTS=thps.run,django,localhost`
+-   When DEBUG_MODE is set to `"True"`, then ALLOWED_HOSTS is automatically set to `['.localhost', '127.0.0.1', '[::1]']`.
+-   As an additional note, if you start up a Django project in production and get a `Server Error 500` immediately on the main page, you might want to check to see if this variable is set correctly. This has caught me out a few times because I am dumb.
+
+
 ## Backblaze B2 Bucket (Optional)
 ```
 B2_BUCKET=<BUCKET>
@@ -76,6 +95,7 @@ B2_APP=<BUCKET APP KEY>
 Backblaze (B2) is a cloud storage service that is a lot like Amazon Web Service's S3 Buckets. Instead, these are a lot more affordable. The reason these are here is that there is an optional component that automates the database backups for your Postgres database and imports them into your B2 bucket.
 
 For more information, check out Backblaze's article on [Application Keys](https://www.backblaze.com/docs/cloud-storage-application-keys).
+
 
 ## Sentry.io Support (Optional)
 ```
@@ -89,6 +109,7 @@ SENTRY_DSN="<SENTRY_LINK>"
 As a note, this is NOT strictly a Sentry.io thing. Sentry.io can cost money and its self-hosted options aren't super great. If you want more open-source options, you can try [GlitchTip](https://glitchtip.com/) or [BugSink](https://www.bugsink.com/). Both of these tools use the same Sentry SDK found in the Django code; all you need to do is setup your instance of either, follow the instructions, and input the DSN code they give you into the `SENTRY_DSN` variable.
 
 And, of course, if you want this disabled, make sure `SENTRY_ENABLED` is set to `False`. If you want to use a Sentry-enabled service, make sure this is set to `True`.
+
 
 ## Metadata
 ```
@@ -123,6 +144,7 @@ Metadata is embedded information on web pages that describe the site, what the p
     -   Note: This is for ALL web pages. If you want granular control of what keywords are used for what web pages, you will need to modify the specific templates used in this project.
 -   Must equal a string in quotes. Remove `<DESCRIPTION>` and input your description here.
     -   Example: `SITE_DESCRIPTION="This is a generic description that describes my webpage."`
+
 
 ## Social Media
 ```

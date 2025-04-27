@@ -50,7 +50,7 @@ class Games(models.Model):
         verbose_name_plural = "Games"
         ordering = ["release"]
 
-    LeaderboardChoices = [
+    leaderboard_choices = [
         ("realtime", "RTA"),
         ("realtime_noloads", "LRT"),
         ("ingame", "IGT"),
@@ -65,11 +65,11 @@ class Games(models.Model):
     release = models.DateField(verbose_name="Release Date")
     boxart = models.URLField(verbose_name="Box Art URL")
     defaulttime = models.CharField(
-        verbose_name="Default Time", choices=LeaderboardChoices, default="realtime"
+        verbose_name="Default Time", choices=leaderboard_choices, default="realtime"
     )
     idefaulttime = models.CharField(
         verbose_name="ILs Default Time",
-        choices=LeaderboardChoices,
+        choices=leaderboard_choices,
         default="realtime",
         help_text=(
             "Sometimes leaderboards have one timing standard for full game "
@@ -113,12 +113,17 @@ class Categories(models.Model):
         verbose_name_plural = "Categories"
         ordering = ["name"]
 
+    type_choices = [
+        ("per-level", "Individual Level"),
+        ("per-game", "Full Game"),
+    ]
+
     id = models.CharField(max_length=10, primary_key=True, verbose_name="Category ID")
     game = models.ForeignKey(
         Games, verbose_name="Linked Game", null=True, on_delete=models.SET_NULL
     )
     name = models.CharField(max_length=50, verbose_name="Name")
-    type = models.CharField(max_length=15, verbose_name="Type (IL/FG)")
+    type = models.CharField(verbose_name="Type (IL/FG)", choices=type_choices)
     url = models.URLField(verbose_name="URL")
     hidden = models.BooleanField(verbose_name="Hide Category", default=False)
 
@@ -223,14 +228,6 @@ class Awards(models.Model):
     )
     description = models.CharField(
         max_length=500, verbose_name="Award Description", blank=True, null=True
-    )
-    unique = models.BooleanField(
-        verbose_name="Unique Award",
-        default=False,
-        help_text=(
-            "When checked, this award will be given the 'unique' tag - enabling "
-            "special effects for the award on the profile page."
-        ),
     )
 
     def __str__(self):

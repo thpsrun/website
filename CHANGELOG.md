@@ -83,6 +83,8 @@
 *   Removed the `/import/` endpoint.
     *   This was a fragment from the earlier days of the project when I - quite frankly - did not know what I was doing.
         * Clarification: I still don't.
+*   Removed `unique` field from `Awards` model.
+    *   This was an idea earlier on to give special flair to players with specific awards. Currently not something I am working on, so it was removed. May be added again later!
   
   
 ### Other
