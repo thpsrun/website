@@ -151,6 +151,13 @@ class Variables(models.Model):
     class Meta:
         verbose_name_plural = "Variables"
 
+    type_choices = [
+        ("global", "All Categories"),
+        ("full-game", "Only Full Game Runs"),
+        ("all-levels", "Only IL Runs"),
+        ("single-level", "Specific IL")
+    ]
+
     id = models.CharField(max_length=10, primary_key=True, verbose_name="Variable ID")
     name = models.CharField(max_length=50, verbose_name="Name")
     game = models.ForeignKey(
@@ -172,22 +179,36 @@ class Variables(models.Model):
             "must be blank."
         ),
     )
-    scope = models.CharField(max_length=12, verbose_name="Scope (FG/IL)")
-    hidden = models.BooleanField(verbose_name="Hide Variables", default=False)
+    scope = models.CharField(verbose_name="Scope (FG/IL)", choices=type_choices)
+    level = models.ForeignKey(
+        Levels,
+        verbose_name="Associated Level",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text=(
+            'If \"scope\" is set to \"single-level\", then a level must be associated. Otherwise, '
+            'keep null.'
+        )
+    )
+    hidden = models.BooleanField(verbose_name="Hide Variable", default=False)
 
     def clean(self):
         if (self.cat is None) and (not self.all_cats):
             raise ValidationError(
                 '"Linked Category" must have a value OR "All Categories" must be checked.'
             )
-        elif self.cat == "all":
-            raise ValidationError(
-                '"all" is not a valid category value; if this variable is for all categories, '
-                'please check "All Categories".'
-            )
         elif self.cat and self.all_cats:
             raise ValidationError(
                 'If "All Categories" is checked,  "Linked Category" field should be empty.'
+            )
+        elif (self.level is None) and (self.scope == "single-level"):
+            raise ValidationError(
+                'If "scope" is set to "single-level", a level must be specified.'
+            )
+        elif (self.level) and (self.scope != "single-level"):
+            raise ValidationError(
+                'If a "level" is set, then "scope" must be set to "single-level".'
             )
 
     def __str__(self):
@@ -274,22 +295,22 @@ class Players(models.Model):
         on_delete=models.SET_NULL,
     )
     pfp = models.CharField(
-        max_length=50, verbose_name="Profile Picture URL", blank=True, null=True
+        max_length=100, verbose_name="Profile Picture URL", blank=True, null=True
     )
     pronouns = models.CharField(
         max_length=20, verbose_name="Pronouns", blank=True, null=True
     )
-    twitch = models.CharField(
-        max_length=75, verbose_name="Twitch", blank=True, null=True
+    twitch = models.URLField(
+        verbose_name="Twitch", blank=True, null=True
     )
-    youtube = models.CharField(
-        max_length=100, verbose_name="YouTube", blank=True, null=True
+    youtube = models.URLField(
+        verbose_name="YouTube", blank=True, null=True
     )
-    twitter = models.CharField(
-        max_length=40, verbose_name="Twitter", blank=True, null=True
+    twitter = models.URLField(
+        verbose_name="Twitter", blank=True, null=True
     )
-    bluesky = models.CharField(
-        max_length=75, verbose_name="Bluesky", blank=True, null=True
+    bluesky = models.URLField(
+        verbose_name="Bluesky", blank=True, null=True
     )
     ex_stream = models.BooleanField(
         verbose_name="Stream Exception",
@@ -471,6 +492,7 @@ class Runs(models.Model):
 
 class RunVariableValues(models.Model):
     class Meta:
+        verbose_name_plural = "Run Variable Values"
         constraints = [
             models.UniqueConstraint(
                 fields=["run", "variable"], name="unique_variable_and_value"
@@ -487,7 +509,8 @@ class RunVariableValues(models.Model):
 
 class NowStreaming(models.Model):
     class Meta:
-        verbose_name_plural = "Streaming"
+        verbose_name = "Stream"
+        verbose_name_plural = "Streams"
 
     streamer = models.OneToOneField(
         Players, primary_key=True, verbose_name="Streamer", on_delete=models.CASCADE

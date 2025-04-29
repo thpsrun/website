@@ -1,7 +1,7 @@
 aiohttp==3.11.*
 asgiref==3.8.*
 celery[redis]
-certifi==2025.1.31
+certifi==2025.*
 crispy-bootstrap5==2025.*
 Django==5.2.*
 #django-allauth==65.7.*
@@ -26,7 +26,7 @@ pytz==2025.2
 redis==5.2.*
 requests==2.32.*
 sentry-sdk==2.26.*
-rsa==4.9
+rsa==4.9.*
 tzdata==2025.*
 uritemplate==4.1.*
 urllib3==2.4.*

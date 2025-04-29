@@ -30,6 +30,7 @@
 *   Added quick-links to Twitch, YouTube, and/or Archived Video to player profiles, leaderboards, and the main page. [#19](https://github.com/ThePackle/SRLC/issues/19)
 *   Added "Run History" for all players. By navigating to `/player/<NAME>/history/`, you will be able to see ALL current and obsolete speedruns (ordered by date).
     *   Quick-links to Twitch, YouTube, and/or Archived Videos are also here!
+*   Added additional validations for the `Variable` model and added preliminary support for using the `all-levels` and `single-level` attributes. [#36](https://github.com/ThePackle/SRLC/issues/36)
 *   Added more alt and title tags through the site for accessibility.
 *   Added the `NowStreaming` model.
     *   Added a new panel on the main page to show who is actively streaming.
@@ -90,6 +91,19 @@
 ### Other
 *   Practically every major class, method, and function within this project is documented to a decent degree using python docstrings.
     *   Tried to also add some in-line comments wherever I could to explain rationale aout some lines of code.
+*   On this repo, you will find a new section called "documentation" that goes over a lot of components of the project, including model structures, relationships, and API stuff.
+  
+
+### Future Stuff/Current Issues
+*   The project supports only two players (because the THPS community has not had a run with more than two players). A future update will remove `player` and `player2` from the `Runs` model and have a `Players` through model, similar to `RunVariableValues`.
+*   The `subcategory` field in `Runs` is a lazy way to solve an issue from earlier on in the project's life (as early as 2.0 two years ago).
+    *   The `subcategory` field is used to quickly query for all unique game/category combinations to dynamically load. There are, however, two major issues:
+        1.  It only accounts for TWO global categories at a time. There hasn't been a reason to increase this, but other games may use more than two. Administrators from those communities will find issues with this, and it is honestly kind of a lazy way to do things. It needs to be more dynamic.
+        2.  If a category or variable changes name, there is no mechanism to automatically update this field.
+*   Run submissions is a topic that has been brought up a few times. Right now, this project currently PULLS data from Speedrun.com and acts like a cache. Later updates could introduce the concept of run submissions and, maybe, have it synced back up to Speedrun.com somehow.
+    *   This is currently not possible with the v1 endpoint.
+*   Updating to the v2 endpoint for Speedrun.com is an eventuality. However, the v2 endpoint is in alpha, is poorly documented (outside of the outstanding job by ManicJamie and YummyBacon5 in the [speedruncompy](https://github.com/ManicJamie/speedruncompy) repo). Because of this, I am not comfortable moving EVERYTHING to v2 yet.
+    *   Due to this, there is some functionality I cannot implement yet. So, soon??
   
 * * *
   
