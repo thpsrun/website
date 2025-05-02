@@ -150,7 +150,7 @@ USE_TZ          = True
 # Static files (CSS, JavaScript, Images)
 PROJECT_DIR     = os.path.dirname(os.path.abspath(__file__))
 STATIC_ROOT     = os.path.join(PROJECT_DIR, 'static')
-STATIC_URL      = "website/static/"
+STATIC_URL      = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
