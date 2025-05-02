@@ -4,13 +4,23 @@
 ### Description: All of the necessary defs and commands to add a new, approved run to the API.
 ### Dependencies: srl/models, srl/tasks
 ######################################################################################################################################################
-import math
+from celery import shared_task
 from django.db import transaction
 from django.db.models import Count
-from celery import shared_task
-from srl.models import Variables,Categories,VariableValues,MainRuns,ILRuns,GameOverview,Players,Levels,Platforms
-from srl.tasks import convert_time,update_player
 from srl.m_tasks import points_formula
+from srl.models import (
+    Categories,
+    GameOverview,
+    ILRuns,
+    Levels,
+    MainRuns,
+    Platforms,
+    Players,
+    Variables,
+    VariableValues,
+)
+from srl.tasks import convert_time, update_player
+
 
 ### add_run starts to gathers information about the approved run from the SRC API.
 ### The biggest thing here is that it will normalize the data so it can be properly stored in your API.
@@ -291,8 +301,9 @@ def invoke_single_run(game_id,category,run,var_name=None,var_string=None,obsolet
                     )
 
         if point_reset:
-            remove_obsolete.delay(game_id,var_name,players,reset_points)
             update_points.delay(game_id,var_name,max_points,reset_points)
+
+        remove_obsolete.delay(game_id,var_name,players,reset_points)
 
 ### update_points is ran after a new run is successfully uploaded to the API.
 ### It will go through all of the runs within a game's specific subcategory and re-rank their points.
