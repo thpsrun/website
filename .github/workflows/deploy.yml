@@ -64,14 +64,14 @@ jobs:
             docker compose down
             docker compose up -d --build
 
-      - name: Run Docker Tests
-        run: 
-          docker compose exec -T django python3 manage.py test
-
       - name: Cleanup Docker
-        run:
+        run: |
           echo "Cleaning up Docker system..."
           docker system prune -af --volumes
+
+      - name: Run Docker Tests
+        run: |
+          docker compose exec -T django python3 manage.py test
 
   deploy-main:
     if: github.ref == 'refs/heads/main'

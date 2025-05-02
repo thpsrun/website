@@ -96,7 +96,6 @@ class ModelTestCase(TestCase):
             id=1,
             name="Best in the World",
             description="Simply the best",
-            unique=True,
         )
 
         cls.countrycodes = CountryCodes.objects.create(

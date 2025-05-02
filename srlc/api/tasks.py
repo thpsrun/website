@@ -526,8 +526,7 @@ def invoke_single_run(
 
         if point_reset:
             update_points.delay(game_id, var_name, max_points, reset_points)
-
-        remove_obsolete.delay(game_id, var_name, players, reset_points)
+            remove_obsolete.delay(game_id, var_name, players, reset_points)
 
 
 @shared_task
