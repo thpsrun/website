@@ -72,6 +72,7 @@
 *   Fixed an issue where, if a game's timing is set to LRT and no RTA was submitted, it would appear as "0m 00s" on the leaderboard.
     *   Only obsolete runs were really affected, so this is more for the "Runs History" page for players.
 *   Fixed an issue where obsolete runs were counting towards a player's overall totals.
+*   Fixed an issue where new runs would be improperly have `obsolete` set to True; later functions would not reset this to False.
   
 
 ### Removed

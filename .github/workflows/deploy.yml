@@ -71,7 +71,7 @@ jobs:
 
       - name: Run Docker Tests
         run: |
-          docker compose exec -T django python3 manage.py test
+          docker exec -T django python3 manage.py test
 
   deploy-main:
     if: github.ref == 'refs/heads/main'

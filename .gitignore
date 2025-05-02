@@ -146,3 +146,4 @@ typescript
 npm/*
 pyproject.toml
 .pylintrc
+static/

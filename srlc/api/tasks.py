@@ -110,7 +110,9 @@ def normalize_src(id):
                     lb_info["category"]["data"],
                     lb_info["level"]["data"],
                     run_info["values"],
-                    True
+                    False,  # obsolete
+                    True,  # point_reset
+                    True  # download_pfp
                 )
 
             # Simple check to see if the run has information on individual levels. If not,
@@ -526,7 +528,8 @@ def invoke_single_run(
 
         if point_reset:
             update_points.delay(game_id, var_name, max_points, reset_points)
-            remove_obsolete.delay(game_id, var_name, players, reset_points)
+
+        remove_obsolete.delay(game_id, run_id, var_name, players, reset_points)
 
 
 @shared_task
@@ -682,8 +685,8 @@ def remove_obsolete(game_id, subcategory, players, run_type):
             # Removes the newest time from the query,
             # then sets all other runs (should be one) to obsolete.
             if len(slowest_runs) > 0:
-                last = slowest_runs.last()
-                slowest_runs = slowest_runs.exclude(id=last.id)
+                last = all_runs.last()
+                slowest_runs = slowest_runs.exclude(id=last)
                 for new_obsolete in slowest_runs:
                     new_obsolete.obsolete = True
                     new_obsolete.save(force_update=True)
