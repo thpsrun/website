@@ -44,6 +44,11 @@ jobs:
           tags: tag:ci
           version: latest
 
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+  
       - name: SSH - Deploy - Restart Docker
         uses: appleboy/ssh-action@v1.0.3
         with:
