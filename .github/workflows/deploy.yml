@@ -31,40 +31,43 @@ jobs:
         run: |
           flake8 --extend-ignore=E126,E127,E128,E203,E221,W503,W504 --extend-exclude=*/migrations/*.py --max-line-length=100 `git ls-files | grep py$`
 
-  #deploy-dev-test:
-    #if: github.ref == 'refs/heads/dev'
-      #- name: Tailscale
-        #uses: tailscale/github-action@v3
-        #with:
-          #oauth-client-id: ${{ secrets.DEV_TS_OAUTH_CLIENT_ID }}
-          #oauth-secret: ${{ secrets.DEV_TS_OAUTH_SECRET }}
-          #tags: tag:ci
-          #version: 1.52.0
+  deploy-dev-test:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
 
-      #- name: SSH - Deploy - Restart Docker
-        #uses: appleboy/ssh-action@v1.0.3
-        #with:
-          #host: ${{ secrets.DEV_SERVER_IP }}
-          #username: ${{ secrets.DEV_SERVER_USER }}
-          #key: ${{ secrets.DEV_SERVER_SSH_KEY }}
-          #port: 22
-          #run: |
-            #cd ~/deploy
-            #git checkout dev
-            #git pull origin dev
+    steps:
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.DEV_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.DEV_TS_OAUTH_SECRET }}
+          tags: tag:ci
+          version: 1.52.0
 
-            #echo "Restarting Docker containers..."
-            #docker compose down
-            #docker compose up -d --build
+      - name: SSH - Deploy - Restart Docker
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEV_SERVER_IP }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            cd ~/deploy
+            git checkout dev
+            git pull origin dev
 
-      #- name: Run Docker Tests
-        #run: 
-          #docker compose exec -T django python3 manage.py test
+            echo "Restarting Docker containers..."
+            docker compose down
+            docker compose up -d --build
 
-      #- name: Cleanup Docker
-        #run:
-          #echo "Cleaning up Docker system..."
-          #docker system prune -af --volumes
+      - name: Run Docker Tests
+        run: 
+          docker compose exec -T django python3 manage.py test
+
+      - name: Cleanup Docker
+        run:
+          echo "Cleaning up Docker system..."
+          docker system prune -af --volumes
 
   deploy-main:
     if: github.ref == 'refs/heads/main'
