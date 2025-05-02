@@ -58,7 +58,6 @@ jobs:
           port: 22
           script: |
             cd ~/deploy
-            git checkout dev
             git pull origin dev
 
             echo "Restarting Docker containers..."
