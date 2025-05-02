@@ -114,7 +114,7 @@
 ###### April 3, 2024
 
 ### Fixed
-*   Fixed an isue where runs were not properly set to obsolete when a new run was uploaded. [#21](https://github.com/ThePackle/SRLC/issues/21)
+*   Fixed an issue where runs were not properly set to obsolete when a new run was uploaded. [#21](https://github.com/ThePackle/SRLC/issues/21)
   
 * * *
   
