@@ -21,11 +21,10 @@ fi
 #for copying the certificate and configuration to the volume
 if [ -f "/etc/letsencrypt/live/${SSL_HOST}/fullchain.pem" ]; then
     echo "SSL cert exists, enabling HTTPS..."
-    envsubst '${SSL_HOST}' < /etc/nginx/nginx.conf > /etc/nginx/conf.d/default.conf
+    envsubst '${SSL_HOST}' < /etc/nginx/nginx.prod.conf > /etc/nginx/conf.d/default.conf
 else
     echo "Certbot unable to get SSL cert,server HTTP only..."
 fi
-
 
 echo "Setting up auto-renewal..."
 apk add --no-cache dcron
