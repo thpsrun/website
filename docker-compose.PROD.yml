@@ -60,7 +60,7 @@ services:
         - ./nginx:/etc/nginx/:rw
       networks:
         - srlc
-  
+
   certbot:
       container_name: certbot
       restart: unless-stopped
