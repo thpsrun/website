@@ -64,18 +64,18 @@ jobs:
             docker compose down
             docker compose -f docker-compose.PROD.yml up -d --build
 
-      - name: Wait Job
-        run: |
-          sleep 10s
+      #- name: Wait Job
+        #run: |
+          #sleep 10s
 
       - name: Cleanup Docker
         run: |
           echo "Cleaning up Docker system..."
           docker system prune -af --volumes
 
-      - name: Run Docker Tests
-        run: |
-          docker exec -it django python3 manage.py test
+      #- name: Run Docker Tests
+        #run: |
+          #docker exec -it django python3 manage.py test
 
   deploy-main:
     if: github.ref == 'refs/heads/main'

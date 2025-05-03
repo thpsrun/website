@@ -8,7 +8,7 @@ if [ ! -f "/etc/letsencrypt/live/${SSL_HOST}/fullchain.pem" ]; then
   envsubst '' < /etc/nginx/nginx.conf > /etc/nginx/conf.d/default.conf
 else
   echo "SSL cert exists, enabling HTTPS..."
-  envsubst '${SSL_HOST}' < /etc/nginx/nginx.conf > /etc/nginx/conf.d/default.conf
+  envsubst '${SSL_HOST}' < /etc/nginx/nginx.prod.conf > /etc/nginx/conf.d/default.conf
 fi
 
 # Monitor /etc/nginx/ and /etc/letsencrypt/ for configuration or SSL changes
