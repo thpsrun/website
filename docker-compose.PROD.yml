@@ -1,0 +1,82 @@
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:17.4-bookworm
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: ${POSTGRES_NAME}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    networks:
+      - srlc
+
+  django:
+    container_name: django
+    restart: unless-stopped
+    build: .
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./srlc:/srlc
+      - ./static:/srlc/static
+      - ../guides:/srlc/docs
+    networks:
+      - srlc
+
+  redis:
+    container_name: redis
+    image: redis:alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - srlc
+
+  nginx:
+      build:
+        context: ./nginx
+        dockerfile: Dockerfile
+      image: nginx:production
+      container_name: hds_nginx_production
+      ports:
+        - 80:80
+        - 443:443
+      depends_on:
+        - django
+      env_file:
+        - .env
+      volumes:
+        - ./static:/app/static:ro
+        - ./certbot/web:/vol/www:ro
+        - ./certbot/certs:/etc/letsencrypt/:ro
+        - ./nginx:/etc/nginx/:rw
+      networks:
+        - srlc
+  
+  certbot:
+      container_name: certbot
+      restart: unless-stopped
+      build:
+        context: ./certbot
+      env_file:
+        - .env
+      depends_on:
+        - nginx
+      volumes:
+        - ./certbot/web:/vol/www:rw
+        - ./certbot/certs:/etc/letsencrypt/:rw
+        - ./nginx:/etc/nginx/:rw
+      networks:
+        - srlc
+
+networks:
+  srlc:
+    driver: bridge
