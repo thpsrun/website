@@ -94,7 +94,10 @@ def normalize_src(id):
                         run,
                         lb_info["category"]["data"],
                         lb_info["level"]["data"],
-                        run_info["values"]
+                        run_info["values"],
+                        False,  # obsolete
+                        True,  # point_reset
+                        True  # download_pfp
                     )
                     finish = 1
 
