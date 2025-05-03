@@ -21,7 +21,7 @@ If you need a new template, it is at the bottom of this page!
 ## Secrets
 ```
 COMMUNITY_NAME="<COMMUNITY_NAME>"
-POSTGRES_NAME="<POSTGRES_TABLE>"
+POSTGRES_DB="<POSTGRES_TABLE>"
 POSTGRES_USER="<POSTGRES_USER>"
 POSTGRES_PASSWORD="<POSTGRES_PASSWORD>"
 SECRET_KEY="<SECRETKEY>" # https://djecrety.ir
@@ -35,20 +35,20 @@ ALLOWED_HOSTS=<IP>,localhost
 -   Must equal a string in quotes. Remove `<COMMUNITY_NAME>` and put the name of your community here.
     -   Example: `COMMUNITY_NAME="THPS.RUN"`
 
-### POSTGRES_NAME
+### POSTGRES_DB
 -   Name of the table Django will use in the Postgres database and what is created in Postgres.
 -   Must equal a string in quotes. Remove `<POSTGRES_TABLE>` and put the name of your table here.
     -   Do NOT input special characters. Alphanumeric (A-Z,0-9) and underscores only!
-    -   Example: `POSTGRES_NAME="pokemon_community"`
+    -   Example: `POSTGRES_DB="pokemon_community"`
 
 ### POSTGRES_USER
--   Name of the user that accesses the Postgres database from the `POSTGRES_NAME` variable.
+-   Name of the user that accesses the Postgres database from the `POSTGRES_DB` variable.
 -   Must equal a string in quotes. Remove `<POSTGRES_USER>` and put the name of your user here.
     -   Do NOT input special characters. Alphanumeric (A-Z,0-9) only!
     -   Example: `POSTGRES_USER="bobbyb"`
 
 ### POSTGRES_PASSWORD
--   The password for the `POSTGRES_USER` to access the database stated in `POSTGRES_NAME`.
+-   The password for the `POSTGRES_USER` to access the database stated in `POSTGRES_DB`.
 -   Must equal a string in quotes. Remove `<POSTGRES_PASSWORD>` and put your password here.
     -   Keep it secret, keep it safe!!
     -   Make sure this is a UNIQUE password.
@@ -167,7 +167,7 @@ Each of these links follow the same formatting and behavior on the site.
 ## Copy of .env.example
 ```
 COMMUNITY_NAME="<COMMUNITY_NAME>"
-POSTGRES_NAME="<POSTGRES_TABLE>"
+POSTGRES_DB="<POSTGRES_TABLE>"
 POSTGRES_USER="<POSTGRES_USER>"
 POSTGRES_PASSWORD="<POSTGRES_PASSWORD>"
 SECRET_KEY="<SECRETKEY>" # https://djecrety.ir

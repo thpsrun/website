@@ -93,17 +93,16 @@ REST_FRAMEWORK = {
 WSGI_APPLICATION = "website.wsgi.application"
 
 if os.getenv("DEBUG_MODE") == "True":
-    print("DEBUG ENABLED!!!!! MAKE SURE YOU AREN'T IN PRODUCTION!!!!!")
     DEBUG = True
     CSRF_TRUSTED_ORIGINS = ["http://localhost:8001"]
 else:
     CSRF_COOKIE_SECURE              = True
     SESSION_COOKIE_SECURE           = True
-    SECURE_SSL_REDIRECT             = False  # ASSUMES YOU ARE USING NPM
+    SECURE_SSL_REDIRECT             = True
     SECURE_HSTS_SECONDS             = 3600
     SECURE_HSTS_INCLUDE_SUBDOMAINS  = True
     SECURE_HSTS_PRELOAD             = True
-    SECURE_SSL_HOST                 = False  # ASSUMES YOU ARE USING NPM
+    SECURE_SSL_HOST                 = True
     SECURE_CONTENT_TYPE_NOSNIFF     = True
     SECURE_BROWSER_XSS_FILTER       = True
     X_FRAME_OPTIONS                 = "DENY"
@@ -112,7 +111,7 @@ else:
 DATABASES = {
     "default": {
         "ENGINE"    : "django.db.backends.postgresql",
-        "NAME"      : os.getenv("POSTGRES_NAME"),
+        "NAME"      : os.getenv("POSTGRES_DB"),
         "USER"      : os.getenv("POSTGRES_USER"),
         "PASSWORD"  : os.getenv("POSTGRES_PASSWORD"),
         "HOST"      : "postgres",

@@ -1,3 +1,9 @@
+volumes:
+    static_files:
+      name: srlc_static_files
+    postgres_data:
+      name: srlc_postgres_data
+
 services:
   postgres:
     container_name: postgres
@@ -5,18 +11,21 @@ services:
     restart: unless-stopped
     shm_size: 128mb
     environment:
-      POSTGRES_DB: ${POSTGRES_NAME}
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./db:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - srlc
 
   django:
     container_name: django
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: /app/start.sh server
     restart: unless-stopped
-    build: .
     ports:
       - "8001:8001"
     env_file:
@@ -25,9 +34,9 @@ services:
       - postgres
       - redis
     volumes:
-      - ./srlc:/srlc
-      - ./static:/srlc/static
-      - ../guides:/srlc/docs
+      - ./srlc:/app
+      - static_files:/app/static:rw
+      - ../guides:/app/docs
     networks:
       - srlc
 

@@ -12,7 +12,7 @@ REMOTE_PATH="b2:$B2_BUCKET/backups"
 mkdir -p "$BACKUP_DIR"
 
 docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" "postgres" \
-  pg_dump -U "$POSTGRES_USER" "$POSTGRES_NAME" | gzip > "$BACKUP_DIR/$BACKUP_NAME"
+  pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" | gzip > "$BACKUP_DIR/$BACKUP_NAME"
 
 rclone copy "$BACKUP_DIR/$BACKUP_NAME" "$REMOTE_PATH"
 
