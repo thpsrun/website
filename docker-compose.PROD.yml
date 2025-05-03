@@ -1,14 +1,10 @@
 volumes:
-    postgres_data:
-      name: slrc_app_data
-    static_files:
-      name: srlc_static_files
-    certbot_web:
-      name: srlc_certbot_web
-    certbot_certs:
-      name: srlc_certbot_certs
-    nginx_config:
-      name: srlc_nginx_config
+  postgres_data:
+    name: slrc_app_data
+  static_files:
+    name: srlc_static_files
+  nginx_config:
+    name: srlc_nginx_config
 
 services:
   postgres:
@@ -53,41 +49,23 @@ services:
       - srlc
 
   nginx:
-      build:
-        context: ./nginx
-        dockerfile: Dockerfile
-      image: nginx:1.27.5-bookworm
-      container_name: nginx
-      ports:
-        - 80:80
-        - 443:443
-      depends_on:
-        - django
-      env_file:
-        - .env
-      volumes:
-        - static_files:/app/static:ro
-        - certbot_web:/vol/www:ro
-        - certbot_certs:/etc/letsencrypt/:ro
-        - nginx_config:/etc/nginx/:rw
-      networks:
-        - srlc
-
-  certbot:
-      container_name: certbot
-      restart: unless-stopped
-      build:
-        context: ./certbot
-      env_file:
-        - .env
-      depends_on:
-        - nginx
-      volumes:
-        - certbot_web:/vol/www:rw
-        - certbot_certs:/etc/letsencrypt/:rw
-        - nginx_config:/etc/nginx/:rw
-      networks:
-        - srlc
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    image: nginx:1.27.5-bookworm
+    container_name: nginx
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - django
+    env_file:
+      - .env
+    volumes:
+      - static_files:/app/static:ro
+      - nginx_config:/etc/nginx/:rw
+    networks:
+      - srlc
 
 networks:
   srlc:

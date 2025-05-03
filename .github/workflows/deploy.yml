@@ -71,7 +71,7 @@ jobs:
       - name: Cleanup Docker
         run: |
           echo "Cleaning up Docker system..."
-          docker system prune -af --volumes
+          docker system prune -f
 
       #- name: Run Docker Tests
         #run: |
