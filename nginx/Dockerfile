@@ -1,8 +1,7 @@
 FROM nginx:1.27.5-bookworm
 
 RUN rm /etc/nginx/conf.d/default.conf
-COPY nginx.dev.conf /etc/nginx/
-COPY nginx.prod.conf /etc/nginx/
+COPY nginx.conf /etc/nginx/
 
 COPY ./manager.sh /manager.sh
 
