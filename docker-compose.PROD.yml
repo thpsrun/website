@@ -45,7 +45,7 @@ services:
         context: ./nginx
         dockerfile: Dockerfile
       image: nginx:production
-      container_name: hds_nginx_production
+      container_name: nginx
       ports:
         - 80:80
         - 443:443
