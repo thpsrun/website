@@ -1,5 +1,5 @@
 volumes:
-    app_data:
+    postgres_data:
       name: slrc_app_data
     static_files:
       name: srlc_static_files
