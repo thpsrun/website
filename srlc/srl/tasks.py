@@ -1,9 +1,10 @@
 import os
 import re
 import time
+from itertools import product
 
 import requests
-from celery import shared_task
+from celery import chain, shared_task
 from django.db import transaction
 from langcodes import standardize_tag
 
@@ -19,6 +20,7 @@ from .models import (
     Players,
     Runs,
     RunVariableValues,
+    Series,
     Variables,
     VariableValues,
 )
@@ -87,7 +89,7 @@ def update_game_runs(game_id, reset):
         reset (int): Determines if all `Categories`, `Levels`, `Variables`, `VariableValues`,
             `RunVariableValues`, and `Runs` who matched the game_id arguemnt are reset.
 
-    Calls:
+    Called Functions:
         - `src_api`
         - `update_category`
         - `update_level`
@@ -104,11 +106,11 @@ def update_game_runs(game_id, reset):
     # However, if you choose "Update Game Runs" it will iterate through ALL runs within the game
     # (including obsolete) and update things accordingly.
     if reset == 1:
+        RunVariableValues.objects.filter(run__game__id=game_id).delete()
+        VariableValues.objects.filter(var__game__id=game_id).delete()
+        Variables.objects.filter(game=game_id).delete()
         Categories.objects.filter(game=game_id).delete()
         Levels.objects.filter(game=game_id).delete()
-        Variables.objects.filter(game=game_id).delete()
-        VariableValues.objects.filter(var__game__id=game_id).delete()
-        RunVariableValues.objects.filter(run__game__id=game_id).delete()
         Runs.objects.filter(game=game_id, obsolete=False).delete()
 
         game_check = src_api(
@@ -119,26 +121,32 @@ def update_game_runs(game_id, reset):
         if isinstance(game_check, dict):
             cat_check = game_check["categories"]["data"]
             for check in cat_check:
-                update_category.delay(check, game_id)
+                chain(update_category.s(check, game_id))()
 
             il_check = game_check["levels"]["data"]
             if len(il_check) > 0:
                 for level in il_check:
-                    update_level.delay(level, game_id)
+                    chain(update_level.s(level, game_id))()
 
             var_check = game_check["variables"]["data"]
             if len(var_check) > 0:
                 for variable in var_check:
-                    update_variable.delay(game_id, variable)
+                    chain(update_variable.s(game_id, variable))()
 
             for category in cat_check:
-                update_category_runs.delay(game_id, category, il_check)
+                chain(update_category_runs.s(game_id, category, il_check))()
     else:
         all_runs = Runs.objects.only("id").filter(game=game_id)
 
+        series_id = Series.objects.all().first().id
+        series_info = src_api(f"https://speedrun.com/api/v1/series/{series_id}/games?max=50")
+        series_list = []
+
+        for game in series_info:
+            series_list.append(game["id"])
+
         for run in all_runs:
-            print(f"!!!! DEBUG - {run.id}")
-            normalize_src.delay(run.id)
+            chain(normalize_src.s(run.id, series_list))()
 
 
 @shared_task
@@ -159,6 +167,7 @@ def update_category(category, game_id):
                 "game"  : Games.objects.only("id").get(id=game_id),
                 "type"  : category["type"],
                 "url"   : category["weblink"],
+                "rules" : category["rules"],
             }
         )
 
@@ -197,6 +206,7 @@ def update_level(level, game_id):
                 "name"  : level["name"],
                 "game"  : Games.objects.only("id").get(id=game_id),
                 "url"   : level["weblink"],
+                "rules" : level["rules"],
             }
         )
 
@@ -210,12 +220,11 @@ def update_variable(gameid, variable):
         variable (dict): Usually from Speedrun.com's API. Includes information about a specific
             variable that will be imported into the `Variables` model.
 
-    Calls:
+    Called Functions:
         - `update_variable_value`
     """
     cat_get = (
-        None
-        if variable["category"] is None
+        None if variable["category"] is None
         else Categories.objects.only("id").get(id=variable["category"])
     )
 
@@ -233,7 +242,7 @@ def update_variable(gameid, variable):
 
     if variable["is-subcategory"]:
         for value in variable["values"]["values"]:
-            update_variable_value.delay(variable, value)
+            chain(update_variable_value.s(variable, value))()
 
 
 @shared_task
@@ -247,9 +256,12 @@ def update_variable_value(variable, value):
     """
     with transaction.atomic():
         VariableValues.objects.update_or_create(
-            var=Variables.objects.get(id=variable["id"]),
             value=value,
-            name=variable["values"]["values"][value]["label"],
+            defaults={
+                "var"   : Variables.objects.get(id=variable["id"]),
+                "name"  : variable["values"]["values"][value]["label"],
+                "rules" : variable["values"]["values"][value]["rules"],
+            }
         )
 
 
@@ -269,246 +281,89 @@ def update_category_runs(game_id, category, il_check):
         il_check (dict): When a category is set to `per-level`, `il_check` would be iterated
             through to pass into `invoke_runs`.
 
-    Calls:
+    Called Functions:
         - `src_api`
         - `invoke_runs`
     """
-    var_ids = Variables.objects.only("id").filter(cat=category["id"])
-    global_cats = Variables.objects.only("id").filter(all_cats=True, game=game_id)
+    def iterate_combinations(var_dict):
+        if not var_dict:
+            return [[]]
 
-    global_fg_cats = (
-        Variables.objects.only("id")
-        .filter(all_cats=True, scope="full-game", game=game_id)
-    )
+        keys = list(var_dict.keys())
+        values_lists = [var_dict[key] for key in keys]
 
-    if category["type"] == "per-level":
-        # THPS community does not have any sub-categories for levels (only 1 category).
-        # This will need be updated later to make it more dynamic.
-        per_level_check = Categories.objects.only("id").filter(game=game_id, type="per-level")
+        combinations = product(*values_lists)
+        return [
+            list(zip(keys, values))
+            for values in combinations
+        ]
 
-        for il in il_check:
-            leaderboard = src_api(
-                f"https://speedrun.com/api/v1/leaderboards/{game_id}"
-                f"level/{il['id']}/{category['id']}?embed=players,game,category"
-            )
+    def get_variable_combinations(scope_types, variable_list):
+        lb_list = {}
 
-            if len(per_level_check) > 1:
-                var_name = il["name"] + " (" + category["name"] + ")"
-                invoke_runs.delay(game_id, category, leaderboard, var_name)
-            else:
-                invoke_runs.delay(game_id, category, leaderboard, il["name"])
-    elif len(global_fg_cats) > 1:
-        # The uses cases for this code assumes you have, at max, 2 global subcategories.
-        # Code would need be updated to correctly take advantage of more than 1.
-        cat_list      = []
-        var_name_list = []
+        for variable in variable_list:
+            if not variable.get("is-subcategory"):
+                continue
 
-        if len(global_fg_cats) == 2:
-            global_cat_one = (
-                VariableValues.objects.select_related("var")
-                .only("name", "var", "value")
-                .filter(var_id=global_fg_cats[0].id)
-            )
+            if variable["scope"]["type"] not in scope_types:
+                continue
 
-            global_cat_two = (
-                VariableValues.objects.select_related("var")
-                .only("name", "var", "value")
-                .filter(var_id=global_fg_cats[1].id)
-            )
+            value_ids = list(variable["values"]["values"].keys())
+            lb_list[variable["id"]] = value_ids
 
-            for global_value_one in global_cat_one:
-                var_name   = ""
-                lb_string  = ""
+        return iterate_combinations(lb_list)
 
-                lb_string  = lb_string + f"var-{global_value_one.var.id}={global_value_one.value}&"
-                var_name   = var_name + f"{global_value_one.name}, "
-
-                for val in global_cat_two:
-                    lb_string2  = lb_string + f"var-{val.var.id}={val.value}&"
-                    var_name2   = var_name + f"{val.name}, "
-
-                    cat_list.append(lb_string2.rstrip("&"))
-                    var_name_list.append(category["name"] + " (" + var_name2.rstrip(", ") + ")")
-
-        for index, lb_string in enumerate(cat_list):
-            leaderboard = src_api(
-                f"https://speedrun.com/api/v1/leaderboards/"
-                f"{game_id}/category/{category['id']}?{lb_string}"
-                f"&embed=players,game,category"
-            )
-
-            if leaderboard != 400:
-                invoke_runs.delay(game_id, category, leaderboard, var_name_list[index])
-    elif len(var_ids) == 1:
-        var_value = (
-            VariableValues.objects.select_related("var")
-            .only("name", "var", "value")
-            .filter(var=var_ids[0].id)
-        )
-
-        for var in var_value:
-            lb_string     = f"var-{var.var.id}={var.value}"
-            var_name      = f"{var.name}"
-            cat_list      = []
-            var_name_list = []
-            lb_string2    = ""
-            var_name2     = ""
-
-            if len(global_cats) > 1:
-                for global_cat in global_cats:
-                    global_values = (
-                        VariableValues.objects.select_related("var")
-                        .only("name", "var", "value")
-                        .filter(var=global_cat.id)
-                    )
-
-                    for global_value in global_values:
-                        lb_string2 = f"var-{global_cat.id}={global_value.value}&"
-                        var_name2  = f"{global_value.name}"
-
-                        cat_list.append(lb_string2 + lb_string)
-                        var_name_list.append(
-                            category["name"] + " " + var_name
-                            + "(" + var_name2 + ")"
-                        )
-            elif len(global_cats) == 1:
-                global_values = (
-                    VariableValues.objects.select_related("var")
-                    .only("name", "var", "value")
-                    .filter(var=global_cats[0].id)
-                )
-
-                for global_value in global_values:
-                    lb_string2 = f"&var-{global_value.var.id}={global_value.value}"
-                    var_name2  = f", {global_value.name}"
-
-                    cat_list.append(lb_string + lb_string2)
-                    var_name_list.append(
-                        category["name"] + " ("
-                        + var_name + var_name2 + ")"
-                    )
-            else:
-                cat_list.append(lb_string)
-                var_name_list.append(category["name"] + " (" + var_name + ")")
-
-            for index, lb_string in enumerate(cat_list):
-                leaderboard = src_api(
-                    f"https://speedrun.com/api/v1/leaderboards/"
-                    f"{game_id}/category/{category['id']}?{lb_string}"
-                    f"&embed=players,game,category"
-                )
-
-                if leaderboard != 400:
-                    invoke_runs.delay(game_id, category, leaderboard, var_name_list[index])
-    elif len(var_ids) > 1:
-        var_value_one = (
-            VariableValues.objects.select_related("var")
-            .only("name", "var", "value")
-            .filter(var=var_ids[0].id)
-        )
-
-        var_value_two = (
-            VariableValues.objects.select_related("var")
-            .only("name", "var", "value")
-            .filter(var=var_ids[1].id)
-        )
-
-        lb_string     = ""
-        var_name      = ""
-        cat_list      = []
-        var_name_list = []
-        lb_string2    = ""
-        var_name2     = ""
-
-        for variable in var_value_one:
-            for var in var_value_two:
-                lb_string  = f"var-{variable.var.id}={variable.value}&var-{var.var.id}={var.value}&"
-                var_name   = f"{variable.name}, {var.name}, "
-
-                if len(global_cats) > 1:
-                    for global_cat in global_cats:
-                        global_values = (
-                            VariableValues.objects.only("name", "value")
-                            .filter(var=global_cat.id)
-                        )
-
-                        for global_value in global_values:
-                            lb_string2 = f"var-{global_cat.id}={global_value.value}&"
-                            var_name2  = f"{global_value.name}"
-
-                            cat_list.append(lb_string2 + lb_string)
-                            var_name_list.append(
-                                category["name"] + " "
-                                + var_name + "(" + var_name2 + ")"
-                            )
-                elif len(global_cats) == 1:
-                    global_values = (
-                        VariableValues.objects.only("name", "value")
-                        .filter(var=global_cats[0].id)
-                    )
-
-                    for global_value in global_values:
-                        lb_string2 = f"&var-{global_value.var.id}={global_value.value}"
-                        var_name2  = f", {global_value.name}"
-
-                        cat_list.append(lb_string + lb_string2)
-                        var_name_list.append(
-                            category["name"] + " ("
-                            + var_name + var_name2 + ")"
-                        )
-                else:
-                    cat_list.append(lb_string.rstrip("&"))
-                    var_name_list.append(
-                        category["name"] + " ("
-                        + var_name.rstrip(", ") + ")"
-                    )
-
-            for index, lb_string in enumerate(cat_list):
-                leaderboard = src_api(
-                    f"https://speedrun.com/api/v1/leaderboards/"
-                    f"{game_id}/category/{category['id']}?{lb_string}"
-                    f"&embed=players,game,category"
-                )
-
-                if leaderboard != 400:
-                    invoke_runs.delay(game_id, category, leaderboard, var_name_list[index])
-    elif category["type"] == "per-game" and len(var_ids) == 0:
-        if len(global_cats) > 0:
-            for global_cat in global_cats:
-                cat_list        = []
-                var_name_list   = []
-                lb_string       = ""
-                var_name        = ""
-
-                global_values = (
-                    VariableValues.objects.only("name", "value")
-                    .filter(var=global_cat.id)
-                )
-
-                for global_value in global_values:
-                    lb_string = f"var-{global_cat.id}={global_value.value}"
-                    var_name  = f"{global_value.name}"
-
-                    cat_list.append(lb_string)
-                    var_name_list.append(category["name"] + " (" + var_name + ")")
-
-                for index, lb_string in enumerate(cat_list):
-                    leaderboard = src_api(
-                        f"https://speedrun.com/api/v1/leaderboards/"
-                        f"{game_id}/category/{category['id']}?{lb_string}"
-                        f"&embed=players,game,category"
-                    )
-
-                    if leaderboard != 400:
-                        invoke_runs.delay(game_id, category, leaderboard, var_name_list[index])
+    def fetch_leaderboard(game_id, category_id, il_id=None, combo=None):
+        base_url = "https://speedrun.com/api/v1/leaderboards/"
+        if il_id:
+            url = f"{base_url}{game_id}/level/{il_id}/{category_id}"
         else:
-            leaderboard = src_api(
-                f"https://speedrun.com/api/v1/leaderboards/{game_id}/category/"
-                f"{category['id']}?embed=players,game,category"
-            )
+            url = f"{base_url}{game_id}/category/{category_id}"
 
-            if leaderboard != 400:
-                invoke_runs.delay(game_id, category, leaderboard, category["name"])
+        if combo:
+            var_string = "&".join(f"var={var_id}-{val_id}" for var_id, val_id in combo)
+            url += f"?{var_string}&embed=players,game,category"
+        else:
+            url += "?embed=players,game,category"
+
+        return src_api(url)
+
+    is_il = category["type"] == "per-level"
+    scope_types = {"global", "all-level", "single-level"} if is_il else {"global", "full-game"}
+
+    if is_il:
+        for il in il_check:
+            variable_list = src_api(f"https://www.speedrun.com/api/v1/levels/{il['id']}/variables")
+            combo_list = get_variable_combinations(scope_types, variable_list)
+
+            if combo_list:
+                for combo in combo_list:
+                    leaderboard = fetch_leaderboard(
+                        game_id, category["id"], il["id"], combo
+                    )
+                    chain(invoke_runs.s(game_id, category, leaderboard))()
+            else:
+                leaderboard = fetch_leaderboard(
+                    game_id, category["id"], il["id"]
+                )
+                chain(invoke_runs.s(game_id, category, leaderboard))()
+    else:
+        variable_list = src_api(
+            f"https://www.speedrun.com/api/v1/categories/{category['id']}/variables"
+        )
+        combo_list = get_variable_combinations(scope_types, variable_list)
+
+        if combo_list:
+            for combo in combo_list:
+                leaderboard = fetch_leaderboard(
+                    game_id, category["id"], combo
+                )
+                chain(invoke_runs.s(game_id, category, leaderboard))()
+        else:
+            leaderboard = fetch_leaderboard(
+                game_id, category["id"]
+            )
+            chain(invoke_runs.s(game_id, category, leaderboard))()
 
 
 @shared_task
@@ -527,7 +382,7 @@ def update_player(player, download_pfp=True):
         download_pfp (bool): True by default. When True, the profile picture of the player is
             downloaded and saved to local disk for caching.
 
-    Calls:
+    Called Functions:
         - `src_api`
     """
     player_data = src_api(f"https://speedrun.com/api/v1/users/{player}")
@@ -613,7 +468,7 @@ def update_player(player, download_pfp=True):
 
 
 @shared_task
-def invoke_runs(game_id, category, leaderboard, var_name=None):
+def invoke_runs(game_id, category, leaderboard):
     """Iterates through the `leaderboard` argument to process all runs within it to import.
 
     Processes the `leaderboard (dict)` argument to determine what the world record speedrun is,
@@ -628,11 +483,22 @@ def invoke_runs(game_id, category, leaderboard, var_name=None):
         var_name (str): None is default. This is the full "name" for the category and/or subcategory
             combination. This will be deprecated in a future release.
 
-    Calls:
+    Called Functions:
         - `invoke_players`
         - `points_formula`
         - `time_conversion`
     """
+    def build_var_name(base_name, run_variables):
+        if len(run_variables) > 0:
+            var_name = base_name + " ("
+            for key, value in run_variables.items():
+                value_name = VariableValues.objects.only("name", "value").get(value=value).name
+                var_name += f"{value_name}, "
+
+            return var_name.removesuffix(", ") + ")"
+        else:
+            return base_name
+
     if len(leaderboard["runs"]) > 0:
         wr_records = leaderboard["runs"][0]
         pb_records = leaderboard["runs"][1:]
@@ -725,11 +591,26 @@ def invoke_runs(game_id, category, leaderboard, var_name=None):
                 else wr_records["run"]["date"]
             )
 
-            run_times   = wr_records["run"]["times"]
+            run_times = wr_records["run"]["times"]
 
             c_rta, c_nl, c_igt = time_conversion(run_times)
 
+            if category["type"] == "per-level":
+                level = Levels.objects.only("id", "name").get(id=wr_records["run"]["level"])
+                if len(
+                    Categories.objects.only("id")
+                    .filter(game=game_get.id, type="per-level")
+                ) > 1:
+                    var_level = f"{level.name} ({category["name"]})"
+                else:
+                    var_level = f"{level.name}"
+                var_name = build_var_name(var_level, wr_records["run"]["values"])
+            else:
+                base_name = category["name"]
+                var_name = build_var_name(base_name, wr_records["run"]["values"])
+
             default = {
+                "runtype"       : "main" if category["type"] == "per-game" else "il",
                 "player"        : player_get,
                 "game"          : game_get,
                 "category"      : Categories.objects.only("id").get(id=category["id"]),
@@ -768,7 +649,7 @@ def invoke_runs(game_id, category, leaderboard, var_name=None):
                     lrt_fix = True
 
             else:
-                default["level"] = Levels.objects.only("id").get(id=wr_records["run"]["level"])
+                default["level"] = level
 
                 if game_get.idefaulttime == "realtime_noloads":
                     lrt_fix = True
@@ -860,6 +741,21 @@ def invoke_runs(game_id, category, leaderboard, var_name=None):
 
                     c_rta, c_nl, c_igt = time_conversion(run_times)
 
+                    if category["type"] == "per-level":
+                        level = Levels.objects.only("id", "name").get(id=pb["run"]["level"])
+
+                        if len(
+                            Categories.objects.only("id")
+                            .filter(game=game_get.id, type="per-level")
+                        ) > 1:
+                            var_level = f"{level.name} ({category["name"]})"
+                        else:
+                            var_level = f"{level.name}"
+                        var_name = build_var_name(var_level, pb["run"]["values"])
+                    else:
+                        base_name = category["name"]
+                        var_name = build_var_name(base_name, pb["run"]["values"])
+
                     default = {
                         "runtype"       : "main" if category["type"] == "per-game" else "il",
                         "player"        : player_get,
@@ -899,7 +795,7 @@ def invoke_runs(game_id, category, leaderboard, var_name=None):
                         if game_get.defaulttime == "realtime_noloads":
                             lrt_fix = True
                     else:
-                        default["level"] = Levels.objects.only("id").get(id=pb["run"]["level"])
+                        default["level"] = level
 
                         if game_get.idefaulttime == "realtime_noloads":
                             lrt_fix = True
@@ -1052,7 +948,7 @@ def import_obsolete(player, download_pfp=False):
         download_pfp (bool): False by default. When set to True, this value will eventually enable
             another function to download the profile picture of the player.
 
-    Calls:
+    Called Functions:
         - `src_api`
         - `add_run`
     """

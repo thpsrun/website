@@ -109,7 +109,7 @@ def time_conversion(time):
             - noloads (str): The written format of loads removed time (no loads).
             - igt (str): The written format of in-game.
 
-    Calls:
+    Called Functions:
         - `convert_time`
     """
     realtime    = time["realtime_t"]

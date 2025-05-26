@@ -125,6 +125,9 @@ class Categories(models.Model):
     name = models.CharField(max_length=50, verbose_name="Name")
     type = models.CharField(verbose_name="Type (IL/FG)", choices=type_choices)
     url = models.URLField(verbose_name="URL")
+    rules = models.TextField(
+        max_length=1000, verbose_name="Rules", blank=True, null=True
+    )
     hidden = models.BooleanField(verbose_name="Hide Category", default=False)
 
     def __str__(self):
@@ -142,6 +145,9 @@ class Levels(models.Model):
     )
     name = models.CharField(max_length=75, verbose_name="Name")
     url = models.URLField(verbose_name="URL")
+    rules = models.TextField(
+        max_length=1000, verbose_name="Rules", blank=True, null=True
+    )
 
     def __str__(self):
         return self.name
@@ -225,6 +231,9 @@ class VariableValues(models.Model):
     name = models.CharField(max_length=50, verbose_name="Name")
     value = models.CharField(max_length=10, primary_key=True, verbose_name="Value ID")
     hidden = models.BooleanField(verbose_name="Hide Value", default=False)
+    rules = models.TextField(
+        max_length=1000, verbose_name="Rules", blank=True, null=True
+    )
 
     def __str__(self):
         return self.name

@@ -1,4 +1,6 @@
-from celery import shared_task
+from types import SimpleNamespace
+
+from celery import chain, shared_task
 from django.db import transaction
 from django.db.models import Count
 from srl.m_tasks import convert_time, points_formula, src_api, time_conversion
@@ -10,20 +12,20 @@ from srl.models import (
     Players,
     Runs,
     RunVariableValues,
+    Series,
     Variables,
     VariableValues,
 )
 from srl.tasks import (
     update_category,
-    update_game_runs,
-    update_level,
+    update_game,
     update_player,
     update_variable,
 )
 
 
 @shared_task
-def normalize_src(id):
+def normalize_src(id, series_id_list=None):
     """Normalizes information about a specific speedrun from the Speedrun.com API.
 
     Normalizes all information and metadata about a speedrun from the Speedrun.com API based on its
@@ -35,61 +37,63 @@ def normalize_src(id):
             at the end of a URL for a game (e.g. `12345678` at the end of
             `https://speedrun.com/game/run/<ID>`)
 
-    Calls:
-        - `update_game_runs`
+    Called Functions:
+        - `update_game`
         - `update_player`
         - `update_level`
         - `update_variable`
         - `update_category`
         - `add_run`
     """
+
+    if not series_id_list:
+        series_id = Series.objects.all().first().id
+
+        series_info = src_api(f"https://speedrun.com/api/v1/series/{series_id}/games?max=50")
+        series_id_list = []
+
+        for game in series_info:
+            series_id_list.append(game["id"])
+
     run_info = src_api(f"https://speedrun.com/api/v1/runs/{id}?embed=players")
     try:
-        if "speedrun.com/th" in run_info["weblink"]:
+        if run_info["game"] in series_id_list:
             if not Games.objects.only("id").filter(id=run_info["game"]).exists():
-                update_game_runs.delay(run_info["game"])
+                chain(update_game.s(run_info["game"]))()
 
             for player in run_info["players"]["data"]:
                 if player["rel"] != "guest":
                     if not Players.objects.only("id").filter(id=player["id"]).exists():
-                        update_player.delay(player["id"])
+                        chain(update_player.s(player["id"]))()
+
+            base_url = "https://speedrun.com/api/v1/leaderboards"
 
             if run_info["level"]:
-                lb_info = src_api(
-                    f"https://speedrun.com/api/v1/leaderboards/"
-                    f"{run_info['game']}/level/{run_info['level']}/"
-                    f"{run_info['category']}?embed=game,category,level,players,"
-                    f"variables"
-                )
-
-                update_level.delay(lb_info["level"]["data"], run_info["game"])
-            elif len(run_info["values"]) > 0:
-                lb_variables = ""
-                for key, value in run_info["values"].items():
-                    lb_variables += f"var-{key}={value}&"
-
-                lb_variables = lb_variables.rstrip("&")
-
-                lb_info = src_api(
-                    f"https://speedrun.com/api/v1/leaderboards/"
-                    f"{run_info['game']}/category/{run_info['category']}?"
-                    f"{lb_variables}&embed=game,category,level,players,variables"
-                )
+                second_part = f"{run_info['game']}/level/{run_info['level']}"
             else:
-                lb_info = src_api(
-                    f"https://speedrun.com/api/v1/leaderboards/"
-                    f"{run_info['game']}/category/{run_info['category']}?"
-                    f"embed=game,category,level,players,variables"
+                second_part = f"{run_info['game']}/category"
+
+            params = []
+
+            if run_info["values"]:
+                params.extend(
+                    [f"var-{key}={value}" for key, value in run_info["values"].items()]
                 )
+
+            params.append("embed=game,category,level,players,variables")
+            query_string = "&".join(params)
+
+            lb_info = src_api(f"{base_url}/{second_part}/{run_info['category']}?{query_string}")
 
             for variable in lb_info["variables"]["data"]:
-                update_variable.delay(run_info["game"], variable)
+                chain(update_variable.s(run_info["game"], variable))()
 
-            update_category.delay(lb_info["category"]["data"], run_info["game"])
+            chain(update_category.s(lb_info["category"]["data"], run_info["game"]))()
+
             finish = 0
             for run in lb_info["runs"]:
                 if run["run"]["id"] == run_info["id"]:
-                    add_run.delay(
+                    chain(add_run.s(
                         lb_info["game"]["data"],
                         run,
                         lb_info["category"]["data"],
@@ -98,8 +102,9 @@ def normalize_src(id):
                         False,  # obsolete
                         True,  # point_reset
                         True  # download_pfp
-                    )
+                    ))()
                     finish = 1
+                    continue
 
             # Games can have the option so that speedruns from other platforms or regions
             # do not offset and obsolete if they are slower. They are still in the SRC leaderboard
@@ -107,16 +112,16 @@ def normalize_src(id):
             # to be imported and properly excluded later.
             if finish == 0:
                 run_info["place"] = 0
-                add_run.delay(
+                chain(add_run.s(
                     lb_info["game"]["data"],
                     run_info,
                     lb_info["category"]["data"],
                     lb_info["level"]["data"],
                     run_info["values"],
-                    False,  # obsolete
-                    True,  # point_reset
+                    True,  # obsolete
+                    False,  # point_reset
                     True  # download_pfp
-                )
+                ))()
 
             # Simple check to see if the run has information on individual levels. If not,
             # it returns False so the serializer better processes it.
@@ -152,167 +157,39 @@ def add_run(
         download_pfp (bool): Default is True. Determines if the profile pictures of the imported
             speedrun's player should also be downloaded locally.
 
-    Calls:
+    Called Functions:
         - `invoke_single_run`
     """
-    var_ids = Variables.objects.only("id").filter(cat=category["id"])
-    global_cats = Variables.objects.only("id").filter(all_cats=True, game=game["id"])
+    def build_var_name(base_name, run_variables):
+        if len(run_variables) > 0:
+            var_name = base_name + " ("
+            for key, value in run_variables.items():
+                value_name = VariableValues.objects.only("name", "value").get(value=value).name
+                var_name += f"{value_name}, "
 
-    variable_list = []
-    for key, value in run_variables.items():
-        variable_list.append(value)
+            return var_name.removesuffix(", ") + ")"
+        else:
+            return base_name
 
     if category["type"] == "per-level":
-        per_level_check = Categories.objects.only("id").filter(game=game["id"], type="per-level")
-
-        if len(per_level_check) > 1:
-            var_name = level["name"] + " (" + category["name"] + ")"
-            invoke_single_run.delay(
-                game["id"],
-                category,
-                run,
-                var_name,
-                obsolete,
-                point_reset,
-                download_pfp
-            )
+        if len(Categories.objects.only("id").filter(game=game["id"], type="per-level")) > 1:
+            base_name = f"{level['name']} ({category["name"]})"
         else:
-            invoke_single_run.delay(
-                game["id"],
-                category,
-                run,
-                level["name"],
-                obsolete,
-                point_reset,
-                download_pfp
-            )
-    elif len(var_ids) == 1:
-        var_value = VariableValues.objects.only("name", "value").filter(var=var_ids[0].id)
+            base_name = f"{level['name']}"
+            var_name = build_var_name(base_name, run_variables)
+    else:
+        base_name = category["name"]
+        var_name = build_var_name(base_name, run_variables)
 
-        for var in var_value:
-            if var.value in variable_list:
-                var_name = f"{var.name}"
-                var_name2 = ""
-
-                if len(global_cats) > 1:
-                    for global_cat in global_cats:
-                        global_values = (
-                            VariableValues.objects.only("value")
-                            .filter(var=global_cat.id)
-                        )
-
-                        for global_value in global_values:
-                            if global_value.value in variable_list:
-                                var_name2 = f"{global_value.name}"
-
-                                var_name = category["name"] + " " + var_name + "(" + var_name2 + ")"
-
-                elif len(global_cats) == 1:
-                    global_values = (
-                        VariableValues.objects.only("value")
-                        .filter(var=global_cats[0].id)
-                    )
-
-                    for global_value in global_values:
-                        if global_value.value in variable_list:
-                            var_name2 = f", {global_value.name}"
-
-                            var_name = category["name"] + " (" + var_name + var_name2 + ")"
-                else:
-                    var_name = category["name"] + " (" + var_name + ")"
-
-                invoke_single_run.delay(
-                    game["id"],
-                    category,
-                    run,
-                    var_name,
-                    obsolete,
-                    point_reset,
-                    download_pfp
-                )
-    elif len(var_ids) > 1:
-        var_name = ""
-
-        for variable in var_ids:
-            var_value = VariableValues.objects.only("name").filter(var=variable.id)
-
-            for var in var_value:
-                if var.value in variable_list:
-                    temp_name = f"{var.name}"
-
-                    var_name += temp_name + ", "
-
-        if len(global_cats) > 1:
-            for global_cat in global_cats:
-                global_values = (
-                    VariableValues.objects.only("name", "value")
-                    .filter(var=global_cat.id)
-                )
-
-                for global_value in global_values:
-                    if global_value.value in variable_list:
-                        var_name2 = f"{global_value.name}"
-
-                        var_name = category["name"] + " " + var_name + "(" + var_name2 + ")"
-        elif len(global_cats) == 1:
-            global_values = (
-                VariableValues.objects.only("name", "value")
-                .filter(var=global_cats[0].id)
-            )
-
-            for global_value in global_values:
-                if global_value.value in variable_list:
-                    var_name2 = f", {global_value.name}"
-
-                    var_name = category["name"] + " (" + var_name + var_name2 + ")"
-        else:
-            var_name = category["name"] + " (" + var_name.rstrip(", ") + ")"
-
-        invoke_single_run.delay(
-            game["id"],
-            category,
-            run,
-            var_name,
-            obsolete,
-            point_reset,
-            download_pfp
-        )
-    elif category["type"] == "per-game" and len(var_ids) == 0:
-        if len(global_cats) > 0:
-            var_name = ""
-            for global_cat in global_cats:
-                global_values = (
-                    VariableValues.objects.only("name", "value")
-                    .filter(var=global_cat.id)
-                )
-
-                for global_value in global_values:
-                    if global_value.value in variable_list:
-                        temp_name = f"{global_value.name}"
-
-                        var_name += temp_name + ", "
-
-            var_name = category["name"] + " (" + var_name.rstrip(", ") + ")"
-
-            invoke_single_run.delay(
-                game["id"],
-                category,
-                run,
-                var_name,
-                obsolete,
-                point_reset,
-                download_pfp
-            )
-        else:
-            invoke_single_run.delay(
-                game["id"],
-                category,
-                run,
-                category["name"],
-                obsolete,
-                point_reset,
-                download_pfp
-            )
+    invoke_single_run(
+        game["id"],
+        category,
+        run,
+        var_name,
+        obsolete,
+        point_reset,
+        download_pfp
+    )
 
 
 @shared_task
@@ -333,7 +210,7 @@ def invoke_single_run(
         download_pfp (bool): Default is True. Determines if the profile pictures of the imported
             speedrun's player should also be downloaded locally.
 
-    Calls:
+    Called Functions:
         - `convert_time`
         - `points_formula`
         - `remove_obsolete`
@@ -457,11 +334,15 @@ def invoke_single_run(
 
             defaulttime = Games.objects.only("defaulttime").get(id=game_id).idefaulttime
 
-        if obsolete is False:
+        if not obsolete:
             if run["place"] == 1:
                 points = max_points
             elif run["place"] > 1:
-                source = wr_pull if wr_pull else default
+                source = (
+                    wr_pull
+                    if wr_pull
+                    else SimpleNamespace(**default)
+                )
                 if defaulttime == "realtime":
                     wr_time = (
                         source.timeigt_secs
@@ -496,8 +377,7 @@ def invoke_single_run(
         default["player"] = player1
 
         if player2:
-            wait = update_player.s(player2, download_pfp)
-            wait()
+            chain(update_player.s(player2, download_pfp))()
 
             try:
                 player2 = Players.objects.only("id").get(id=player2)
@@ -530,9 +410,10 @@ def invoke_single_run(
                 )
 
         if point_reset:
-            update_points.delay(game_id, var_name, max_points, reset_points)
+            chain(update_points.s(game_id, var_name, max_points, reset_points))()
 
-        remove_obsolete.delay(game_id, run_id, var_name, players, reset_points)
+        if not obsolete:
+            chain(remove_obsolete.s(game_id, var_name, players, reset_points))()
 
 
 @shared_task
@@ -658,6 +539,9 @@ def remove_obsolete(game_id, subcategory, players, run_type):
                         "id", "game__id", "player__id", "subcategory", "obsolete", "time_secs",
                         "timenl_secs", "timeigt_secs"
                     )
+                    .filter(
+                        game=game_id, player=player["id"], subcategory=subcategory, obsolete=False
+                    )
                     .main())
             else:
                 default_time = Games.objects.only("idefaulttime").get(id=game_id).idefaulttime
@@ -667,11 +551,14 @@ def remove_obsolete(game_id, subcategory, players, run_type):
                         "id", "game__id", "player__id", "subcategory", "obsolete", "time_secs",
                         "timenl_secs", "timeigt_secs"
                     )
+                    .filter(
+                        game=game_id, player=player["id"], subcategory=subcategory, obsolete=False
+                    )
                     .il()
                 )
 
             duplicated_subcategories = (
-                all_runs.filter(game=game_id, player=player["id"], subcategory=subcategory)
+                all_runs
                 .values("subcategory")
                 .annotate(count=Count("subcategory"))
                 .filter(count__gt=1)
@@ -680,7 +567,6 @@ def remove_obsolete(game_id, subcategory, players, run_type):
 
             slowest_runs = (
                 all_runs.filter(
-                    game=game_id, obsolete=False, player=player["id"],
                     subcategory__in=duplicated_subcategories
                 )
                 .order_by(f"-{time_columns[default_time]}")

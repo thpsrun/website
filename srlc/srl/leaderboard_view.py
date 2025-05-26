@@ -168,7 +168,7 @@ def Leaderboard(request, profile=None, game=None):
         profile: Sorted leaderboard (with additional contexts and information) is returned so it can
             be dynamically generated on the website.
 
-    Calls:
+    Called Functions:
         - `profile_one`
         - `profile_two`
         - `profile_three`

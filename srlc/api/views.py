@@ -1,5 +1,6 @@
-import time
 
+
+from celery import chain
 from django.db.models import Q
 from rest_framework import status
 from rest_framework.response import Response
@@ -199,14 +200,10 @@ class API_Runs(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        normalize = normalize_src.delay(id)
-        ilcheck = normalize.get()
+        s_chain = chain(normalize_src.s(id))()
+        normalize = s_chain.get()
 
-        # Sometimes the other celery tasks are slow, so this will allow them to quickly
-        # finish before providing a response.
-        time.sleep(2)
-
-        if ilcheck == "invalid":
+        if normalize == "invalid":
             return Response(
                 {"ERROR": "id provided does not belong to this leaderboard's games."},
                 status=status.HTTP_400_BAD_REQUEST
@@ -240,14 +237,10 @@ class API_Runs(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        normalize = normalize_src.delay(id)
-        ilcheck = normalize.get()
+        s_chain = chain(normalize_src.s(id))()
+        normalize = s_chain.get()
 
-        # Sometimes the other celery tasks are slow, so this will allow them to quickly
-        # finish before providing a response.
-        time.sleep(2)
-
-        if ilcheck == "invalid":
+        if normalize == "invalid":
             return Response(
                 {"ERROR": "id provided does not belong to this leaderboard's games."},
                 status=status.HTTP_400_BAD_REQUEST

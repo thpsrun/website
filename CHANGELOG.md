@@ -1,6 +1,7 @@
 ## v3.0 - The Open Source Update
 ###### April ??, 2025
 *   [!!!!] This project is now open source! For more information on this, please check out the project's GitHub here: [https://github.com/ThePackle/SRLC/](https://github.com/ThePackle/SRLC/)
+    *   This project has been updated to include some configurations and settings from [headstart-django](https://github.com/alexdeathway/headstart-django)!
   
 ### Added
 *   Added Guides!
@@ -25,6 +26,7 @@
 *   Added the new `Runs` model to replace `MainRuns` and `ILRuns`.
     *   It was frustrating dealing with duplicate code for two nearly identical models (`MainRuns` has support for 2 players; `ILRuns` has support for Levels). This update forced me to change this to a combined model - had to get rid of dumb tech debt!
     *   Each runtype (`main` and `il`) have been given new QuerySet options to better separate them quickly.
+*   Added support to cache rules by `Levels`, `Categories`, or `VariableValues`.
 *   Added the `RunVariableValues` model to map out Variable-Value tandems for each run in the `Runs`.
     *   Later updates will deprecate `subcategory` and make it more automated to find categories and sub-categories for each game.
 *   Added quick-links to Twitch, YouTube, and/or Archived Video to player profiles, leaderboards, and the main page. [#19](https://github.com/ThePackle/SRLC/issues/19)
@@ -62,6 +64,9 @@
     *   All endpoints have specific query and embed options that are added (TODO) <HERE>.
 *   Changed `/runs/` endpoint to now properly return data upon POST'ing a new run, while also serving HTTP_200_OK.
 *   Changed `abbr` value in the `Games` model to `slug`.
+*   Changed some checks in the API so it better detects if a newly submitted run is from a game belonging to the inputted `Series`. 
+    *   Before, it checked the `weblink` key on new runs to see if they contain `speedrun.com/th`, which obviously (mostly) works for Tony Hawk... But it was hard-coded and it doesn't work for other series.
+    *   This change effectively pulls all game IDs from the Speedrun.com API, and then checks to see if the newly submitted run belongs to any of those games.
   
   
 ### Fixed
@@ -73,6 +78,11 @@
     *   Only obsolete runs were really affected, so this is more for the "Runs History" page for players.
 *   Fixed an issue where obsolete runs were counting towards a player's overall totals.
 *   Fixed an issue where new runs would be improperly have `obsolete` set to True; later functions would not reset this to False.
+*   Fixed an issue where profile pictures were not displaying correctly. [#11](https://github.com/ThePackle/SRLC/issues/11)
+    *   Static profile pictures weren't being properly utilized by nginx, but also the static URLs were wrong.
+*   Fixed an issue where brand new games in a series would fail to be added to the database. [#42](https://github.com/ThePackle/SRLC/issues/42)
+    *   Tony Hawk's Shred was the first real run added in a long time, so I added celery chaining to help stop it from going too fast.
+*   Fixed an issue where `VariableValues` were returning an error when they were being updated with new metadata.
   
 
 ### Removed
