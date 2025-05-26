@@ -597,10 +597,10 @@ def MainPage(request):
     subcategories = [
         "Any%", "Any% (6th Gen)", "100%", "Any% (No Major Glitches)",
         "All Goals & Golds (No Major Glitches)", "All Goals & Golds (All Careers)",
-        "All Goals & Golds (6th Gen)", "Any% (Beginner)", "100% (NSR)", "Story (Easy, NG+)",
-        "100% (NG)", "Classic (Normal, NG+)", "Story Mode (Easy, NG+)", "Classic Mode (Normal)",
-        "Any% (360/PS3)", "100% (360/PS3)", "Any% Tour Mode (All Tours, New Game)",
-        "All Goals & Golds (All Tours, New Game)"
+        "All Goals & Golds (6th Gen)", "Any% (6th Gen, Normal)", "100% (Normal)", "Any% (Beginner)",
+        "100% (NSR)", "Story (Easy, NG+)", "100% (NG)", "Classic (Normal, NG+)",
+        "Story Mode (Easy, NG+)", "Classic Mode (Normal)", "Any% (360/PS3)", "100% (360/PS3)",
+        "Any% Tour Mode (All Tours, New Game)", "All Goals & Golds (All Tours, New Game)"
     ]
 
     exempt_games = ["GBA", "PSP", "GBC", "Category Extensions", "Remix", "Sk8land", "HD", "2x"]
