@@ -181,7 +181,7 @@ def add_run(
         base_name = category["name"]
         var_name = build_var_name(base_name, run_variables)
 
-    invoke_single_run(
+    chain(invoke_single_run.s(
         game["id"],
         category,
         run,
@@ -189,7 +189,7 @@ def add_run(
         obsolete,
         point_reset,
         download_pfp
-    )
+    ))()
 
 
 @shared_task
@@ -542,7 +542,8 @@ def remove_obsolete(game_id, subcategory, players, run_type):
                     .filter(
                         game=game_id, player=player["id"], subcategory=subcategory, obsolete=False
                     )
-                    .main())
+                    .main()
+                )
             else:
                 default_time = Games.objects.only("idefaulttime").get(id=game_id).idefaulttime
                 all_runs = (
@@ -574,7 +575,7 @@ def remove_obsolete(game_id, subcategory, players, run_type):
             # Removes the newest time from the query,
             # then sets all other runs (should be one) to obsolete.
             if len(slowest_runs) > 0:
-                last = all_runs.last()
+                last = slowest_runs.last()
                 slowest_runs = slowest_runs.exclude(id=last)
                 for new_obsolete in slowest_runs:
                     new_obsolete.obsolete = True
