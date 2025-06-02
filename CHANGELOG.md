@@ -67,6 +67,7 @@
 *   Changed some checks in the API so it better detects if a newly submitted run is from a game belonging to the inputted `Series`. 
     *   Before, it checked the `weblink` key on new runs to see if they contain `speedrun.com/th`, which obviously (mostly) works for Tony Hawk... But it was hard-coded and it doesn't work for other series.
     *   This change effectively pulls all game IDs from the Speedrun.com API, and then checks to see if the newly submitted run belongs to any of those games.
+*   Changed the response for the `/runs/` endpoint to give information on the current world record based on what game and category the run is from.
   
   
 ### Fixed

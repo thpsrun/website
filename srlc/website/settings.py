@@ -96,6 +96,7 @@ if os.getenv("DEBUG_MODE") == "True":
     DEBUG = True
     CSRF_TRUSTED_ORIGINS = ["http://localhost:8001"]
 else:
+    APPEND_SLASH                    = True
     CSRF_COOKIE_SECURE              = True
     SESSION_COOKIE_SECURE           = True
     SECURE_SSL_REDIRECT             = True

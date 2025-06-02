@@ -263,7 +263,7 @@ def invoke_single_run(
 
         try:
             approver_get = Players.objects.only("id").get(id=run["run"]["status"]["examiner"])
-        except Players.DoesNotExist:
+        except Exception:
             approver_get = None
 
         run_date = (

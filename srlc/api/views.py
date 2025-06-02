@@ -64,6 +64,7 @@ class API_Runs(APIView):
         - `variables`: Embeds all related variables and values into the response.
         - `platform`: Embeds the related platform into the response.
         - `players`: Embeds all related players into the response.
+        - `record`: Embeds world record information for the related category into the response.
 
     Embed Examples:
         - `/runs/123456?embed=category,level,game`
@@ -90,6 +91,7 @@ class API_Runs(APIView):
                 "timeigt": "0",
                 "timeigt_secs": 0.0
             },
+            "record": z5l9eljy,
             "system": {
                 "platform": "wxeod9rn",
                 "emulated": true
@@ -115,7 +117,7 @@ class API_Runs(APIView):
         ```
     """
     ALLOWED_QUERIES = {"status"}
-    ALLOWED_EMBEDS  = {"category", "level", "game", "variables", "platform", "players"}
+    ALLOWED_EMBEDS  = {"category", "level", "game", "variables", "platform", "players", "record"}
 
     def get(self, request, id):
         """Returns a speedrun based on its ID.
@@ -369,6 +371,10 @@ class API_PlayerRecords(APIView):
 
     Model: `Runs`, `Players`
 
+    Allowed Queries:
+        - `oldest`: Returns a list of the user's personal bests with the oldest listed first.
+        - `newest`: Returns a list of the user's personal bests with the newest listed first.
+
     Allowed Embeds:
         - `categories`: Embeds each run's associated category into the response.
         - `levels`: Embeds each run's associated level into the response.
@@ -494,6 +500,9 @@ class API_PlayerRecords(APIView):
 
             main_runs = Runs.objects.main().filter(player=player).filter(obsolete=False)
             il_runs   = Runs.objects.il().filter(player=player).filter(obsolete=False)
+
+            main_runs = main_runs.order_by("-v_date")
+            il_runs = il_runs.order_by("-v_date")
 
             main_data = RunSerializer(main_runs, many=True, context={"embed": embed_fields}).data
             il_data   = RunSerializer(il_runs, many=True, context={"embed": embed_fields}).data

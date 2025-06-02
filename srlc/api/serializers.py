@@ -40,6 +40,7 @@ class RunSerializer(serializers.ModelSerializer):
     level       = serializers.SerializerMethodField()
     variables   = serializers.SerializerMethodField()
     times       = serializers.SerializerMethodField()
+    record      = serializers.SerializerMethodField()
     players     = serializers.SerializerMethodField()
     system      = serializers.SerializerMethodField()
     status      = serializers.SerializerMethodField()
@@ -81,6 +82,21 @@ class RunSerializer(serializers.ModelSerializer):
             "timeigt_secs"  : obj.timeigt_secs,
         })
 
+    def get_record(self, obj):
+        """Serializes the world record associated with the run's subcategory"""
+
+        if "record" in self.context.get("embed", []):
+            record = Runs.objects.filter(
+                game=obj.game, subcategory=obj.subcategory, place=1
+            ).first()
+
+            get_record = RunSerializer(Runs.objects.get(id=record.id)).data
+            return get_record
+        else:
+            return Runs.objects.only("id").filter(
+                game=obj.game, subcategory=obj.subcategory, place=1
+            ).first().id
+
     def get_players(self, obj):
         """Serailizes player information, to include optional embeds."""
         if "players" in self.context.get("embed", []):
@@ -119,7 +135,7 @@ class RunSerializer(serializers.ModelSerializer):
         """Serailizes run status information."""
         return ({
             "vid_status"    : obj.vid_status,
-            "approver"      : obj.approver.id,
+            "approver"      : obj.approver.id if obj.approver else None,
             "v_date"        : obj.v_date,
             "obsolete"      : obj.obsolete,
         })
@@ -214,16 +230,19 @@ class RunSerializer(serializers.ModelSerializer):
         data.pop("points", None)
         data.pop("url", None)
 
+        if "record" in self.context.get("embed", []):
+            data["record"].pop("record", None)
+
         return data
 
     class Meta:
         model  = Runs
         fields = [
-            "id", "runtype", "game", "platform", "category", "level",
-            "subcategory", "place", "player", "player2", "players",
-            "url", "video", "arch_video", "date", "v_date", "times", "time_secs",
-            "timenl", "timenl_secs", "timeigt", "timeigt_secs", "points", "emulated",
-            "vid_status", "obsolete", "system", "status", "videos", "variables", "meta"
+            "id", "runtype", "game", "platform", "category", "level", "subcategory", "place",
+            "player", "player2", "players", "url", "video", "arch_video", "date", "v_date",
+            "record", "times", "time_secs", "timenl", "timenl_secs", "timeigt", "timeigt_secs",
+            "points", "emulated", "vid_status", "obsolete", "system", "status", "videos",
+            "variables", "meta"
         ]
 
 
@@ -287,12 +306,15 @@ class PlayerSerializer(serializers.ModelSerializer):
 
     def get_stats(self, obj):
         """Serializes basic stats for the player, including rankings and points."""
-        main_runs   = (
-            Runs.objects.filter(runtype="main", points__gt=0)
-            .filter(Q(player=obj.id) | Q(player2=obj.id))
+        main_runs = (
+            Runs.objects.only("points", "obsolete")
+            .filter(runtype="main").filter(Q(player=obj.id) | Q(player2=obj.id))
         )
 
-        il_runs     = Runs.objects.filter(runtype="il", player=obj.id, points__gt=0)
+        il_runs = (
+            Runs.objects.only("points", "obsolete")
+            .filter(runtype="il", player=obj.id)
+        )
 
         main_points = sum(run.points for run in main_runs.filter(obsolete=False))
         il_points   = sum(run.points for run in il_runs.filter(obsolete=False))
@@ -339,8 +361,8 @@ class PlayerSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Players
         fields = [
-            "id", "name", "nickname", "url", "country", "pronouns", "twitch",
-            "youtube", "twitter", "ex_stream", "awards", "stats"
+            "id", "name", "nickname", "url", "country", "pronouns", "twitch", "youtube", "twitter",
+            "ex_stream", "awards", "stats"
         ]
 
 
@@ -410,8 +432,8 @@ class GameSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Games
         fields = [
-            "id", "name", "slug", "release", "boxart", "twitch", "defaulttime",
-            "idefaulttime", "pointsmax", "ipointsmax", "categories", "levels", "platforms"
+            "id", "name", "slug", "release", "boxart", "twitch", "defaulttime", "idefaulttime",
+            "pointsmax", "ipointsmax", "categories", "levels", "platforms"
         ]
 
 
@@ -507,6 +529,9 @@ class CategorySerializer(serializers.ModelSerializer):
 
         if "variables" not in embed_fields:
             data.pop("variables", None)
+        else:
+            for variable in data["variables"]:
+                variable.pop("cat", None)
 
         return data
 
@@ -563,6 +588,9 @@ class VariableSerializer(serializers.ModelSerializer):
 
         if "values" not in embed_fields:
             data.pop("values", None)
+        else:
+            for value in data["values"]:
+                value.pop("variable", None)
 
         return data
 
