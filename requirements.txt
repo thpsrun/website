@@ -21,7 +21,7 @@ psycopg==3.2.6
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
 pytz==2025.2
-redis==5.2.1
+redis==6.2.0
 requests==2.32.3
 rsa==4.9
 tzdata==2025.2
