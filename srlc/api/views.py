@@ -284,6 +284,7 @@ class API_Players(APIView):
             "name": "ThePackle",
             "nickname": "Packle",
             "url": "https://www.speedrun.com/user/ThePackle",
+            "pfp": "pfp_link",
             "country": "United States",
             "pronouns": "He/Him",
             "twitch": "https://www.twitch.tv/ThePackle",

@@ -361,8 +361,8 @@ class PlayerSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Players
         fields = [
-            "id", "name", "nickname", "url", "country", "pronouns", "twitch", "youtube", "twitter",
-            "ex_stream", "awards", "stats"
+            "id", "name", "nickname", "url", "pfp", "country", "pronouns", "twitch", "youtube",
+            "twitter", "ex_stream", "awards", "stats"
         ]
 
 
