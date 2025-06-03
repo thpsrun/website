@@ -112,7 +112,8 @@ class API_Runs(APIView):
             "meta": {
                 "points": 1000,
                 "url": "https://www.speedrun.com/thps4/run/z5l9eljy"
-            }
+            },
+            "description": "this is a description"
         }
         ```
     """

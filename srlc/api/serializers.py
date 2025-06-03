@@ -242,7 +242,7 @@ class RunSerializer(serializers.ModelSerializer):
             "player", "player2", "players", "url", "video", "arch_video", "date", "v_date",
             "record", "times", "time_secs", "timenl", "timenl_secs", "timeigt", "timeigt_secs",
             "points", "emulated", "vid_status", "obsolete", "system", "status", "videos",
-            "variables", "meta"
+            "variables", "meta", "description"
         ]
 
 
