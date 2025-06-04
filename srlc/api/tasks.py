@@ -366,10 +366,9 @@ def invoke_single_run(
         player2 = players[1].get("id") if len(players) > 1 and players[1]["rel"] == "user" else None
 
         if player1:
-            wait = update_player.s(player1, download_pfp)
-            wait()
-
             try:
+                chain(update_player.s(player1, download_pfp)())
+
                 player1 = Players.objects.only("id").get(id=player1)
             except Players.DoesNotExist:
                 player1 = None
@@ -377,9 +376,9 @@ def invoke_single_run(
         default["player"] = player1
 
         if player2:
-            chain(update_player.s(player2, download_pfp))()
-
             try:
+                chain(update_player.s(player2, download_pfp))()
+
                 player2 = Players.objects.only("id").get(id=player2)
             except Players.DoesNotExist:
                 player2 = None

@@ -64,14 +64,11 @@ def src_api(url, paginate=False):
     response = requests.get(url)
 
     while response.status_code == 420 or response.status_code == 503:
-        print("Rate limit exceeded, waiting 60 seconds...")
+        print("[DEBUG] Rate limit exceeded, waiting 60 seconds...")
         time.sleep(60)
         response = requests.get(url)
 
     if response.status_code != 200:
-        print(f"Error: {response}")
-        print(url)
-
         response = response.status_code
         return response
 

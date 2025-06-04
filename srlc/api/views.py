@@ -1,7 +1,10 @@
 
 
+import time
+
 from celery import chain
 from django.db.models import Q
+from django.http import HttpRequest, HttpResponse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,6 +18,7 @@ from srl.models import (
     Variables,
     VariableValues,
 )
+from srl.tasks import update_player
 
 from api.tasks import normalize_src
 
@@ -23,6 +27,8 @@ from .serializers import (
     GameSerializer,
     LevelSerializer,
     PlayerSerializer,
+    PlayerSerializerPost,
+    PlayerStreamSerializer,
     RunSerializer,
     StreamSerializer,
     StreamSerializerPost,
@@ -120,21 +126,21 @@ class API_Runs(APIView):
     ALLOWED_QUERIES = {"status"}
     ALLOWED_EMBEDS  = {"category", "level", "game", "variables", "platform", "players", "record"}
 
-    def get(self, request, id):
+    def get(self, request: HttpRequest, id: str) -> HttpResponse:
         """Returns a speedrun based on its ID.
 
         Args:
             request (Request): The request object containing the information, queries, or embeds.
-            id (str): The exact ID of th speedrun requesting to be returned.
+            id (str): The exact ID of the speedrun requesting to be returned.
                 - "all" is a valid `id`, but must be used in conjunction with a query.
 
         Returns:
             Response: A response object containing the JSON data of a speedrun.
         """
 
-        if len(id) > 10:
+        if len(id) >= 15:
             return Response(
-                {"ERROR": "id must be less than 10 characters."},
+                {"ERROR": "id must be 15 characters or less."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -184,27 +190,28 @@ class API_Runs(APIView):
                     status=status.HTTP_200_OK
                 )
 
-    def post(self, request, id):
+    def post(self, _, id: str) -> HttpResponse:
         """Creates a new speedrun object based on its ID.
 
         After the `id` is given, the data is normalized, processed, and validated before it is
         added as a new `Runs` model object.
 
         Args:
-            id (str): The exact ID of th speedrun requesting to be added to the database.
+            id (str): The exact ID of the speedrun requesting to be added to the database.
 
         Returns:
             Response: A response object containing the JSON data of a speedrun.
         """
 
-        if len(id) > 10:
+        if len(id) >= 15:
             return Response(
-                {"ERROR": "id must be less than 10 characters."},
+                {"ERROR": "id must be 15 characters or less."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         s_chain = chain(normalize_src.s(id))()
         normalize = s_chain.get()
+        time.sleep(5)
 
         if normalize == "invalid":
             return Response(
@@ -214,29 +221,32 @@ class API_Runs(APIView):
         else:
             run = Runs.objects.filter(id=id).first()
             if run:
-                return Response(RunSerializer(run).data, status=status.HTTP_201_CREATED)
+                return Response(
+                    RunSerializer(run).data,
+                    status=status.HTTP_201_CREATED
+                )
             else:
                 return Response(
                     {"ERROR": f"Unknown error - The run id {id} could not be called."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-    def put(self, request, id):
+    def put(self, _, id) -> HttpResponse:
         """Updates (or creates) a speedrun object based on its ID.
 
         After the `id` is given, the data is normalized, processed, and validated before it is
         updated in the `Runs` model. If the `id` does not exist already, it is added.
 
         Args:
-            id (str): The exact ID of th speedrun requesting to be updated or added to the database.
+            id (str): The exact ID of the speedrun requesting to be updated or added to the database
 
         Returns:
             Response: A response object containing the JSON data of a speedrun.
         """
 
-        if len(id) > 10:
+        if len(id) >= 15:
             return Response(
-                {"ERROR": "id must be less than 10 characters."},
+                {"ERROR": "id must be 15 characters or less."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -307,9 +317,9 @@ class API_Players(APIView):
         ```
     """
 
-    ALLOWED_QUERIES = {"streamexceptions"}
+    ALLOWED_QUERIES = {"streams"}
 
-    def get(self, request, id):
+    def get(self, request: HttpRequest, id: str) -> HttpResponse:
         """Returns a specific player's information based on its ID.
 
         Args:
@@ -320,9 +330,9 @@ class API_Players(APIView):
             Response: A response object containing the JSON data of a player.
         """
 
-        if len(id) > 10:
+        if len(id) >= 15:
             return Response(
-                {"ERROR": "id must be less than 10 characters."},
+                {"ERROR": "id must be 15 characters or less."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -337,12 +347,14 @@ class API_Players(APIView):
             )
 
         if id == "all":
-            players = Players.objects.all()
+            players = Players.objects.only("id", "name", "twitch", "youtube", "ex_stream").filter(
+                Q(twitch__isnull=False) | Q(youtube__isnull=False)
+            )
 
-            if "streamexceptions" in query_fields:
-                players = players.filter(ex_stream=True)
-
-            return Response(PlayerSerializer(players, many=True).data)
+            return Response(
+                PlayerStreamSerializer(players, many=True).data,
+                status=status.HTTP_200_OK
+            )
 
         player = (
             Players.objects.filter(id__iexact=id).first()
@@ -350,12 +362,78 @@ class API_Players(APIView):
         )
 
         if player:
-            return Response(PlayerSerializer(player).data)
+            return Response(
+                PlayerSerializer(player).data,
+                status=status.HTTP_200_OK
+            )
         else:
             return Response(
                 {"ERROR": "Player ID or Name does not exist."},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+    def put(self, request: HttpRequest, id: str) -> HttpResponse:
+        """Forces the `player` object to be updated from the Speedrun.com API.
+
+        After the `id` is given, the player's data will be normalized and their player information
+        will be properly updated in the `Players` model.
+
+        Args:
+            id (str): The exact ID or player name of the player being updated.
+
+        Returns:
+            Response: A response object containing the JSON data of a speedrun.
+        """
+
+        if len(id) >= 15:
+            return Response(
+                {"ERROR": "id must be 15 characters or less."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        player = (
+            Players.objects.only("id", "name", "twitch", "youtube", "ex_stream").filter(
+                Q(id__iexact=id)
+                | Q(name__iexact=id)
+            ).first()
+        )
+
+        if player:
+            if request.data:
+                if not request.data.get("ex_stream"):
+                    request.data.update({"ex_stream": player.ex_stream})
+
+                serializer = PlayerSerializerPost(instance=player, data=request.data)
+
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(
+                        serializer.data,
+                        status=status.HTTP_202_ACCEPTED
+                    )
+                else:
+                    return Response(
+                        serializer.errors,
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+        else:
+            try:
+                chain(update_player(id))()
+
+                return Response(
+                    "ok",
+                    status=status.HTTP_200_OK
+                )
+            except AttributeError:
+                return Response(
+                    {"ERROR": "Player ID or name does not exist."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception:
+                return Response(
+                    {"ERROR": "An unknown error has occurred."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
 
 class API_PlayerRecords(APIView):
@@ -460,7 +538,7 @@ class API_PlayerRecords(APIView):
 
     ALLOWED_EMBEDS = {"categories", "levels", "games", "platforms"}
 
-    def get(self, request, id):
+    def get(self, request: HttpRequest, id: str) -> HttpResponse:
         """Returns a player's full record history based on its ID.
 
         This endpoint returns all full-game and individual level speedruns for a specific player.
@@ -476,9 +554,9 @@ class API_PlayerRecords(APIView):
             Response: A response object containing the JSON data of a player's speedruns.
         """
 
-        if len(id) > 10:
+        if len(id) >= 15:
             return Response(
-                {"ERROR": "id must be less than 10 characters."},
+                {"ERROR": "id must be 15 characters or less."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -563,7 +641,7 @@ class API_Games(APIView):
 
     ALLOWED_EMBEDS = {"categories", "levels", "platforms"}
 
-    def get(self, request, id):
+    def get(self, request: HttpRequest, id: str) -> HttpResponse:
         """Returns a specific game's metadata based on its ID.
 
         If a game ID or slug is provided, returns that specific game's details. "All" can also be
@@ -577,9 +655,9 @@ class API_Games(APIView):
         Returns:
             Response: A response object containing the JSON data of a game.
         """
-        if len(id) > 10:
+        if len(id) >= 15:
             return Response(
-                {"ERROR": "id must be less than 10 characters."},
+                {"ERROR": "id must be 15 characters or less."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -653,7 +731,7 @@ class API_Categories(APIView):
 
     ALLOWED_EMBEDS = {"game", "variables"}
 
-    def get(self, request, id):
+    def get(self, request: HttpRequest, id: str) -> HttpResponse:
         """Returns a single category and its metadata based on its ID.
 
         Parameters:
@@ -663,9 +741,9 @@ class API_Categories(APIView):
         Returns:
             Response: A response object containing the JSON data of a category.
         """
-        if len(id) > 10:
+        if len(id) >= 15:
             return Response(
-                {"ERROR": "id must be less than 10 characters."},
+                {"ERROR": "id must be 15 characters or less."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -729,7 +807,7 @@ class API_Variables(APIView):
 
     ALLOWED_EMBEDS = {"game", "values"}
 
-    def get(self, request, id):
+    def get(self, request: HttpRequest, id: str) -> HttpResponse:
         """Returns a single variable's metadata and values based on its ID.
 
         Parameters:
@@ -739,9 +817,9 @@ class API_Variables(APIView):
         Returns:
             Response: A response object containing the JSON data of a variable.
         """
-        if len(id) > 10:
+        if len(id) >= 15:
             return Response(
-                {"ERROR": "id must be less than 10 characters."},
+                {"ERROR": "id must be 15 characters or less."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -802,7 +880,7 @@ class API_Values(APIView):
 
     ALLOWED_EMBEDS = {"variable"}
 
-    def get(self, request, id):
+    def get(self, request: HttpRequest, id: str) -> HttpResponse:
         """Returns a single value's metadata and related variable based on its ID.
 
         Parameters:
@@ -812,9 +890,9 @@ class API_Values(APIView):
         Returns:
             Response: A response object containing the JSON data of a value.
         """
-        if len(id) > 10:
+        if len(id) >= 15:
             return Response(
-                {"ERROR": "id must be less than 10 characters."},
+                {"ERROR": "id must be 15 characters or less."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -836,7 +914,10 @@ class API_Values(APIView):
                 status=status.HTTP_200_OK
             )
         else:
-            return Response({"ERROR": "Value ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"ERROR": "Value ID does not exist"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class API_Levels(APIView):
@@ -870,7 +951,7 @@ class API_Levels(APIView):
     """
     ALLOWED_EMBEDS = {"game"}
 
-    def get(self, request, id):
+    def get(self, request: HttpRequest, id: str) -> HttpResponse:
         """Returns a single level based on its ID.
 
         Parameters:
@@ -880,9 +961,9 @@ class API_Levels(APIView):
         Returns:
             Response: A response object containing the JSON data of a level.
         """
-        if len(id) > 10:
+        if len(id) >= 15:
             return Response(
-                {"ERROR": "id must be less than 10 characters."},
+                {"ERROR": "id must be 15 characters or less."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -904,7 +985,10 @@ class API_Levels(APIView):
                 status=status.HTTP_200_OK
             )
         else:
-            return Response({"ERROR": "Level ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"ERROR": "Level ID does not exist"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class API_Streams(APIView):
@@ -949,14 +1033,14 @@ class API_Streams(APIView):
         ]
         ```
     """
-    def get(self, request):
+    def get(self, _) -> HttpResponse:
         """Returns a list of all available streams currently in the database."""
         return Response(
             StreamSerializer(NowStreaming.objects.all(), many=True).data,
             status=status.HTTP_200_OK
         )
 
-    def post(self, request):
+    def post(self, request: HttpRequest) -> HttpResponse:
         """Creates a new livestream object.
 
         Args:
@@ -974,16 +1058,22 @@ class API_Streams(APIView):
         if not streamcheck:
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(
+                    serializer.data,
+                    status=status.HTTP_201_CREATED
+                )
             else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    serializer.errors,
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         else:
             return Response(
                 {"ERROR": "Stream from this player already exists."},
                 status=status.HTTP_409_CONFLICT
             )
 
-    def put(self, request):
+    def put(self, request: HttpRequest) -> HttpResponse:
         """Updates (or creates) a livestream object.
 
         Args:
@@ -1006,9 +1096,12 @@ class API_Streams(APIView):
                 status=(status.HTTP_202_ACCEPTED if stream else status.HTTP_201_CREATED)
             )
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-    def delete(self, request):
+    def delete(self, request: HttpRequest) -> HttpResponse:
         """Removes a livestream object.
 
         Args:
@@ -1024,7 +1117,10 @@ class API_Streams(APIView):
 
         if stream:
             stream.delete()
-            return Response(status=status.HTTP_200_OK)
+            return Response(
+                "ok",
+                status=status.HTTP_200_OK
+            )
         else:
             return Response(
                 {"ERROR": f"{request.data['streamer']} is not in the model."},

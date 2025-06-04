@@ -465,6 +465,8 @@ def update_player(player, download_pfp=True):
                     "twitter"       : twitter_get,
                 }
             )
+    else:
+        raise AttributeError
 
 
 @shared_task
