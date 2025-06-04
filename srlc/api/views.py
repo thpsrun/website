@@ -399,23 +399,22 @@ class API_Players(APIView):
         )
 
         if player:
-            if request.data:
-                if not request.data.get("ex_stream"):
-                    request.data.update({"ex_stream": player.ex_stream})
+            if not request.data.get("ex_stream"):
+                request.data.update({"ex_stream": player.ex_stream})
 
-                serializer = PlayerSerializerPost(instance=player, data=request.data)
+            serializer = PlayerSerializerPost(instance=player, data=request.data)
 
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response(
-                        serializer.data,
-                        status=status.HTTP_202_ACCEPTED
-                    )
-                else:
-                    return Response(
-                        serializer.errors,
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+            if serializer.is_valid():
+                serializer.save()
+                return Response(
+                    serializer.data,
+                    status=status.HTTP_202_ACCEPTED
+                )
+            else:
+                return Response(
+                    serializer.errors,
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         else:
             try:
                 chain(update_player(id))()
