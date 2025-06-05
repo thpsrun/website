@@ -378,6 +378,14 @@ class PlayerStreamSerializer(serializers.ModelSerializer):
         country (dict): Contains information about the associated player's country.
         awards (dict): Contains information about the associated player's awards.
     """
+    twitch = serializers.SerializerMethodField()
+
+    def get_twitch(self, obj: Players):
+        """Serializes Twitch.tv metadata for players."""
+        if obj.twitch:
+            return obj.twitch.replace("https://www.twitch.tv/", "")
+        else:
+            obj.twitch
 
     def to_representation(self, instance):
         """Customizes the serialized output of the object.
