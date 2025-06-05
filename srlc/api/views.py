@@ -345,14 +345,21 @@ class API_Players(APIView):
             )
 
         if id == "all":
-            players = Players.objects.only("id", "name", "twitch", "youtube", "ex_stream").filter(
-                Q(twitch__isnull=False) | Q(youtube__isnull=False)
-            )
+            if "streams" in query_fields:
+                players = (
+                    Players.objects.only("id", "name", "twitch", "youtube", "ex_stream")
+                    .filter(Q(twitch__isnull=False) | Q(youtube__isnull=False))
+                )
 
-            return Response(
-                PlayerStreamSerializer(players, many=True).data,
-                status=status.HTTP_200_OK
-            )
+                return Response(
+                    PlayerStreamSerializer(players, many=True).data,
+                    status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    {"ERROR": "'all' can only be used with a query (streams)."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         player = (
             Players.objects.filter(id__iexact=id).first()
