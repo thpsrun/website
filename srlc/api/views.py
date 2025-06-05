@@ -1,6 +1,3 @@
-
-
-
 from celery import chain
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
@@ -323,6 +320,7 @@ class API_Players(APIView):
         Args:
             request (Request): The request object containing the information, queries, or embeds.
             id (str): The exact ID or username of the player requesting to be returned.
+                - "all" is a valid `id`, but must be used in conjunction with a query.
 
         Returns:
             Response: A response object containing the JSON data of a player.
