@@ -1,6 +1,5 @@
 
 
-import time
 
 from celery import chain
 from django.db.models import Q
@@ -211,7 +210,6 @@ class API_Runs(APIView):
 
         s_chain = chain(normalize_src.s(id))()
         normalize = s_chain.get()
-        time.sleep(5)
 
         if normalize == "invalid":
             return Response(
