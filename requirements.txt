@@ -1,4 +1,4 @@
-aiohttp==3.11.16
+aiohttp==3.12.11
 asgiref==3.8.1
 celery[redis]
 certifi==2025.1.31
