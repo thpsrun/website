@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .complex_views import (
+from srl.complex_views import (
     FG_Leaderboard,
     GameLeaderboard,
     IL_Leaderboard,
@@ -11,7 +11,7 @@ from .complex_views import (
     PlayerProfile,
     search_leaderboard,
 )
-from .static_views import FAQ, Changelog, PrivacyPolicy
+from srl.static_views import FAQ, Changelog, PrivacyPolicy
 
 urlpatterns = [
     path("", MainPage, name="Leaderboard"),

@@ -16,12 +16,7 @@ from srl.models import (
     Variables,
     VariableValues,
 )
-from srl.tasks import (
-    update_category,
-    update_game,
-    update_player,
-    update_variable,
-)
+from srl.tasks import update_category, update_game, update_player, update_variable
 
 
 @shared_task
@@ -49,7 +44,9 @@ def normalize_src(id, series_id_list=None):
     if not series_id_list:
         series_id = Series.objects.all().first().id
 
-        series_info = src_api(f"https://speedrun.com/api/v1/series/{series_id}/games?max=50")
+        series_info = src_api(
+            f"https://speedrun.com/api/v1/series/{series_id}/games?max=50"
+        )
         series_id_list = []
 
         for game in series_info:
@@ -83,7 +80,9 @@ def normalize_src(id, series_id_list=None):
             params.append("embed=game,category,level,players,variables")
             query_string = "&".join(params)
 
-            lb_info = src_api(f"{base_url}/{second_part}/{run_info['category']}?{query_string}")
+            lb_info = src_api(
+                f"{base_url}/{second_part}/{run_info['category']}?{query_string}"
+            )
 
             for variable in lb_info["variables"]["data"]:
                 chain(update_variable.s(run_info["game"], variable))()
@@ -93,16 +92,18 @@ def normalize_src(id, series_id_list=None):
             finish = 0
             for run in lb_info["runs"]:
                 if run["run"]["id"] == run_info["id"]:
-                    chain(add_run.s(
-                        lb_info["game"]["data"],
-                        run,
-                        lb_info["category"]["data"],
-                        lb_info["level"]["data"],
-                        run_info["values"],
-                        False,  # obsolete
-                        True,  # point_reset
-                        True  # download_pfp
-                    ))()
+                    chain(
+                        add_run.s(
+                            lb_info["game"]["data"],
+                            run,
+                            lb_info["category"]["data"],
+                            lb_info["level"]["data"],
+                            run_info["values"],
+                            False,  # obsolete
+                            True,  # point_reset
+                            True,  # download_pfp
+                        )
+                    )()
                     finish = 1
                     continue
 
@@ -112,16 +113,18 @@ def normalize_src(id, series_id_list=None):
             # to be imported and properly excluded later.
             if finish == 0:
                 run_info["place"] = 0
-                chain(add_run.s(
-                    lb_info["game"]["data"],
-                    run_info,
-                    lb_info["category"]["data"],
-                    lb_info["level"]["data"],
-                    run_info["values"],
-                    True,  # obsolete
-                    False,  # point_reset
-                    True  # download_pfp
-                ))()
+                chain(
+                    add_run.s(
+                        lb_info["game"]["data"],
+                        run_info,
+                        lb_info["category"]["data"],
+                        lb_info["level"]["data"],
+                        run_info["values"],
+                        True,  # obsolete
+                        False,  # point_reset
+                        True,  # download_pfp
+                    )
+                )()
 
             # Simple check to see if the run has information on individual levels. If not,
             # it returns False so the serializer better processes it.
@@ -137,7 +140,14 @@ def normalize_src(id, series_id_list=None):
 
 @shared_task
 def add_run(
-    game, run, category, level, run_variables, obsolete=False, point_reset=True, download_pfp=True
+    game,
+    run,
+    category,
+    level,
+    run_variables,
+    obsolete=False,
+    point_reset=True,
+    download_pfp=True,
 ):
     """Retrieves and normalizes Speedrun.com API data before importing it into the database.
 
@@ -160,11 +170,14 @@ def add_run(
     Called Functions:
         - `invoke_single_run`
     """
+
     def build_var_name(base_name, run_variables):
         if len(run_variables) > 0:
             var_name = base_name + " ("
             for key, value in run_variables.items():
-                value_name = VariableValues.objects.only("name", "value").get(value=value).name
+                value_name = (
+                    VariableValues.objects.only("name", "value").get(value=value).name
+                )
                 var_name += f"{value_name}, "
 
             return var_name.removesuffix(", ") + ")"
@@ -172,7 +185,10 @@ def add_run(
             return base_name
 
     if category["type"] == "per-level":
-        if len(Categories.objects.only("id").filter(game=game["id"], type="per-level")) > 1:
+        if (
+            len(Categories.objects.only("id").filter(game=game["id"], type="per-level"))
+            > 1
+        ):
             base_name = f"{level['name']} ({category["name"]})"
         else:
             base_name = f"{level['name']}"
@@ -181,20 +197,22 @@ def add_run(
         base_name = category["name"]
         var_name = build_var_name(base_name, run_variables)
 
-    chain(invoke_single_run.s(
-        game["id"],
-        category,
-        run,
-        var_name,
-        obsolete,
-        point_reset,
-        download_pfp
-    ))()
+    chain(
+        invoke_single_run.s(
+            game["id"], category, run, var_name, obsolete, point_reset, download_pfp
+        )
+    )()
 
 
 @shared_task
 def invoke_single_run(
-    game_id, category, run, var_name=None, obsolete=False, point_reset=True, download_pfp=True
+    game_id,
+    category,
+    run,
+    var_name=None,
+    obsolete=False,
+    point_reset=True,
+    download_pfp=True,
 ):
     """Creates or updates a `Runs` object with Speedrun.com API information.
 
@@ -230,7 +248,9 @@ def invoke_single_run(
 
     lrt_fix = False
     if run["run"]["level"] is not None:
-        game_get = Games.objects.only("id", "idefaulttime", "ipointsmax").get(id=game_id)
+        game_get = Games.objects.only("id", "idefaulttime", "ipointsmax").get(
+            id=game_id
+        )
         max_points = game_get.ipointsmax
 
         if game_get.idefaulttime == "realtime_noloads":
@@ -257,19 +277,21 @@ def invoke_single_run(
             run_video = None
 
         try:
-            platform_get = Platforms.objects.only("id").get(id=run["run"]["system"]["platform"])
+            platform_get = Platforms.objects.only("id").get(
+                id=run["run"]["system"]["platform"]
+            )
         except Platforms.DoesNotExist:
             platform_get = None
 
         try:
-            approver_get = Players.objects.only("id").get(id=run["run"]["status"]["examiner"])
+            approver_get = Players.objects.only("id").get(
+                id=run["run"]["status"]["examiner"]
+            )
         except Exception:
             approver_get = None
 
         run_date = (
-            run["run"]["submitted"]
-            if run["run"]["submitted"]
-            else run["run"]["date"]
+            run["run"]["submitted"] if run["run"]["submitted"] else run["run"]["date"]
         )
 
         v_date = (
@@ -283,41 +305,41 @@ def invoke_single_run(
         c_rta, c_nl, c_igt = time_conversion(run_times)
 
         default = {
-            "runtype"       : "main" if category["type"] == "per-game" else "il",
-            "game"          : game_get,
-            "category"      : Categories.objects.only("id").get(id=category["id"]),
-            "subcategory"   : var_name,
-            "place"         : place,
-            "url"           : run["run"]["weblink"],
-            "video"         : run_video,
-            "date"          : run_date,
-            "v_date"        : v_date,
-            "time"          : c_rta,
-            "time_secs"     : run["run"]["times"]["realtime_t"],
-            "timenl"        : c_nl,
-            "timenl_secs"   : run["run"]["times"]["realtime_noloads_t"],
-            "timeigt"       : c_igt,
-            "timeigt_secs"  : run["run"]["times"]["ingame_t"],
-            "platform"      : platform_get,
-            "emulated"      : run["run"]["system"]["emulated"],
-            "obsolete"      : obsolete,
-            "vid_status"    : run["run"]["status"]["status"],
-            "approver"      : approver_get,
-            "description"   : run["run"]["comment"],
+            "runtype": "main" if category["type"] == "per-game" else "il",
+            "game": game_get,
+            "category": Categories.objects.only("id").get(id=category["id"]),
+            "subcategory": var_name,
+            "place": place,
+            "url": run["run"]["weblink"],
+            "video": run_video,
+            "date": run_date,
+            "v_date": v_date,
+            "time": c_rta,
+            "time_secs": run["run"]["times"]["realtime_t"],
+            "timenl": c_nl,
+            "timenl_secs": run["run"]["times"]["realtime_noloads_t"],
+            "timeigt": c_igt,
+            "timeigt_secs": run["run"]["times"]["ingame_t"],
+            "platform": platform_get,
+            "emulated": run["run"]["system"]["emulated"],
+            "obsolete": obsolete,
+            "vid_status": run["run"]["status"]["status"],
+            "approver": approver_get,
+            "description": run["run"]["comment"],
         }
 
         # LRT_TEMP_FIX
         # This is a temporary fix for an issue with the SRC API where runs that have LRT but no RTA
         # time will have the LRT set to RTA instead. Really dumb.
         if lrt_fix and default["time_secs"] > 0 and default["timenl_secs"] == 0:
-            default["time"]         = "0"
-            default["time_secs"]    = 0.0
-            default["timenl"]       = convert_time(run["run"]["times"]["realtime_t"])
-            default["timenl_secs"]  = run["run"]["times"]["realtime_t"]
+            default["time"] = "0"
+            default["time_secs"] = 0.0
+            default["timenl"] = convert_time(run["run"]["times"]["realtime_t"])
+            default["timenl_secs"] = run["run"]["times"]["realtime_t"]
 
         if category["type"] == "per-game":
-            reset_points    = "Main"
-            wr_pull         = (
+            reset_points = "Main"
+            wr_pull = (
                 Runs.objects.main()
                 .filter(game=game_id, subcategory=var_name, obsolete=False, place=1)
                 .first()
@@ -338,11 +360,7 @@ def invoke_single_run(
             if run["place"] == 1:
                 points = max_points
             elif run["place"] > 1:
-                source = (
-                    wr_pull
-                    if wr_pull
-                    else SimpleNamespace(**default)
-                )
+                source = wr_pull if wr_pull else SimpleNamespace(**default)
                 if defaulttime == "realtime":
                     wr_time = (
                         source.timeigt_secs
@@ -363,7 +381,11 @@ def invoke_single_run(
             points = 0
 
         player1 = players[0].get("id")
-        player2 = players[1].get("id") if len(players) > 1 and players[1]["rel"] == "user" else None
+        player2 = (
+            players[1].get("id")
+            if len(players) > 1 and players[1]["rel"] == "user"
+            else None
+        )
 
         if player1:
             try:
@@ -392,10 +414,7 @@ def invoke_single_run(
             default["points"] = points
 
         with transaction.atomic():
-            run_obj, _ = Runs.objects.update_or_create(
-                id=run_id,
-                defaults=default
-            )
+            run_obj, _ = Runs.objects.update_or_create(id=run_id, defaults=default)
 
         if len(run["run"]["values"]) > 0:
             for var_id, val_id in run["run"]["values"].items():
@@ -403,9 +422,7 @@ def invoke_single_run(
                 value = VariableValues.objects.get(value=val_id)
 
                 RunVariableValues.objects.update_or_create(
-                    run=run_obj,
-                    variable=variable,
-                    value=value
+                    run=run_obj, variable=variable, value=value
                 )
 
         if point_reset:
@@ -438,15 +455,16 @@ def update_points(game_id, subcategory, max_points, reset_points):
 
     # Dictionary to map default timing methods to the type of seconds used.
     time_columns = {
-        "realtime"          : "time_secs",
-        "realtime_noloads"  : "timenl_secs",
-        "ingame"            : "timeigt_secs",
+        "realtime": "time_secs",
+        "realtime_noloads": "timenl_secs",
+        "ingame": "timeigt_secs",
     }
 
     if reset_points == "Main":
         all_runs = (
-            Runs.objects
-            .only("place", "points", "time_secs", "timenl_secs", "timeigt_secs")
+            Runs.objects.only(
+                "place", "points", "time_secs", "timenl_secs", "timeigt_secs"
+            )
             .main()
             .filter(game=game_id, subcategory=subcategory, obsolete=False)
         )
@@ -454,8 +472,9 @@ def update_points(game_id, subcategory, max_points, reset_points):
         default_time = Games.objects.only("defaulttime").get(id=game_id).defaulttime
     else:
         all_runs = (
-            Runs.objects
-            .only("place", "points", "time_secs", "timenl_secs", "timeigt_secs")
+            Runs.objects.only(
+                "place", "points", "time_secs", "timenl_secs", "timeigt_secs"
+            )
             .il()
             .filter(game=game_id, subcategory=subcategory, obsolete=False)
         )
@@ -520,9 +539,9 @@ def remove_obsolete(game_id, subcategory, players, run_type):
         run_type (str): Can be `Main` or `IL`. This assists in determining type of query to be ran.
     """
     time_columns = {
-        "realtime"          : "time_secs",
-        "realtime_noloads"  : "timenl_secs",
-        "ingame"            : "timeigt_secs",
+        "realtime": "time_secs",
+        "realtime_noloads": "timenl_secs",
+        "ingame": "timeigt_secs",
     }
 
     for player in players:
@@ -531,46 +550,64 @@ def remove_obsolete(game_id, subcategory, players, run_type):
             # Once found, it will set the slowest_runs variable based on the game ID, whether it
             # is already obsolete, from the same player, in the same category.
             if run_type == "Main":
-                default_time = Games.objects.only("defaulttime").get(id=game_id).defaulttime
+                default_time = (
+                    Games.objects.only("defaulttime").get(id=game_id).defaulttime
+                )
                 all_runs = (
                     Runs.objects.prefetch_related("game", "player")
                     .only(
-                        "id", "game__id", "player__id", "subcategory", "obsolete", "time_secs",
-                        "timenl_secs", "timeigt_secs"
+                        "id",
+                        "game__id",
+                        "player__id",
+                        "subcategory",
+                        "obsolete",
+                        "time_secs",
+                        "timenl_secs",
+                        "timeigt_secs",
                     )
                     .filter(
-                        game=game_id, player=player["id"], subcategory=subcategory, obsolete=False
+                        game=game_id,
+                        player=player["id"],
+                        subcategory=subcategory,
+                        obsolete=False,
                     )
                     .main()
                 )
             else:
-                default_time = Games.objects.only("idefaulttime").get(id=game_id).idefaulttime
+                default_time = (
+                    Games.objects.only("idefaulttime").get(id=game_id).idefaulttime
+                )
                 all_runs = (
                     Runs.objects.prefetch_related("game", "player")
                     .only(
-                        "id", "game__id", "player__id", "subcategory", "obsolete", "time_secs",
-                        "timenl_secs", "timeigt_secs"
+                        "id",
+                        "game__id",
+                        "player__id",
+                        "subcategory",
+                        "obsolete",
+                        "time_secs",
+                        "timenl_secs",
+                        "timeigt_secs",
                     )
                     .filter(
-                        game=game_id, player=player["id"], subcategory=subcategory, obsolete=False
+                        game=game_id,
+                        player=player["id"],
+                        subcategory=subcategory,
+                        obsolete=False,
                     )
                     .il()
                 )
 
             duplicated_subcategories = (
-                all_runs
-                .values("subcategory")
+                all_runs.values("subcategory")
                 .annotate(count=Count("subcategory"))
                 .filter(count__gt=1)
                 .values("subcategory")
             )
 
-            slowest_runs = (
-                all_runs.filter(
-                    subcategory__in=duplicated_subcategories
-                )
-                .order_by(f"-{time_columns[default_time]}")
-            )
+            slowest_runs = all_runs.filter(
+                subcategory__in=duplicated_subcategories
+            ).order_by(f"-{time_columns[default_time]}")
             # Removes the newest time from the query,
             # then sets all other runs (should be one) to obsolete.
             if len(slowest_runs) > 0:

@@ -16,9 +16,7 @@ from srl.models import (
 )
 from srl.tasks import update_player
 
-from api.tasks import normalize_src
-
-from .serializers import (
+from api.serializers import (
     CategorySerializer,
     GameSerializer,
     LevelSerializer,
@@ -31,6 +29,7 @@ from .serializers import (
     ValueSerializer,
     VariableSerializer,
 )
+from api.tasks import normalize_src
 
 
 class API_Runs(APIView):
@@ -119,8 +118,17 @@ class API_Runs(APIView):
         }
         ```
     """
+
     ALLOWED_QUERIES = {"status"}
-    ALLOWED_EMBEDS  = {"category", "level", "game", "variables", "platform", "players", "record"}
+    ALLOWED_EMBEDS = {
+        "category",
+        "level",
+        "game",
+        "variables",
+        "platform",
+        "players",
+        "record",
+    }
 
     def get(self, request: HttpRequest, id: str) -> HttpResponse:
         """Returns a speedrun based on its ID.
@@ -137,53 +145,61 @@ class API_Runs(APIView):
         if len(id) >= 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         query_fields = request.GET.get("query", "").split(",")
         query_fields = [field.strip() for field in query_fields if field.strip()]
-        invalid_queries = [field for field in query_fields if field not in self.ALLOWED_QUERIES]
+        invalid_queries = [
+            field for field in query_fields if field not in self.ALLOWED_QUERIES
+        ]
 
         if invalid_queries:
             return Response(
                 {"ERROR": f"Invalid queries: {', '.join(invalid_queries)}"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         embed_fields = request.GET.get("embed", "").split(",")
         embed_fields = [field.strip() for field in embed_fields if field.strip()]
-        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
+        invalid_embeds = [
+            field for field in embed_fields if field not in self.ALLOWED_EMBEDS
+        ]
 
         if invalid_embeds:
             return Response(
                 {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if id == "all":
             if "status" in query_fields:
                 new_runs = Runs.objects.filter(vid_status="new")
-                runs = RunSerializer(new_runs, many=True, context={"embed": embed_fields}).data
+                runs = RunSerializer(
+                    new_runs, many=True, context={"embed": embed_fields}
+                ).data
 
                 return Response(
-                    {"new_runs" : runs, }
+                    {
+                        "new_runs": runs,
+                    }
                 )
             else:
                 return Response(
                     {"ERROR": "'all' can only be used with a query (status)."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
         else:
             run = Runs.objects.filter(id__iexact=id).first()
             if run:
                 return Response(
                     RunSerializer(run, context={"embed": embed_fields}).data,
-                    status=status.HTTP_200_OK
+                    status=status.HTTP_200_OK,
                 )
             else:
                 return Response(
                     {"ERROR": "run id provided does not exist."},
-                    status=status.HTTP_200_OK
+                    status=status.HTTP_200_OK,
                 )
 
     def post(self, _, id: str) -> HttpResponse:
@@ -202,7 +218,7 @@ class API_Runs(APIView):
         if len(id) >= 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         s_chain = chain(normalize_src.s(id))()
@@ -211,19 +227,16 @@ class API_Runs(APIView):
         if normalize == "invalid":
             return Response(
                 {"ERROR": "id provided does not belong to this leaderboard's games."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
         else:
             run = Runs.objects.filter(id=id).first()
             if run:
-                return Response(
-                    RunSerializer(run).data,
-                    status=status.HTTP_201_CREATED
-                )
+                return Response(RunSerializer(run).data, status=status.HTTP_201_CREATED)
             else:
                 return Response(
                     {"ERROR": f"Unknown error - The run id {id} could not be called."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
     def put(self, _, id) -> HttpResponse:
@@ -242,7 +255,7 @@ class API_Runs(APIView):
         if len(id) >= 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         s_chain = chain(normalize_src.s(id))()
@@ -251,7 +264,7 @@ class API_Runs(APIView):
         if normalize == "invalid":
             return Response(
                 {"ERROR": "id provided does not belong to this leaderboard's games."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
         else:
             run = Runs.objects.filter(id=id).first()
@@ -260,7 +273,7 @@ class API_Runs(APIView):
             else:
                 return Response(
                     {"ERROR": f"Unknown error - The run id {id} could not be called."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
 
@@ -329,34 +342,35 @@ class API_Players(APIView):
         if len(id) >= 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        query_fields    = request.GET.get("query", "").split(",")
-        query_fields    = [field.strip() for field in query_fields if field.strip()]
-        invalid_queries = [field for field in query_fields if field not in self.ALLOWED_QUERIES]
+        query_fields = request.GET.get("query", "").split(",")
+        query_fields = [field.strip() for field in query_fields if field.strip()]
+        invalid_queries = [
+            field for field in query_fields if field not in self.ALLOWED_QUERIES
+        ]
 
         if invalid_queries:
             return Response(
                 {"ERROR": f"Invalid queries: {', '.join(invalid_queries)}"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if id == "all":
             if "streams" in query_fields:
-                players = (
-                    Players.objects.only("id", "name", "twitch", "youtube", "ex_stream")
-                    .filter(Q(twitch__isnull=False) | Q(youtube__isnull=False))
-                )
+                players = Players.objects.only(
+                    "id", "name", "twitch", "youtube", "ex_stream"
+                ).filter(Q(twitch__isnull=False) | Q(youtube__isnull=False))
 
                 return Response(
                     PlayerStreamSerializer(players, many=True).data,
-                    status=status.HTTP_200_OK
+                    status=status.HTTP_200_OK,
                 )
             else:
                 return Response(
                     {"ERROR": "'all' can only be used with a query (streams)."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
         player = (
@@ -365,14 +379,11 @@ class API_Players(APIView):
         )
 
         if player:
-            return Response(
-                PlayerSerializer(player).data,
-                status=status.HTTP_200_OK
-            )
+            return Response(PlayerSerializer(player).data, status=status.HTTP_200_OK)
         else:
             return Response(
                 {"ERROR": "Player ID or Name does not exist."},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
     def put(self, request: HttpRequest, id: str) -> HttpResponse:
@@ -391,14 +402,13 @@ class API_Players(APIView):
         if len(id) >= 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         player = (
-            Players.objects.only("id", "name", "twitch", "youtube", "ex_stream").filter(
-                Q(id__iexact=id)
-                | Q(name__iexact=id)
-            ).first()
+            Players.objects.only("id", "name", "twitch", "youtube", "ex_stream")
+            .filter(Q(id__iexact=id) | Q(name__iexact=id))
+            .first()
         )
 
         if player:
@@ -409,32 +419,23 @@ class API_Players(APIView):
 
             if serializer.is_valid():
                 serializer.save()
-                return Response(
-                    serializer.data,
-                    status=status.HTTP_202_ACCEPTED
-                )
+                return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
             else:
-                return Response(
-                    serializer.errors,
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             try:
                 chain(update_player(id))()
 
-                return Response(
-                    "ok",
-                    status=status.HTTP_200_OK
-                )
+                return Response("ok", status=status.HTTP_200_OK)
             except AttributeError:
                 return Response(
                     {"ERROR": "Player ID or name does not exist."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             except Exception:
                 return Response(
                     {"ERROR": "An unknown error has occurred."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
 
@@ -559,17 +560,19 @@ class API_PlayerRecords(APIView):
         if len(id) >= 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
-        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
+        embed_fields = request.GET.get("embed", "").split(",")
+        embed_fields = [field.strip() for field in embed_fields if field.strip()]
+        invalid_embeds = [
+            field for field in embed_fields if field not in self.ALLOWED_EMBEDS
+        ]
 
         if invalid_embeds:
             return Response(
                 {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         player = (
@@ -581,23 +584,23 @@ class API_PlayerRecords(APIView):
             player_data = PlayerSerializer(player).data
 
             main_runs = Runs.objects.main().filter(player=player).filter(obsolete=False)
-            il_runs   = Runs.objects.il().filter(player=player).filter(obsolete=False)
+            il_runs = Runs.objects.il().filter(player=player).filter(obsolete=False)
 
             main_runs = main_runs.order_by("-v_date")
             il_runs = il_runs.order_by("-v_date")
 
-            main_data = RunSerializer(main_runs, many=True, context={"embed": embed_fields}).data
-            il_data   = RunSerializer(il_runs, many=True, context={"embed": embed_fields}).data
+            main_data = RunSerializer(
+                main_runs, many=True, context={"embed": embed_fields}
+            ).data
+            il_data = RunSerializer(
+                il_runs, many=True, context={"embed": embed_fields}
+            ).data
 
-            return Response({
-                **player_data,
-                "main_runs" : main_data,
-                "il_runs"   : il_data
-            })
+            return Response({**player_data, "main_runs": main_data, "il_runs": il_data})
         else:
             return Response(
                 {"ERROR": "Player ID or Name does not exist."},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
 
@@ -660,24 +663,26 @@ class API_Games(APIView):
         if len(id) >= 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
-        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
+        embed_fields = request.GET.get("embed", "").split(",")
+        embed_fields = [field.strip() for field in embed_fields if field.strip()]
+        invalid_embeds = [
+            field for field in embed_fields if field not in self.ALLOWED_EMBEDS
+        ]
 
         if invalid_embeds:
             return Response(
                 {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if id == "all":
             games = Games.objects.all().order_by("release")
             return Response(
                 GameSerializer(games, many=True, context={"embed": embed_fields}).data,
-                status=status.HTTP_200_OK
+                status=status.HTTP_200_OK,
             )
 
         game = (
@@ -688,12 +693,12 @@ class API_Games(APIView):
         if game:
             return Response(
                 GameSerializer(game, context={"embed": embed_fields}).data,
-                status=status.HTTP_200_OK
+                status=status.HTTP_200_OK,
             )
         else:
             return Response(
                 {"ERROR": "Game ID or slug/abbreviation does not exist"},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
 
@@ -746,29 +751,31 @@ class API_Categories(APIView):
         if len(id) >= 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
-        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
+        embed_fields = request.GET.get("embed", "").split(",")
+        embed_fields = [field.strip() for field in embed_fields if field.strip()]
+        invalid_embeds = [
+            field for field in embed_fields if field not in self.ALLOWED_EMBEDS
+        ]
 
         if invalid_embeds:
             return Response(
                 {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         category = Categories.objects.filter(id__iexact=id).first()
         if category:
             return Response(
                 CategorySerializer(category, context={"embed": embed_fields}).data,
-                status=status.HTTP_200_OK
+                status=status.HTTP_200_OK,
             )
         else:
             return Response(
                 {"ERROR": "Category ID does not exist"},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
 
@@ -822,29 +829,31 @@ class API_Variables(APIView):
         if len(id) >= 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
-        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
+        embed_fields = request.GET.get("embed", "").split(",")
+        embed_fields = [field.strip() for field in embed_fields if field.strip()]
+        invalid_embeds = [
+            field for field in embed_fields if field not in self.ALLOWED_EMBEDS
+        ]
 
         if invalid_embeds:
             return Response(
                 {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         variables = Variables.objects.filter(id__iexact=id).first()
         if variables:
             return Response(
                 VariableSerializer(variables, context={"embed": embed_fields}).data,
-                status=status.HTTP_200_OK
+                status=status.HTTP_200_OK,
             )
         else:
             return Response(
                 {"ERROR": "Variable ID does not exist"},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
 
@@ -895,17 +904,19 @@ class API_Values(APIView):
         if len(id) >= 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
-        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
+        embed_fields = request.GET.get("embed", "").split(",")
+        embed_fields = [field.strip() for field in embed_fields if field.strip()]
+        invalid_embeds = [
+            field for field in embed_fields if field not in self.ALLOWED_EMBEDS
+        ]
 
         if invalid_embeds:
             return Response(
                 {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         value = VariableValues.objects.filter(value__iexact=id).first()
@@ -913,12 +924,11 @@ class API_Values(APIView):
         if value:
             return Response(
                 ValueSerializer(value, context={"embed": embed_fields}).data,
-                status=status.HTTP_200_OK
+                status=status.HTTP_200_OK,
             )
         else:
             return Response(
-                {"ERROR": "Value ID does not exist"},
-                status=status.HTTP_404_NOT_FOUND
+                {"ERROR": "Value ID does not exist"}, status=status.HTTP_404_NOT_FOUND
             )
 
 
@@ -951,6 +961,7 @@ class API_Levels(APIView):
         }
         ```
     """
+
     ALLOWED_EMBEDS = {"game"}
 
     def get(self, request: HttpRequest, id: str) -> HttpResponse:
@@ -966,17 +977,19 @@ class API_Levels(APIView):
         if len(id) >= 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        embed_fields   = request.GET.get("embed", "").split(",")
-        embed_fields   = [field.strip() for field in embed_fields if field.strip()]
-        invalid_embeds = [field for field in embed_fields if field not in self.ALLOWED_EMBEDS]
+        embed_fields = request.GET.get("embed", "").split(",")
+        embed_fields = [field.strip() for field in embed_fields if field.strip()]
+        invalid_embeds = [
+            field for field in embed_fields if field not in self.ALLOWED_EMBEDS
+        ]
 
         if invalid_embeds:
             return Response(
                 {"ERROR": f"Invalid embed(s): {', '.join(invalid_embeds)}"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         levels = Levels.objects.filter(id__iexact=id).first()
@@ -984,12 +997,11 @@ class API_Levels(APIView):
         if levels:
             return Response(
                 LevelSerializer(levels, context={"embed": embed_fields}).data,
-                status=status.HTTP_200_OK
+                status=status.HTTP_200_OK,
             )
         else:
             return Response(
-                {"ERROR": "Level ID does not exist"},
-                status=status.HTTP_404_NOT_FOUND
+                {"ERROR": "Level ID does not exist"}, status=status.HTTP_404_NOT_FOUND
             )
 
 
@@ -1035,11 +1047,12 @@ class API_Streams(APIView):
         ]
         ```
     """
+
     def get(self, _) -> HttpResponse:
         """Returns a list of all available streams currently in the database."""
         return Response(
             StreamSerializer(NowStreaming.objects.all(), many=True).data,
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
 
     def post(self, request: HttpRequest) -> HttpResponse:
@@ -1050,29 +1063,21 @@ class API_Streams(APIView):
         """
         serializer = StreamSerializerPost(data=request.data)
 
-        streamcheck = (
-            NowStreaming.objects.filter(
-                Q(streamer__name__iexact=request.data["streamer"])
-                | Q(streamer__id__iexact=request.data["streamer"])
-            ).exists()
-        )
+        streamcheck = NowStreaming.objects.filter(
+            Q(streamer__name__iexact=request.data["streamer"])
+            | Q(streamer__id__iexact=request.data["streamer"])
+        ).exists()
 
         if not streamcheck:
             if serializer.is_valid():
                 serializer.save()
-                return Response(
-                    serializer.data,
-                    status=status.HTTP_201_CREATED
-                )
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
-                return Response(
-                    serializer.errors,
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(
                 {"ERROR": "Stream from this player already exists."},
-                status=status.HTTP_409_CONFLICT
+                status=status.HTTP_409_CONFLICT,
             )
 
     def put(self, request: HttpRequest) -> HttpResponse:
@@ -1081,13 +1086,11 @@ class API_Streams(APIView):
         Args:
             request (Request): JSON information that must pass validation before being added.
         """
-        stream = (
-            NowStreaming.objects.filter(
-                Q(streamer__name__iexact=request.data["streamer"])
-                | Q(streamer__id__iexact=request.data["streamer"])
-                | Q(streamer__twitch__icontains=request.data["streamer"])
-            ).first()
-        )
+        stream = NowStreaming.objects.filter(
+            Q(streamer__name__iexact=request.data["streamer"])
+            | Q(streamer__id__iexact=request.data["streamer"])
+            | Q(streamer__twitch__icontains=request.data["streamer"])
+        ).first()
 
         serializer = StreamSerializerPost(instance=stream, data=request.data)
 
@@ -1095,13 +1098,12 @@ class API_Streams(APIView):
             serializer.save()
             return Response(
                 serializer.data,
-                status=(status.HTTP_202_ACCEPTED if stream else status.HTTP_201_CREATED)
+                status=(
+                    status.HTTP_202_ACCEPTED if stream else status.HTTP_201_CREATED
+                ),
             )
         else:
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request: HttpRequest) -> HttpResponse:
         """Removes a livestream object.
@@ -1109,22 +1111,17 @@ class API_Streams(APIView):
         Args:
             request (Request): JSON information that must pass validation before being deleted.
         """
-        stream = (
-            NowStreaming.objects.filter(
-                Q(streamer__name__iexact=request.data["streamer"])
-                | Q(streamer__id__iexact=request.data["streamer"])
-                | Q(streamer__twitch__icontains=request.data["streamer"])
-            ).first()
-        )
+        stream = NowStreaming.objects.filter(
+            Q(streamer__name__iexact=request.data["streamer"])
+            | Q(streamer__id__iexact=request.data["streamer"])
+            | Q(streamer__twitch__icontains=request.data["streamer"])
+        ).first()
 
         if stream:
             stream.delete()
-            return Response(
-                "ok",
-                status=status.HTTP_200_OK
-            )
+            return Response("ok", status=status.HTTP_200_OK)
         else:
             return Response(
                 {"ERROR": f"{request.data['streamer']} is not in the model."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )

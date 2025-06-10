@@ -98,10 +98,7 @@ class ModelTestCase(TestCase):
             description="Simply the best",
         )
 
-        cls.countrycodes = CountryCodes.objects.create(
-            id="usa",
-            name="United States"
-        )
+        cls.countrycodes = CountryCodes.objects.create(id="usa", name="United States")
 
         cls.player1 = Players.objects.create(
             id="player1",

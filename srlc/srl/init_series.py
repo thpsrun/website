@@ -55,7 +55,7 @@ def init_series(series_id):
 
                 if len(game_check["variables"]["data"]) > 0:
                     for variable in game_check["variables"]["data"]:
-                        update_variable.delay(game['id'], variable)
+                        update_variable.delay(game["id"], variable)
 
                 for category in game_check["categories"]["data"]:
                     update_category_runs.delay(

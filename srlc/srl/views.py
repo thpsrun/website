@@ -4,12 +4,14 @@ import time
 from django.shortcuts import redirect
 from django.views.generic import ListView, View
 
-from .init_series import init_series
+from srl.init_series import init_series
+
 from .tasks import import_obsolete, update_game, update_game_runs, update_player
 
 
 class UpdateSeriesView(View):
     """Initalizes the Series and begins gathering data on all speedruns within it from SRC's API."""
+
     def get(self, request):
         series_ids = request.GET.getlist("series_ids")
         for series_id in series_ids:
@@ -20,6 +22,7 @@ class UpdateSeriesView(View):
 
 class UpdateGameView(ListView):
     """Updates all selected games, their metadata, categories, and variables from SRC's API."""
+
     def get(self, request):
         game_ids = self.request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
@@ -30,6 +33,7 @@ class UpdateGameView(ListView):
 
 class RefreshGameRunsView(ListView):
     """Removes all games associated with the selected games to 'refresh' the leaderboard."""
+
     def get(self, request):
         game_ids = self.request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
@@ -40,6 +44,7 @@ class RefreshGameRunsView(ListView):
 
 class UpdateGameRunsView(ListView):
     """Updates all selected games, their metadata, categories, and variables from SRC's API."""
+
     def get(self, request):
         game_ids = self.request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
@@ -50,6 +55,7 @@ class UpdateGameRunsView(ListView):
 
 class UpdatePlayerView(ListView):
     """Updates all selected players and their metadata from SRC's API."""
+
     def get(self, request):
         player_ids = self.request.GET.get("player_ids", "").split(",")
         for player in player_ids:
@@ -60,6 +66,7 @@ class UpdatePlayerView(ListView):
 
 class ImportObsoleteView(ListView):
     """Crawls all selected users to discover all speedruns within the Series to import obsolete."""
+
     def get(self, request):
         player_ids = self.request.GET.get("player_ids", "").split(",")
         for player in player_ids:

@@ -18,11 +18,12 @@ def src_check():
     games = Games.objects.all()
 
     for game in games:
-        newruns = src_api(f"https://speedrun.com/api/v1/runs?status=new&game={game['id']}")
+        newruns = src_api(
+            f"https://speedrun.com/api/v1/runs?status=new&game={game['id']}"
+        )
 
         if len(newruns) > 0:
             for run in newruns:
                 requests.post(
-                    f"http://localhost:8001/api/runs/{run['id']}",
-                    headers=headers
+                    f"http://localhost:8001/api/runs/{run['id']}", headers=headers
                 )

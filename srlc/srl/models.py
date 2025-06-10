@@ -161,7 +161,7 @@ class Variables(models.Model):
         ("global", "All Categories"),
         ("full-game", "Only Full Game Runs"),
         ("all-levels", "Only IL Runs"),
-        ("single-level", "Specific IL")
+        ("single-level", "Specific IL"),
     ]
 
     id = models.CharField(max_length=10, primary_key=True, verbose_name="Variable ID")
@@ -193,9 +193,9 @@ class Variables(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         help_text=(
-            'If \"scope\" is set to \"single-level\", then a level must be associated. Otherwise, '
-            'keep null.'
-        )
+            'If "scope" is set to "single-level", then a level must be associated. Otherwise, '
+            "keep null."
+        ),
     )
     hidden = models.BooleanField(verbose_name="Hide Variable", default=False)
 
@@ -309,18 +309,10 @@ class Players(models.Model):
     pronouns = models.CharField(
         max_length=20, verbose_name="Pronouns", blank=True, null=True
     )
-    twitch = models.URLField(
-        verbose_name="Twitch", blank=True, null=True
-    )
-    youtube = models.URLField(
-        verbose_name="YouTube", blank=True, null=True
-    )
-    twitter = models.URLField(
-        verbose_name="Twitter", blank=True, null=True
-    )
-    bluesky = models.URLField(
-        verbose_name="Bluesky", blank=True, null=True
-    )
+    twitch = models.URLField(verbose_name="Twitch", blank=True, null=True)
+    youtube = models.URLField(verbose_name="YouTube", blank=True, null=True)
+    twitter = models.URLField(verbose_name="Twitter", blank=True, null=True)
+    bluesky = models.URLField(verbose_name="Bluesky", blank=True, null=True)
     ex_stream = models.BooleanField(
         verbose_name="Stream Exception",
         default=False,

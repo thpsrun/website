@@ -33,7 +33,11 @@ def get_unique_game_names(main_runs):
 @register.filter
 def filter_game_name(game_runs, game_name):
     """Filters game names."""
-    return [game for game in game_runs if Games.objects.get(id=game.game.id).name == game_name]
+    return [
+        game
+        for game in game_runs
+        if Games.objects.get(id=game.game.id).name == game_name
+    ]
 
 
 @register.filter
@@ -47,7 +51,7 @@ def custom_splitter(value):
     symbol = value[index]
 
     first = value[:index].strip()
-    second = value[index:].strip() if symbol == "(" else value[index + 1:].strip()
+    second = value[index:].strip() if symbol == "(" else value[index + 1 :].strip()
 
     return [first, second]
 
@@ -64,19 +68,17 @@ def get_rank(game_name, player_name):
     players = Players.objects.only("id").all()
     leaderboard = []
 
-    game_id  = Games.objects.get(name=game_name).id
+    game_id = Games.objects.get(name=game_name).id
     il_board = Runs.objects.only("id").filter(runtype="il", gameid=game_id).all()
 
     for player in players:
         il_points = (
             il_board.only("id", "points")
             .filter(playerid=player.id)
-            .aggregate(total_points=Sum("points"))["total_points"] or 0
+            .aggregate(total_points=Sum("points"))["total_points"]
+            or 0
         )
-        leaderboard.append({
-            "player": player,
-            "total_points": il_points
-        })
+        leaderboard.append({"player": player, "total_points": il_points})
 
     il_leaderboard = sorted(leaderboard, key=lambda x: x["total_points"], reverse=True)
 

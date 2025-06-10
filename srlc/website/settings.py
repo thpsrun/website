@@ -60,10 +60,10 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 TEMPLATES = [
     {
-        "BACKEND"   : "django.template.backends.django.DjangoTemplates",
-        "DIRS"      : [],
-        "APP_DIRS"  : True,
-        "OPTIONS"   : {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
@@ -96,26 +96,26 @@ if os.getenv("DEBUG_MODE") == "True":
     DEBUG = True
     CSRF_TRUSTED_ORIGINS = ["http://localhost:8001"]
 else:
-    APPEND_SLASH                    = True
-    CSRF_COOKIE_SECURE              = True
-    SESSION_COOKIE_SECURE           = True
-    SECURE_SSL_REDIRECT             = True
-    SECURE_HSTS_SECONDS             = 3600
-    SECURE_HSTS_INCLUDE_SUBDOMAINS  = True
-    SECURE_HSTS_PRELOAD             = True
-    SECURE_SSL_HOST                 = True
-    SECURE_CONTENT_TYPE_NOSNIFF     = True
-    SECURE_BROWSER_XSS_FILTER       = True
-    X_FRAME_OPTIONS                 = "DENY"
-    SECURE_PROXY_SSL_HEADER         = ('HTTP_X_FORWARDED_PROTO', 'https')
+    APPEND_SLASH = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 3600
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_HOST = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 DATABASES = {
     "default": {
-        "ENGINE"    : "django.db.backends.postgresql",
-        "NAME"      : os.getenv("POSTGRES_DB"),
-        "USER"      : os.getenv("POSTGRES_USER"),
-        "PASSWORD"  : os.getenv("POSTGRES_PASSWORD"),
-        "HOST"      : "postgres",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+        "HOST": "postgres",
     }
 }
 
@@ -136,20 +136,20 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # API RATE LIMITING
-RATELIMIT_RATE      = "200/m"
-RATELIMIT_RESPONSE  = '{"ERROR": "Too many requests. Please try again later."}'
-RATELIMIT_ENABLE    = True
+RATELIMIT_RATE = "200/m"
+RATELIMIT_RESPONSE = '{"ERROR": "Too many requests. Please try again later."}'
+RATELIMIT_ENABLE = True
 
 
 # Internationalization
-LANGUAGE_CODE   = "en-us"
-TIME_ZONE       = "UTC"
-USE_I18N        = True
-USE_TZ          = True
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
+USE_I18N = True
+USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_ROOT     = os.path.join(BASE_DIR, 'static')
-STATIC_URL      = "static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

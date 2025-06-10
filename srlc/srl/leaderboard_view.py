@@ -21,7 +21,11 @@ def get_main_points(player, runs_list):
     # If a runner has been in multiple co-op speedruns, they *could* be player1 for one run
     # and player2 for the other; this makes it so only the run with the most points is counted.
     if runs.filter(subcategory__contains="Co-Op").exists():
-        exclude = runs.filter(subcategory__contains="Co-Op").order_by("-points").values("id")[1:]
+        exclude = (
+            runs.filter(subcategory__contains="Co-Op")
+            .order_by("-points")
+            .values("id")[1:]
+        )
         runs = runs.exclude(id__in=exclude)
 
     return runs.aggregate(total_points=Sum("points"))["total_points"] or 0
@@ -42,11 +46,11 @@ def leaderboard_entry(player, points, game=None):
     countrycode, countryname = get_country_info(player)
 
     entry = {
-        "player"        : player.name,
-        "nickname"      : player.nickname,
-        "countrycode"   : countrycode,
-        "countryname"   : countryname,
-        "total_points"  : points
+        "player": player.name,
+        "nickname": player.nickname,
+        "countrycode": countrycode,
+        "countryname": countryname,
+        "total_points": points,
     }
 
     if game:
@@ -109,13 +113,15 @@ def profile_four(players_all, games_all, runs_list, game):
         wr_count = il_runs.filter(player_id=player.id, place=1).count()
         if wr_count > 1:
             countrycode, countryname = get_country_info(player)
-            il_lb.append({
-                "player"        : player.name,
-                "nickname"      : player.nickname,
-                "countrycode"   : countrycode,
-                "countryname"   : countryname,
-                "il_wrs"        : wr_count
-            })
+            il_lb.append(
+                {
+                    "player": player.name,
+                    "nickname": player.nickname,
+                    "countrycode": countrycode,
+                    "countryname": countryname,
+                    "il_wrs": wr_count,
+                }
+            )
 
     il_wr_counts = sorted(il_lb, key=lambda x: x["il_wrs"], reverse=True)
 
@@ -148,9 +154,7 @@ def overall_leaderboard(request, players_all, main_runs_all, il_runs_all):
     for i, item in enumerate(leaderboard_page, start=leaderboard_page.start_index()):
         item["rank"] = i
 
-    return render(
-        request, "srl/leaderboard.html", {"leaderboard": leaderboard_page}
-    )
+    return render(request, "srl/leaderboard.html", {"leaderboard": leaderboard_page})
 
 
 def Leaderboard(request, profile=None, game=None):
@@ -175,16 +179,23 @@ def Leaderboard(request, profile=None, game=None):
         - `profile_four`
         - `overall_leaderboard`
     """
-    players_all = Players.objects.only("id", "name", "nickname", "url", "countrycode").all()
+    players_all = Players.objects.only(
+        "id", "name", "nickname", "url", "countrycode"
+    ).all()
 
-    games_all = (
-        Games.objects.only("id", "name", "slug", "release", "defaulttime", "idefaulttime").all()
-    )
+    games_all = Games.objects.only(
+        "id", "name", "slug", "release", "defaulttime", "idefaulttime"
+    ).all()
 
     main_runs_all = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"], place=0)
         .select_related(
-            "game", "category", "player", "player_countrycode", "player2", "player2_countrycode"
+            "game",
+            "category",
+            "player",
+            "player_countrycode",
+            "player2",
+            "player2_countrycode",
         )
         .main()
         .filter(obsolete=False)
@@ -193,7 +204,12 @@ def Leaderboard(request, profile=None, game=None):
     il_runs_all = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"], place=0)
         .select_related(
-            "game", "category", "player", "player_countrycode", "player2", "player2_countrycode"
+            "game",
+            "category",
+            "player",
+            "player_countrycode",
+            "player2",
+            "player2_countrycode",
         )
         .il()
         .filter(obsolete=False)

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import (
+from api.views import (
     API_Categories,
     API_Games,
     API_Levels,

@@ -9,13 +9,14 @@ YOUTUBE_RE = (
     r"(?:\s+height=(\d+))?\](.*?)\[/youtube\]"
 )
 
-YOUTUBE_URL_RE = (
-    re.compile(r"(?:https?://)?(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([\w-]{11})")
+YOUTUBE_URL_RE = re.compile(
+    r"(?:https?://)?(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([\w-]{11})"
 )
 
 
 class YTInlineProcessor(InlineProcessor):
     """Custom processor class that turns the [youtube] tag in .MD into embedded YouTube videos."""
+
     def handleMatch(self, m, data):
         align = m.group(1) or "center"
         width = m.group(2) or "560"
@@ -34,8 +35,9 @@ class YTInlineProcessor(InlineProcessor):
         iframe.set("src", f"https://www.youtube.com/embed/{video_id}")
         iframe.set("frameborder", "0")
         iframe.set(
-            "allow", "accelerometer; autoplay;"
-            "clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            "allow",
+            "accelerometer; autoplay;"
+            "clipboard-write; encrypted-media; gyroscope; picture-in-picture",
         )
         iframe.set("allowfullscreen", "true")
 
@@ -45,5 +47,8 @@ class YTInlineProcessor(InlineProcessor):
 
 class YTEmbedProcessor(Extension):
     """Processor for the [youtube] tag in .MD files."""
+
     def extendMarkdown(self, md):
-        md.inlinePatterns.register(YTInlineProcessor(YOUTUBE_RE, md), "youtube_shortcode", 175)
+        md.inlinePatterns.register(
+            YTInlineProcessor(YOUTUBE_RE, md), "youtube_shortcode", 175
+        )

@@ -28,8 +28,8 @@ def parse_md_file(file_path):
             - author (str): The name (or discoverer) of the document within the .MD file.
             - content_output (array): Outputted content excluding the metadata lines within the .MD.
     """
-    title   = os.path.basename(file_path).replace(".md", "").replace("_", " ").title()
-    author  = None
+    title = os.path.basename(file_path).replace(".md", "").replace("_", " ").title()
+    author = None
     content = []
 
     with open(file_path, "r", encoding="utf-8") as f:
@@ -83,26 +83,32 @@ def render_guides_list(request, game):
                 .first()
             )
 
-            last_modified = (
-                timezone.make_aware(datetime.datetime.fromtimestamp(os.path.getmtime(file_path)))
+            last_modified = timezone.make_aware(
+                datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
             )
 
-            guides.append({
-                "title"     : doc_title,
-                "author"    : player_get if player_get else doc_author,
-                "url"       : (f"/docs/{game}/{filename}").replace(".md", ""),
-                "last_mod"  : last_modified,
-            })
+            guides.append(
+                {
+                    "title": doc_title,
+                    "author": player_get if player_get else doc_author,
+                    "url": (f"/docs/{game}/{filename}").replace(".md", ""),
+                    "last_mod": last_modified,
+                }
+            )
 
     guides.sort(key=lambda x: x["title"].lower())
 
     game_get = Games.objects.filter(slug=game).first()
 
-    return render(request, "guides/docs_list.html", {
-        "game"      : game.upper(),
-        "game_name" : game_get.name if game_get else None,
-        "guides"    : guides
-    })
+    return render(
+        request,
+        "guides/docs_list.html",
+        {
+            "game": game.upper(),
+            "game_name": game_get.name if game_get else None,
+            "guides": guides,
+        },
+    )
 
 
 def render_markdown(request, game, doc):
@@ -122,15 +128,18 @@ def render_markdown(request, game, doc):
     if not os.path.exists(file_path) or ".github" in file_path:
         return redirect("/")
 
-    doc_title, _ , md_content = parse_md_file(file_path)
+    doc_title, _, md_content = parse_md_file(file_path)
 
     html = markdown.markdown(
-        md_content,
-        extensions=["markdown.extensions.extra", YTEmbedProcessor()]
+        md_content, extensions=["markdown.extensions.extra", YTEmbedProcessor()]
     )
 
-    return render(request, "guides/docs.html", {
-        "doc_game"      : game.upper(),
-        "doc_title"     : doc_title,
-        "doc_content"   : html,
-    })
+    return render(
+        request,
+        "guides/docs.html",
+        {
+            "doc_game": game.upper(),
+            "doc_title": doc_title,
+            "doc_content": html,
+        },
+    )

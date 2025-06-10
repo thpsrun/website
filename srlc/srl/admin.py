@@ -38,13 +38,16 @@ class SeriesAdmin(admin.ModelAdmin):
                 - Note: This is a very intensive operation. Automations WILL take time to retrieve\
                 all of the information it can. Once started, let it sit and check the logs regularly
     """
-    list_display    = ["name"]
-    actions         = ["update_series"]
+
+    list_display = ["name"]
+    actions = ["update_series"]
 
     def update_series(self, request, queryset):
         """Initializes the retrieval of all information related to the selected Series."""
         series_ids = [obj.id for obj in queryset]
-        return redirect(reverse("admin:update_series") + f"?series_ids={','.join(series_ids)}")
+        return redirect(
+            reverse("admin:update_series") + f"?series_ids={','.join(series_ids)}"
+        )
 
     update_series.short_description = "Initialize Series Data"
 
@@ -52,8 +55,11 @@ class SeriesAdmin(admin.ModelAdmin):
         """Adds all above methods to custom URLs."""
         urls = super().get_urls()
         custom_urls = [
-            path("update-series/",
-                self.admin_site.admin_view(UpdateSeriesView.as_view()), name="update_series"),
+            path(
+                "update-series/",
+                self.admin_site.admin_view(UpdateSeriesView.as_view()),
+                name="update_series",
+            ),
         ]
         return custom_urls + urls
 
@@ -76,28 +82,35 @@ class GameAdmin(admin.ModelAdmin):
                 - Note 2: All runs that were deleted this way and are also deleted on SRC are
                     forever lost.
     """
-    list_display    = ["name"]
-    actions         = ["update_game", "update_game_runs", "refresh_game_runs"]
-    search_fields   = ["name"]
+
+    list_display = ["name"]
+    actions = ["update_game", "update_game_runs", "refresh_game_runs"]
+    search_fields = ["name"]
 
     def update_game(self, request, queryset):
         """Updates the metadata for all selected games from the SRC API."""
         game_ids = [obj.id for obj in queryset]
-        return redirect(reverse("admin:update_game") + f"?game_ids={','.join(game_ids)}")
+        return redirect(
+            reverse("admin:update_game") + f"?game_ids={','.join(game_ids)}"
+        )
 
     update_game.short_description = "Update Game Metadata"
 
     def update_game_runs(self, request, queryset):
         """Updates the metadata for all runs of all selected games from the SRC API."""
         game_ids = [obj.id for obj in queryset]
-        return redirect(reverse("admin:update_game_runs") + f"?game_ids={','.join(game_ids)}")
+        return redirect(
+            reverse("admin:update_game_runs") + f"?game_ids={','.join(game_ids)}"
+        )
 
     update_game_runs.short_description = "Update Game Runs"
 
     def refresh_game_runs(self, request, queryset):
         """Removes all runs and re-retrieves them from the SRC API to re-import them."""
         game_ids = [obj.id for obj in queryset]
-        return redirect(reverse("admin:refresh_game_runs") + f"?game_ids={','.join(game_ids)}")
+        return redirect(
+            reverse("admin:refresh_game_runs") + f"?game_ids={','.join(game_ids)}"
+        )
 
     refresh_game_runs.short_description = "Reset Game Runs"
 
@@ -105,31 +118,43 @@ class GameAdmin(admin.ModelAdmin):
         """Adds all above methods to custom URLs."""
         urls = super().get_urls()
         custom_urls = [
-            path("update-game/",
-                self.admin_site.admin_view(UpdateGameView.as_view()), name="update_game"),
-            path("update-game-runs/",
-                self.admin_site.admin_view(UpdateGameRunsView.as_view()), name="update_game_runs"),
-            path("refresh-game-runs/",
-                self.admin_site.admin_view(RefreshGameRunsView.as_view()), name="refresh_game_runs")
+            path(
+                "update-game/",
+                self.admin_site.admin_view(UpdateGameView.as_view()),
+                name="update_game",
+            ),
+            path(
+                "update-game-runs/",
+                self.admin_site.admin_view(UpdateGameRunsView.as_view()),
+                name="update_game_runs",
+            ),
+            path(
+                "refresh-game-runs/",
+                self.admin_site.admin_view(RefreshGameRunsView.as_view()),
+                name="refresh_game_runs",
+            ),
         ]
         return custom_urls + urls
 
 
 class DefaultAdmin(admin.ModelAdmin):
     """Admin panel should be used if the Model has no real optons to sort."""
-    list_display    = ["name"]
-    search_fields   = ["name"]
+
+    list_display = ["name"]
+    search_fields = ["name"]
 
 
 class CategoriesAdmin(admin.ModelAdmin):
     """Admin panel used with the `Categories` model."""
-    list_display    = ["name"]
-    search_fields   = ["id"]
-    list_filter     = ["game"]
+
+    list_display = ["name"]
+    search_fields = ["id"]
+    list_filter = ["game"]
 
 
 class RunVariableValuesInline(admin.TabularInline):
     """Admin panel used with the `RunVariableValues` model."""
+
     model = RunVariableValues
     extra = 1
     autocomplete_fields = ["variable", "value"]
@@ -144,10 +169,11 @@ class SpeedrunAdmin(admin.ModelAdmin):
         - formfield_for_foreignkey: Inlines the `RunVariableValues` information and embeds it into
             each specific run.
     """
-    list_display    = ["id"]
-    search_fields   = ["id"]
-    list_filter     = ["runtype", "obsolete", "game", "platform"]
-    inlines         = [RunVariableValuesInline]
+
+    list_display = ["id"]
+    search_fields = ["id"]
+    list_filter = ["runtype", "obsolete", "game", "platform"]
+    inlines = [RunVariableValuesInline]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Inlines the `RunVariableValues` model into a `Runs` object."""
@@ -178,19 +204,24 @@ class PlayersAdmin(admin.ModelAdmin):
                 - Note: This is moderately intensive. Expect this to take time, especially with
                     rate limiting.
     """
-    list_display    = ["name"]
-    actions         = ["update_player", "import_obsolete"]
-    search_fields   = ["name"]
+
+    list_display = ["name"]
+    actions = ["update_player", "import_obsolete"]
+    search_fields = ["name"]
 
     def update_player(self, request, queryset):
         """Updates the metadata for all selected players from the SRC API."""
         player_ids = [obj.id for obj in queryset]
-        return redirect(reverse("admin:update_player") + f"?player_ids={','.join(player_ids)}")
+        return redirect(
+            reverse("admin:update_player") + f"?player_ids={','.join(player_ids)}"
+        )
 
     def import_obsolete(self, request, queryset):
         """Retrieves and imports all non-ranked speedruns into the `Runs` model."""
         player_ids = [obj.id for obj in queryset]
-        return redirect(reverse("admin:import_obsolete") + f"?player_ids={','.join(player_ids)}")
+        return redirect(
+            reverse("admin:import_obsolete") + f"?player_ids={','.join(player_ids)}"
+        )
 
     update_player.short_description = "Update Player Metadata"
     import_obsolete.short_description = "Force Add Obsolete Runs"
@@ -199,10 +230,16 @@ class PlayersAdmin(admin.ModelAdmin):
         """Adds all above methods to custom URLs."""
         urls = super().get_urls()
         custom_urls = [
-            path("update-player/",
-                self.admin_site.admin_view(UpdatePlayerView.as_view()), name="update_player"),
-            path("import-obsolete/",
-                self.admin_site.admin_view(ImportObsoleteView.as_view()), name="import_obsolete")
+            path(
+                "update-player/",
+                self.admin_site.admin_view(UpdatePlayerView.as_view()),
+                name="update_player",
+            ),
+            path(
+                "import-obsolete/",
+                self.admin_site.admin_view(ImportObsoleteView.as_view()),
+                name="import_obsolete",
+            ),
         ]
         return custom_urls + urls
 

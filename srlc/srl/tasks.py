@@ -58,15 +58,15 @@ def update_game(src_game):
             game, _ = Games.objects.update_or_create(
                 id=src_game["id"],
                 defaults={
-                    "name"          : src_game["names"]["international"],
-                    "slug"          : src_game["abbreviation"],
-                    "release"       : src_game["release-date"],
-                    "defaulttime"   : src_game["ruleset"]["default-time"],
-                    "boxart"        : src_game["assets"]["cover-large"]["uri"],
-                    "twitch"        : twitch_get,
-                    "pointsmax"     : points_max,
-                    "ipointsmax"    : ipoints_max,
-                }
+                    "name": src_game["names"]["international"],
+                    "slug": src_game["abbreviation"],
+                    "release": src_game["release-date"],
+                    "defaulttime": src_game["ruleset"]["default-time"],
+                    "boxart": src_game["assets"]["cover-large"]["uri"],
+                    "twitch": twitch_get,
+                    "pointsmax": points_max,
+                    "ipointsmax": ipoints_max,
+                },
             )
 
             plat_names = [plat["id"] for plat in src_game["platforms"]["data"]]
@@ -139,7 +139,9 @@ def update_game_runs(game_id, reset):
         all_runs = Runs.objects.only("id").filter(game=game_id)
 
         series_id = Series.objects.all().first().id
-        series_info = src_api(f"https://speedrun.com/api/v1/series/{series_id}/games?max=50")
+        series_info = src_api(
+            f"https://speedrun.com/api/v1/series/{series_id}/games?max=50"
+        )
         series_list = []
 
         for game in series_info:
@@ -163,12 +165,12 @@ def update_category(category, game_id):
         Categories.objects.update_or_create(
             id=category["id"],
             defaults={
-                "name"  : category["name"],
-                "game"  : Games.objects.only("id").get(id=game_id),
-                "type"  : category["type"],
-                "url"   : category["weblink"],
-                "rules" : category["rules"],
-            }
+                "name": category["name"],
+                "game": Games.objects.only("id").get(id=game_id),
+                "type": category["type"],
+                "url": category["weblink"],
+                "rules": category["rules"],
+            },
         )
 
 
@@ -182,10 +184,7 @@ def update_platform(platform):
     """
     with transaction.atomic():
         Platforms.objects.update_or_create(
-            id=platform["id"],
-            defaults={
-                "name" : platform["name"]
-            }
+            id=platform["id"], defaults={"name": platform["name"]}
         )
 
 
@@ -203,11 +202,11 @@ def update_level(level, game_id):
         Levels.objects.update_or_create(
             id=level["id"],
             defaults={
-                "name"  : level["name"],
-                "game"  : Games.objects.only("id").get(id=game_id),
-                "url"   : level["weblink"],
-                "rules" : level["rules"],
-            }
+                "name": level["name"],
+                "game": Games.objects.only("id").get(id=game_id),
+                "url": level["weblink"],
+                "rules": level["rules"],
+            },
         )
 
 
@@ -224,7 +223,8 @@ def update_variable(gameid, variable):
         - `update_variable_value`
     """
     cat_get = (
-        None if variable["category"] is None
+        None
+        if variable["category"] is None
         else Categories.objects.only("id").get(id=variable["category"])
     )
 
@@ -232,12 +232,12 @@ def update_variable(gameid, variable):
         Variables.objects.update_or_create(
             id=variable["id"],
             defaults={
-                "name"      : variable["name"],
-                "game"      : Games.objects.only("id").get(id=gameid),
-                "cat"       : cat_get,
-                "all_cats"  : True if variable["category"] is None else False,
-                "scope"     : variable["scope"]["type"],
-            }
+                "name": variable["name"],
+                "game": Games.objects.only("id").get(id=gameid),
+                "cat": cat_get,
+                "all_cats": True if variable["category"] is None else False,
+                "scope": variable["scope"]["type"],
+            },
         )
 
     if variable["is-subcategory"]:
@@ -258,10 +258,10 @@ def update_variable_value(variable, value):
         VariableValues.objects.update_or_create(
             value=value,
             defaults={
-                "var"   : Variables.objects.get(id=variable["id"]),
-                "name"  : variable["values"]["values"][value]["label"],
-                "rules" : variable["values"]["values"][value]["rules"],
-            }
+                "var": Variables.objects.get(id=variable["id"]),
+                "name": variable["values"]["values"][value]["label"],
+                "rules": variable["values"]["values"][value]["rules"],
+            },
         )
 
 
@@ -285,6 +285,7 @@ def update_category_runs(game_id, category, il_check):
         - `src_api`
         - `invoke_runs`
     """
+
     def iterate_combinations(var_dict):
         if not var_dict:
             return [[]]
@@ -293,10 +294,7 @@ def update_category_runs(game_id, category, il_check):
         values_lists = [var_dict[key] for key in keys]
 
         combinations = product(*values_lists)
-        return [
-            list(zip(keys, values))
-            for values in combinations
-        ]
+        return [list(zip(keys, values)) for values in combinations]
 
     def get_variable_combinations(scope_types, variable_list):
         lb_list = {}
@@ -329,11 +327,15 @@ def update_category_runs(game_id, category, il_check):
         return src_api(url)
 
     is_il = category["type"] == "per-level"
-    scope_types = {"global", "all-level", "single-level"} if is_il else {"global", "full-game"}
+    scope_types = (
+        {"global", "all-level", "single-level"} if is_il else {"global", "full-game"}
+    )
 
     if is_il:
         for il in il_check:
-            variable_list = src_api(f"https://www.speedrun.com/api/v1/levels/{il['id']}/variables")
+            variable_list = src_api(
+                f"https://www.speedrun.com/api/v1/levels/{il['id']}/variables"
+            )
             combo_list = get_variable_combinations(scope_types, variable_list)
 
             if combo_list:
@@ -343,9 +345,7 @@ def update_category_runs(game_id, category, il_check):
                     )
                     chain(invoke_runs.s(game_id, category, leaderboard))()
             else:
-                leaderboard = fetch_leaderboard(
-                    game_id, category["id"], il["id"]
-                )
+                leaderboard = fetch_leaderboard(game_id, category["id"], il["id"])
                 chain(invoke_runs.s(game_id, category, leaderboard))()
     else:
         variable_list = src_api(
@@ -355,14 +355,10 @@ def update_category_runs(game_id, category, il_check):
 
         if combo_list:
             for combo in combo_list:
-                leaderboard = fetch_leaderboard(
-                    game_id, category["id"], combo
-                )
+                leaderboard = fetch_leaderboard(game_id, category["id"], combo)
                 chain(invoke_runs.s(game_id, category, leaderboard))()
         else:
-            leaderboard = fetch_leaderboard(
-                game_id, category["id"]
-            )
+            leaderboard = fetch_leaderboard(game_id, category["id"])
             chain(invoke_runs.s(game_id, category, leaderboard))()
 
 
@@ -410,24 +406,20 @@ def update_player(player, download_pfp=True):
         country = location.get("country") if location is not None else None
         c_code = country.get("code") if country is not None else None
 
-        cc = (
-            standardize_tag(c_code.replace("/", "_"))
-            if c_code is not None
-            else None
-        )
+        cc = standardize_tag(c_code.replace("/", "_")) if c_code is not None else None
 
         if isinstance(cc, str) and cc.startswith("ca-"):
             cc = "ca"
 
         if cc is not None:
-            cc_name = player_data.get("location").get("country").get("names").get("international")
+            cc_name = (
+                player_data.get("location")
+                .get("country")
+                .get("names")
+                .get("international")
+            )
             with transaction.atomic():
-                CountryCodes.objects.update_or_create(
-                    id=cc,
-                    defaults={
-                        "name" : cc_name
-                    }
-                )
+                CountryCodes.objects.update_or_create(id=cc, defaults={"name": cc_name})
 
         try:
             cc_get = CountryCodes.objects.only("id").get(id=cc)
@@ -438,32 +430,35 @@ def update_player(player, download_pfp=True):
 
         twitch_get = (
             player_data.get("twitch", {}).get("uri")
-            if player_data.get("twitch") is not None else None
+            if player_data.get("twitch") is not None
+            else None
         )
 
         youtube_get = (
             player_data.get("youtube", {}).get("uri")
-            if player_data.get("youtube") is not None else None
+            if player_data.get("youtube") is not None
+            else None
         )
 
         twitter_get = (
             player_data.get("twitter", {}).get("uri")
-            if player_data.get("twitter") is not None else None
+            if player_data.get("twitter") is not None
+            else None
         )
 
         with transaction.atomic():
             Players.objects.update_or_create(
                 id=player,
                 defaults={
-                    "name"          : player_data["names"]["international"],
-                    "url"           : player_data["weblink"],
-                    "countrycode"   : cc_get,
-                    "pfp"           : file_path if download_pfp is True else None,
-                    "pronouns"      : pronouns_get,
-                    "twitch"        : twitch_get,
-                    "youtube"       : youtube_get,
-                    "twitter"       : twitter_get,
-                }
+                    "name": player_data["names"]["international"],
+                    "url": player_data["weblink"],
+                    "countrycode": cc_get,
+                    "pfp": file_path if download_pfp is True else None,
+                    "pronouns": pronouns_get,
+                    "twitch": twitch_get,
+                    "youtube": youtube_get,
+                    "twitter": twitter_get,
+                },
             )
     else:
         raise AttributeError
@@ -490,11 +485,14 @@ def invoke_runs(game_id, category, leaderboard):
         - `points_formula`
         - `time_conversion`
     """
+
     def build_var_name(base_name, run_variables):
         if len(run_variables) > 0:
             var_name = base_name + " ("
             for key, value in run_variables.items():
-                value_name = VariableValues.objects.only("name", "value").get(value=value).name
+                value_name = (
+                    VariableValues.objects.only("name", "value").get(value=value).name
+                )
                 var_name += f"{value_name}, "
 
             return var_name.removesuffix(", ") + ")"
@@ -505,11 +503,9 @@ def invoke_runs(game_id, category, leaderboard):
         wr_records = leaderboard["runs"][0]
         pb_records = leaderboard["runs"][1:]
         wr_players = wr_records["run"]["players"]
-        game_get   = (
-            Games.objects
-            .only("id", "pointsmax", "ipointsmax", "defaulttime", "idefaulttime")
-            .get(id=game_id)
-        )
+        game_get = Games.objects.only(
+            "id", "pointsmax", "ipointsmax", "defaulttime", "idefaulttime"
+        ).get(id=game_id)
 
         if "category extension" in wr_records["run"]["game"].lower():
             wr_points = game_get.pointsmax
@@ -572,17 +568,15 @@ def invoke_runs(game_id, category, leaderboard):
                 player_get = None
 
             try:
-                platform_get = (
-                    Platforms.objects.only("id")
-                    .get(id=wr_records["run"]["system"]["platform"])
+                platform_get = Platforms.objects.only("id").get(
+                    id=wr_records["run"]["system"]["platform"]
                 )
             except Platforms.DoesNotExist:
                 platform_get = None
 
             try:
-                approver_get = (
-                    Players.objects.only("id")
-                    .get(id=wr_records["run"]["status"]["examiner"])
+                approver_get = Players.objects.only("id").get(
+                    id=wr_records["run"]["status"]["examiner"]
                 )
             except Players.DoesNotExist:
                 approver_get = None
@@ -598,11 +592,17 @@ def invoke_runs(game_id, category, leaderboard):
             c_rta, c_nl, c_igt = time_conversion(run_times)
 
             if category["type"] == "per-level":
-                level = Levels.objects.only("id", "name").get(id=wr_records["run"]["level"])
-                if len(
-                    Categories.objects.only("id")
-                    .filter(game=game_get.id, type="per-level")
-                ) > 1:
+                level = Levels.objects.only("id", "name").get(
+                    id=wr_records["run"]["level"]
+                )
+                if (
+                    len(
+                        Categories.objects.only("id").filter(
+                            game=game_get.id, type="per-level"
+                        )
+                    )
+                    > 1
+                ):
                     var_level = f"{level.name} ({category["name"]})"
                 else:
                     var_level = f"{level.name}"
@@ -612,29 +612,29 @@ def invoke_runs(game_id, category, leaderboard):
                 var_name = build_var_name(base_name, wr_records["run"]["values"])
 
             default = {
-                "runtype"       : "main" if category["type"] == "per-game" else "il",
-                "player"        : player_get,
-                "game"          : game_get,
-                "category"      : Categories.objects.only("id").get(id=category["id"]),
-                "subcategory"   : var_name,
-                "place"         : 1,
-                "url"           : wr_records["run"]["weblink"],
-                "video"         : wr_video,
-                "date"          : wr_date,
-                "v_date"        : wr_records["run"]["status"]["verify-date"],
-                "time"          : c_rta,
-                "time_secs"     : wr_records["run"]["times"]["realtime_t"],
-                "timenl"        : c_nl,
-                "timenl_secs"   : wr_records["run"]["times"]["realtime_noloads_t"],
-                "timeigt"       : c_igt,
-                "timeigt_secs"  : wr_records["run"]["times"]["ingame_t"],
-                "points"        : wr_points,
-                "platform"      : platform_get,
-                "emulated"      : wr_records["run"]["system"]["emulated"],
-                "obsolete"      : False,
-                "vid_status"    : wr_records["run"]["status"]["status"],
-                "approver"      : approver_get,
-                "description"   : wr_records["run"]["comment"],
+                "runtype": "main" if category["type"] == "per-game" else "il",
+                "player": player_get,
+                "game": game_get,
+                "category": Categories.objects.only("id").get(id=category["id"]),
+                "subcategory": var_name,
+                "place": 1,
+                "url": wr_records["run"]["weblink"],
+                "video": wr_video,
+                "date": wr_date,
+                "v_date": wr_records["run"]["status"]["verify-date"],
+                "time": c_rta,
+                "time_secs": wr_records["run"]["times"]["realtime_t"],
+                "timenl": c_nl,
+                "timenl_secs": wr_records["run"]["times"]["realtime_noloads_t"],
+                "timeigt": c_igt,
+                "timeigt_secs": wr_records["run"]["times"]["ingame_t"],
+                "points": wr_points,
+                "platform": platform_get,
+                "emulated": wr_records["run"]["system"]["emulated"],
+                "obsolete": False,
+                "vid_status": wr_records["run"]["status"]["status"],
+                "approver": approver_get,
+                "description": wr_records["run"]["comment"],
             }
 
             lrt_fix = False
@@ -660,16 +660,13 @@ def invoke_runs(game_id, category, leaderboard):
             # This is a temporary fix for an issue with the SRC API where runs that have LRT but
             # no RTA time will have the LRT set to RTA instead. Really dumb.
             if lrt_fix and default["time_secs"] > 0 and default["timenl_secs"] == 0:
-                default["time"]         = "0"
-                default["time_secs"]    = 0.0
-                default["timenl"]       = c_nl
-                default["timenl_secs"]  = wr_records["run"]["times"]["realtime_t"]
+                default["time"] = "0"
+                default["time_secs"] = 0.0
+                default["timenl"] = c_nl
+                default["timenl_secs"] = wr_records["run"]["times"]["realtime_t"]
 
             with transaction.atomic():
-                run_obj, _ = Runs.objects.update_or_create(
-                    id=run_id,
-                    defaults=default
-                )
+                run_obj, _ = Runs.objects.update_or_create(id=run_id, defaults=default)
 
             # If the world record has specific variable:value pairs, this will get them and
             # place them into a special RunsVariableValues model that is linked back to the
@@ -680,9 +677,7 @@ def invoke_runs(game_id, category, leaderboard):
                     value = VariableValues.objects.get(value=val_id)
 
                     RunVariableValues.objects.update_or_create(
-                        run=run_obj,
-                        variable=variable,
-                        value=value
+                        run=run_obj, variable=variable, value=value
                     )
 
         for pb in pb_records:
@@ -692,9 +687,11 @@ def invoke_runs(game_id, category, leaderboard):
                 if pb_players is not None:
                     for player in pb_players:
                         if player["rel"] != "guest":
-                            invoke_players.delay(leaderboard["players"]["data"], player["id"])
+                            invoke_players.delay(
+                                leaderboard["players"]["data"], player["id"]
+                            )
 
-                    run_id  = pb["run"]["id"]
+                    run_id = pb["run"]["id"]
                     player1 = pb_players[0].get("id")
                     player2 = (
                         pb_players[1]["id"]
@@ -703,7 +700,7 @@ def invoke_runs(game_id, category, leaderboard):
                     )
 
                     pb_secs = pb["run"]["times"]["primary_t"]
-                    points  = points_formula(wr_secs, pb_secs, wr_points)
+                    points = points_formula(wr_secs, pb_secs, wr_points)
 
                     videos = pb.get("run").get("videos")
                     pb_video = (
@@ -718,17 +715,15 @@ def invoke_runs(game_id, category, leaderboard):
                         player_get = None
 
                     try:
-                        platform_get = (
-                            Platforms.objects.only("id")
-                            .get(id=pb["run"]["system"]["platform"])
+                        platform_get = Platforms.objects.only("id").get(
+                            id=pb["run"]["system"]["platform"]
                         )
                     except Platforms.DoesNotExist:
                         platform_get = None
 
                     try:
-                        approver_get = (
-                            Players.objects.only("id")
-                            .get(id=pb["run"]["status"]["examiner"])
+                        approver_get = Players.objects.only("id").get(
+                            id=pb["run"]["status"]["examiner"]
                         )
                     except Players.DoesNotExist:
                         approver_get = None
@@ -744,12 +739,18 @@ def invoke_runs(game_id, category, leaderboard):
                     c_rta, c_nl, c_igt = time_conversion(run_times)
 
                     if category["type"] == "per-level":
-                        level = Levels.objects.only("id", "name").get(id=pb["run"]["level"])
+                        level = Levels.objects.only("id", "name").get(
+                            id=pb["run"]["level"]
+                        )
 
-                        if len(
-                            Categories.objects.only("id")
-                            .filter(game=game_get.id, type="per-level")
-                        ) > 1:
+                        if (
+                            len(
+                                Categories.objects.only("id").filter(
+                                    game=game_get.id, type="per-level"
+                                )
+                            )
+                            > 1
+                        ):
                             var_level = f"{level.name} ({category["name"]})"
                         else:
                             var_level = f"{level.name}"
@@ -759,29 +760,31 @@ def invoke_runs(game_id, category, leaderboard):
                         var_name = build_var_name(base_name, pb["run"]["values"])
 
                     default = {
-                        "runtype"       : "main" if category["type"] == "per-game" else "il",
-                        "player"        : player_get,
-                        "game"          : game_get,
-                        "category"      : Categories.objects.only("id").get(id=category["id"]),
-                        "subcategory"   : var_name,
-                        "place"         : pb["place"],
-                        "url"           : pb["run"]["weblink"],
-                        "video"         : pb_video,
-                        "date"          : pb_date,
-                        "v_date"        : pb["run"]["status"]["verify-date"],
-                        "time"          : c_rta,
-                        "time_secs"     : pb["run"]["times"]["realtime_t"],
-                        "timenl"        : c_nl,
-                        "timenl_secs"   : pb["run"]["times"]["realtime_noloads_t"],
-                        "timeigt"       : c_igt,
-                        "timeigt_secs"  : pb["run"]["times"]["ingame_t"],
-                        "points"        : points,
-                        "platform"      : platform_get,
-                        "emulated"      : pb["run"]["system"]["emulated"],
-                        "obsolete"      : False,
-                        "vid_status"    : pb["run"]["status"]["status"],
-                        "approver"      : approver_get,
-                        "description"   : pb["run"]["comment"],
+                        "runtype": "main" if category["type"] == "per-game" else "il",
+                        "player": player_get,
+                        "game": game_get,
+                        "category": Categories.objects.only("id").get(
+                            id=category["id"]
+                        ),
+                        "subcategory": var_name,
+                        "place": pb["place"],
+                        "url": pb["run"]["weblink"],
+                        "video": pb_video,
+                        "date": pb_date,
+                        "v_date": pb["run"]["status"]["verify-date"],
+                        "time": c_rta,
+                        "time_secs": pb["run"]["times"]["realtime_t"],
+                        "timenl": c_nl,
+                        "timenl_secs": pb["run"]["times"]["realtime_noloads_t"],
+                        "timeigt": c_igt,
+                        "timeigt_secs": pb["run"]["times"]["ingame_t"],
+                        "points": points,
+                        "platform": platform_get,
+                        "emulated": pb["run"]["system"]["emulated"],
+                        "obsolete": False,
+                        "vid_status": pb["run"]["status"]["status"],
+                        "approver": approver_get,
+                        "description": pb["run"]["comment"],
                     }
 
                     lrt_fix = False
@@ -805,16 +808,19 @@ def invoke_runs(game_id, category, leaderboard):
                     # LRT_TEMP_FIX
                     # This is a temporary fix for an issue with the SRC API where runs that have LRT
                     # but no RTA time will have the LRT set to RTA instead. Really dumb.
-                    if lrt_fix and default["time_secs"] > 0 and default["timenl_secs"] == 0:
-                        default["time"]         = "0"
-                        default["time_secs"]    = 0.0
-                        default["timenl"]       = c_nl
-                        default["timenl_secs"]  = pb["run"]["times"]["realtime_t"]
+                    if (
+                        lrt_fix
+                        and default["time_secs"] > 0
+                        and default["timenl_secs"] == 0
+                    ):
+                        default["time"] = "0"
+                        default["time_secs"] = 0.0
+                        default["timenl"] = c_nl
+                        default["timenl_secs"] = pb["run"]["times"]["realtime_t"]
 
                     with transaction.atomic():
                         run_obj, _ = Runs.objects.update_or_create(
-                            id=run_id,
-                            defaults=default
+                            id=run_id, defaults=default
                         )
 
                     # If the speedrun has specific variable:value pairs, this will get them and
@@ -826,9 +832,7 @@ def invoke_runs(game_id, category, leaderboard):
                             value = VariableValues.objects.get(value=val_id)
 
                             RunVariableValues.objects.update_or_create(
-                                run=run_obj,
-                                variable=variable,
-                                value=value
+                                run=run_obj, variable=variable, value=value
                             )
 
 
@@ -886,14 +890,19 @@ def invoke_players(players_data, player=None):
                 cc = "ca"
 
             if cc is not None:
-                cc_name = p_data.get("location").get("country").get("names").get("international")
+                cc_name = (
+                    p_data.get("location")
+                    .get("country")
+                    .get("names")
+                    .get("international")
+                )
 
                 with transaction.atomic():
                     CountryCodes.objects.update_or_create(
                         id=cc,
                         defaults={
-                            "name" : cc_name,
-                        }
+                            "name": cc_name,
+                        },
                     )
 
             try:
@@ -905,32 +914,35 @@ def invoke_players(players_data, player=None):
 
             twitch_get = (
                 p_data.get("twitch", {}).get("uri")
-                if p_data.get("twitch") is not None else None
+                if p_data.get("twitch") is not None
+                else None
             )
 
             youtube_get = (
                 p_data.get("youtube", {}).get("uri")
-                if p_data.get("youtube") is not None else None
+                if p_data.get("youtube") is not None
+                else None
             )
 
             twitter_get = (
                 p_data.get("twitter", {}).get("uri")
-                if p_data.get("twitter") is not None else None
+                if p_data.get("twitter") is not None
+                else None
             )
 
             with transaction.atomic():
                 Players.objects.update_or_create(
                     id=player,
                     defaults={
-                        "name"        : p_data["names"]["international"],
-                        "url"         : p_data["weblink"],
-                        "countrycode" : cc_get,
-                        "pfp"         : file_path,
-                        "pronouns"    : pronouns_get,
-                        "twitch"      : twitch_get,
-                        "youtube"     : youtube_get,
-                        "twitter"     : twitter_get,
-                    }
+                        "name": p_data["names"]["international"],
+                        "url": p_data["weblink"],
+                        "countrycode": cc_get,
+                        "pfp": file_path,
+                        "pronouns": pronouns_get,
+                        "twitch": twitch_get,
+                        "youtube": youtube_get,
+                        "twitter": twitter_get,
+                    },
                 )
 
 
@@ -960,14 +972,14 @@ def import_obsolete(player, download_pfp=False):
 
     if isinstance(run_data, dict) and run_data is not None:
         all_runs = run_data["data"]
-        offset   = 0
+        offset = 0
 
         while run_data["pagination"]["max"] == run_data["pagination"]["size"]:
             offset += 200
             run_data = src_api(
                 f"https://speedrun.com/api/v1/"
                 f"runs?user={player}&max=200&offset={offset}?embed=players",
-                True
+                True,
             )
 
             all_runs.extend(run_data["data"])
@@ -1011,5 +1023,6 @@ def import_obsolete(player, download_pfp=False):
                                 lb_info["level"]["data"],
                                 run["values"],
                                 obsolete,
-                                points_reset, download_pfp
+                                points_reset,
+                                download_pfp,
                             )

@@ -109,12 +109,12 @@ def time_conversion(time):
     Called Functions:
         - `convert_time`
     """
-    realtime    = time["realtime_t"]
+    realtime = time["realtime_t"]
     realtime_nl = time["realtime_noloads_t"]
-    ingame      = time["ingame_t"]
+    ingame = time["ingame_t"]
 
-    rta     = convert_time(realtime) if realtime > 0 else 0
+    rta = convert_time(realtime) if realtime > 0 else 0
     noloads = convert_time(realtime_nl) if realtime_nl > 0 else 0
-    igt     = convert_time(ingame) if ingame > 0 else 0
+    igt = convert_time(ingame) if ingame > 0 else 0
 
     return rta, noloads, igt
