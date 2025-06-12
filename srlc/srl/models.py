@@ -324,7 +324,6 @@ class Players(models.Model):
     awards = models.ManyToManyField(
         Awards,
         verbose_name="Awards",
-        default=False,
         blank=True,
         help_text=(
             "Earned awards can be selected here. All selected awards will appear on "
