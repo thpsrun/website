@@ -53,6 +53,14 @@ def normalize_src(id, series_id_list=None):
             series_id_list.append(game["id"])
 
     run_info = src_api(f"https://speedrun.com/api/v1/runs/{id}?embed=players")
+
+    if run_info == 404:
+        if Runs.objects.filter(id=id).exists():
+            default = {"vid_status": "rejected"}
+            with transaction.atomic():
+                Runs.objects.update_or_create(id=id, defaults=default)
+                return
+
     try:
         if run_info["game"] in series_id_list:
             if not Games.objects.only("id").filter(id=run_info["game"]).exists():
