@@ -276,7 +276,7 @@ def invoke_single_run(
 
         try:
             run_video = (
-                run.get("run").get("videos").get("links")[0].get("uri")
+                run.get("run").get("videos").get("links")[-1].get("uri")
                 if run.get("run").get("videos") is not None
                 or run.get("run").get("videos").get("text") != "N/A"
                 else None

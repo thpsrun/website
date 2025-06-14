@@ -52,3 +52,4 @@ services:
 networks:
   srlc:
     driver: bridge
+    external: true

@@ -545,7 +545,7 @@ def invoke_runs(game_id, category, leaderboard):
 
             try:
                 if videos is not None and videos.get("text") != "N/A":
-                    wr_video = videos.get("links", [])[0].get("uri")
+                    wr_video = videos.get("links", [])[-1].get("uri")
                 else:
                     wr_video = None
             except Exception:
@@ -703,11 +703,13 @@ def invoke_runs(game_id, category, leaderboard):
                     points = points_formula(wr_secs, pb_secs, wr_points)
 
                     videos = pb.get("run").get("videos")
-                    pb_video = (
-                        videos["links"][0]["uri"]
-                        if videos and videos.get("text") != "N/A"
-                        else None
-                    )
+                    try:
+                        if videos is not None and videos.get("text") != "N/A":
+                            pb_video = videos.get("links", [])[-1].get("uri")
+                        else:
+                            pb_video = None
+                    except Exception:
+                        pb_video = None
 
                     try:
                         player_get = Players.objects.only("id").get(id=player1)
