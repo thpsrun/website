@@ -15,7 +15,8 @@ COPY docker/start.sh /app/start.sh
 
 RUN pip install --no-cache-dir -r /tmp/requirements.txt \
     && rm -rf /tmp/requirements.txt \
-    && useradd -U app_user \
+    && groupadd -g 1002 app_user \
+    && useradd -u 1002 -g 1002 -U app_user \
     && install -d -m 0755 -o app_user -g app_user /app
 
 WORKDIR /app
