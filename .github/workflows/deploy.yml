@@ -78,23 +78,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          version: latest
+
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           ref: main
+  
+      - name: SSH - Deploy - Restart Docker
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            cd ~/website
+            git pull origin main
 
-      - name: Pull Latest Changes
+            echo "Restarting Docker containers..."
+            docker compose down
+            docker compose -f docker-compose.PROD.yml up -d --build
+
+      - name: Cleanup Docker
         run: |
-          cd ~/website
-          git pull origin main
-
-      - name: Build and Restart Docker Containers
-        run: |
-          cd ~/website
-          docker compose down
-          docker compose pull
-          docker compose up -d --build
-
-      - name: Cleanup Unused Docker Resources
-        run: 
+          echo "Cleaning up Docker system..."
           docker system prune -f
