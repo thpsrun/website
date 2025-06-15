@@ -1,0 +1,53 @@
+name: Feature Request
+description: Suggest a new feature for the project!
+title: "[Request]: "
+labels: ["feature request", "enhancement", "feature"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for considering improvements to the project!
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Guidelines
+      description: By submitting this issue, you agree to follow the [thps.run Contributing Guidelines](https://github.com/thpsrun/website/.github/blob/main/CONTRIBUTING.md).
+      options:
+        - label: I agree to follow this project's Contributing Guidelines.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What do you want added? Include as much information as possible in a concise matter!
+      placeholder: What is your idea??
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Is this request related to a specific problem?
+      placeholder: What problem?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should the problem be solved?
+      placeholder: How should this be implemented?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other options are there? What else have you considered?
+      placeholder: What other options? Is there a reason they won't work?
+    validations:
+      required: true

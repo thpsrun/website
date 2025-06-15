@@ -6,17 +6,18 @@ function updateLeaderboard(selectedSubcategory) {
     var leaderboardBody = leaderboardTable.getElementsByTagName("tbody")[0];
     leaderboardBody.innerHTML = '';
 
-    var filteredRuns = runs.filter(function(run) {
+    var filteredRuns = runs.filter(function (run) {
         return run.subcategory === selectedSubcategory;
     });
 
-    filteredRuns.forEach(function(run, index) {          
-        var row         = leaderboardBody.insertRow();
-        var rankCell    = row.insertCell();
-        var playerCell  = row.insertCell();
-        var timeCell    = row.insertCell();
-        var dateCell    = row.insertCell();
-        var pointsCell  = row.insertCell();
+    filteredRuns.forEach(function (run, index) {
+        var row = leaderboardBody.insertRow();
+        var rankCell = row.insertCell();
+        var playerCell = row.insertCell();
+        var timeCell = row.insertCell();
+        var dateCell = row.insertCell();
+        var pointsCell = row.insertCell();
+        var videosCell = row.insertCell();
 
         rankCell.textContent = run.place;
 
@@ -26,19 +27,19 @@ function updateLeaderboard(selectedSubcategory) {
                 const linkText = nickname || player;
                 return '<a href="/player/' + player + '">' + linkText + '</a>';
             };
-        
+
             const getCountryFlag = (countrycode) => {
                 if (!countrycode) {
                     return "";
                 }
-              
-                const countryFlag = countrycode === "vh" ? 
-                    `<img src="https://www.speedrun.com/images/flags/vh.png" alt="${run.countryname}" title="${run.countryname}" height="15" />` : 
+
+                const countryFlag = countrycode === "vh" ?
+                    `<img src="../srl/misc/vh.png" alt="${run.countryname}" title="${run.countryname}" height="15" />` :
                     `<img src="https://flagcdn.com/h20/${countrycode}.png" alt="${run.countryname}" title="${run.countryname}" height="15" />`;
-              
+
                 return countryFlag;
-              };
-            
+            };
+
             const player1Link = getPlayerLink(run.player, run.nickname);
             const player1Content = getCountryFlag(run.countrycode) + ' ' + player1Link;
 
@@ -72,13 +73,35 @@ function updateLeaderboard(selectedSubcategory) {
         } else {
             dateCell.innerHTML = ' --- ';
         }
+
+        const getVideos = (video, other) => {
+            let videoContent = "";
+
+            if (video || other) {
+                if (other) {
+                    videoContent += `<a href="${other}" target="_blank" style="padding-right: 5px;"><i class="fa-solid fa-cloud" alt="Archived Video" title="Archived Video"></i></a>`;
+                }
+
+                if (video.includes("yout")) {
+                    videoContent += `<a href="${video}" target="_blank"><i class="fab fa-youtube fa-lg" alt="YouTube Video" title="YouTube Video"></i></a>`;
+                } else if (video.includes("twitch")) {
+                    videoContent += `<a href="${video}" target="_blank"><i class="fab fa-twitch fa-lg" alt="Twitch Video" title="Twitch Video"></i></a>`;
+                }
+
+                return videoContent;
+            } else {
+                return "";
+            }
+        };
+
+        videosCell.innerHTML = getVideos(run.video, run.other_video);
     });
 }
 
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     var subcategoryDropdown = document.getElementById("subcategory-dropdown");
 
-    subcategoryDropdown.addEventListener("change", function() {
+    subcategoryDropdown.addEventListener("change", function () {
         var selectedSubcategory = subcategoryDropdown.value;
         updateLeaderboard(selectedSubcategory);
     });

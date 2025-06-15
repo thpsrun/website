@@ -2,12 +2,12 @@
     <head>
         {% load static %}
         <meta charset="utf-8">
-        <meta name="description" content="THPS Speedrun Leaderboards">
-        <meta name="author" content="THPS Speedrun Community">
+        <meta name="description" content="{{ ENV_WEBSITE_DESCRIPTION }}">
+        <meta name="author" content="{{ ENV_WEBSITE_AUTHOR }}">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="keywords" content="speedrun, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+        <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
 
-        <title>Regional Leaderboards - thps.run</title>
+        <title>Regional Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
 
         <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
 

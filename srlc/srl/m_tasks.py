@@ -1,14 +1,18 @@
-######################################################################################################################################################
-### File Name: srl/m_tasks.py
-### Author: ThePackle
-### Description: Includes functions (mini tasks) that are called throughout other tasks.py or views.py files.
-### Dependencies: None.
-######################################################################################################################################################
-import time,math,requests
+import math
+import time
 
-### convert_time is used a few times through the project, mainly to take integer seconds and convert them to a string to call on the website.
-### For example: time_secs of a run is 69.420; this will take the float and conver it to say "1m 09s 420ms"
+import requests
+
+
 def convert_time(secs):
+    """Converts the time given into a string.
+
+    Args:
+        secs (float): The seconds of a speedrun time.
+
+    Returns:
+        final_time (str): The processed string format for a speedrun.
+    """
     hours, remainder = divmod(secs, 3600)
     minutes, seconds = divmod(remainder, 60)
     seconds, milliseconds = divmod(round(seconds, 3) * 1000, 1000)
@@ -17,46 +21,100 @@ def convert_time(secs):
         hours += math.floor(minutes / 60)
         minutes = minutes % 60
 
-    if hours >= 1: final_time = f"{int(hours)}h "
-    else: final_time = ""
+    if hours >= 1:
+        final_time = f"{int(hours)}h "
+    else:
+        final_time = ""
 
-    if minutes == 0: final_time += "0m "
-    elif minutes < 10: final_time += f"{int(minutes)}m "
-    else: final_time += f"{int(minutes)}m "
+    if minutes == 0:
+        final_time += "0m "
+    elif minutes < 10:
+        final_time += f"{int(minutes)}m "
+    else:
+        final_time += f"{int(minutes)}m "
 
-    if seconds < 10: final_time += f"0{int(seconds)}s "
-    else: final_time += f"{int(seconds)}s "
+    if seconds < 10:
+        final_time += f"0{int(seconds)}s "
+    else:
+        final_time += f"{int(seconds)}s "
 
-    if milliseconds > 0: final_time += f"{int(milliseconds)}ms"
-    else: final_time = final_time.rstrip(" ")
+    if milliseconds > 0:
+        final_time += f"{int(milliseconds)}ms"
+    else:
+        final_time = final_time.rstrip(" ")
 
     return final_time
 
-### src_api is a custom function that is called a LOT through the project.
-### Since this project currently uses the v1 endpoint and not a library like speedruncompy, this just provides a consistent function.
-### If a 402 or 503 status code is given, then it is rate limited and will need to wait.
-def src_api(url,paginate=False):
+
+def src_api(url, paginate=False):
+    """Processes a Speedrun.com API GET request to return values from any of its endpoints.
+
+    This function is primarily used to connect to a Speedrun.com API endpoint via GET. However,
+    this can be used if the API call returns valid HTTP Request Codes for `420: Enhance Your Calm`
+    and `503: Service Unavailable` *and* returns data in JSON format with the "data" key value.
+
+    Args:
+        url (str): The complete URL of the API endpoint (usually Speedrun.com) being connected to.
+        paginate (bool): False by default. Some use cases related to pagination *OR* to disable
+            using the "data" key value lookup.
+
+    Returns:
+        response (dict): Dictionary/JSON object from the requested API.
+    """
     response = requests.get(url)
 
     while response.status_code == 420 or response.status_code == 503:
-        print("Rate limit exceeded, waiting 60 seconds...")
+        print("[DEBUG] Rate limit exceeded, waiting 60 seconds...")
         time.sleep(60)
         response = requests.get(url)
-    
-    if response.status_code != 200:
-        print(f"Error: {response}")
 
+    if response.status_code != 200:
         response = response.status_code
         return response
-    
-    if paginate == False:
+
+    if paginate is False:
         response = response.json()["data"]
     else:
         response = response.json()
 
     return response
 
-### points_formula is the formula used to determine the points for a run.
-### It is used a couple of times throughout the app, so this is to consolidate it in one place to make it easier to modify.
-def points_formula(wr,run,max_points):
+
+def points_formula(wr, run, max_points):
+    """Processes points based on algorithmic formula
+
+    Args:
+        wr (float): The world record time (as a float).
+        run (float): The personal best time (as a float).
+        max_points (int): Maximum points of a speedrun
+
+    Returns:
+        int: Points awarded to the speedrun in comparison to world record.
+    """
     return math.floor((0.008 * math.pow(math.e, (4.8284 * (wr / run)))) * max_points)
+
+
+def time_conversion(time):
+    """Processes the returned time values of a run entry in a string.
+
+    Args:
+        time (dict): Raw run dictionary from the Speedrun.com API.
+
+    Returns:
+        tuple: A tuple containing:
+            - rta (str): The written format of real-time.
+            - noloads (str): The written format of loads removed time (no loads).
+            - igt (str): The written format of in-game.
+
+    Called Functions:
+        - `convert_time`
+    """
+    realtime = time["realtime_t"]
+    realtime_nl = time["realtime_noloads_t"]
+    ingame = time["ingame_t"]
+
+    rta = convert_time(realtime) if realtime > 0 else 0
+    noloads = convert_time(realtime_nl) if realtime_nl > 0 else 0
+    igt = convert_time(ingame) if ingame > 0 else 0
+
+    return rta, noloads, igt

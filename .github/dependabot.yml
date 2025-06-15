@@ -5,12 +5,25 @@
 
 version: 2
 updates:
-  - package-ecosystem: "docker" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "docker"
+    directory: "~/deploy/"
     schedule:
       interval: "weekly"
       
   - package-ecosystem: "pip"
-    directory: "/"
+    directory: "~/deploy/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
+    groups:
+      django-libaries:
+        applies-to: version-updates
+        patterns:
+          - "django*"
+          - "Django"
+      support-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "django*"
+          - "Django"

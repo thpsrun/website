@@ -1,54 +1,75 @@
-import os,environ
+import environ
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
-from django.shortcuts import render,redirect
-from django.urls import path, include
+from django.shortcuts import redirect
+from django.urls import include, path
 
 env = environ.Env()
 environ.Env.read_env()
 
-admin.site.site_header = "thps.run"
-admin.site.site_title  = "thps.run"
+admin.site.site_header = env("SITE_NAME")
+admin.site.site_title = env("SITE_NAME")
 admin.site.index_title = "Admin Panel"
 
+
 def discord_redirect(request):
-    if(env("DISCORD_URL")):
+    """Return Discord when accessing `WEBSITE.com/discord`."""
+    if env("DISCORD_URL"):
         return redirect(env("DISCORD_URL"))
+    else:
+        return redirect("/")
+
 
 def twitch_redirect(request):
-    if(env("TWITCH_URL")):
+    """Return Twitch when accessing `WEBSITE.com/twitch`."""
+    if env("TWITCH_URL"):
         return redirect(env("TWITCH_URL"))
+    else:
+        return redirect("/")
+
 
 def twitter_redirect(request):
-    if(env("TWITTER_URL")):
+    """Return Twitter when accessing `WEBSITE.com/twitter`."""
+    if env("TWITTER_URL"):
         return redirect(env("TWITTER_URL"))
-  
+    else:
+        return redirect("/")
+
+
 def youtube_redirect(request):
-    if(env("YOUTUBE_URL")):
+    """Return YouTube when accessing `WEBSITE.com/youtube`."""
+    if env("YOUTUBE_URL"):
         return redirect(env("YOUTUBE_URL"))
+    else:
+        return redirect("/")
+
 
 def bluesky_redirect(request):
-    if(env("BLUESKY_URL")):
+    """Return Bluesky when accessing `WEBSITE.com/bluesky`."""
+    if env("BLUESKY_URL"):
         return redirect(env("BLUESKY_URL"))
+    else:
+        return redirect("/")
+
 
 def src_redirect(request):
+    """Returns Speedrun.com when accessing `WEBSITE.com/src`."""
     return redirect(env("SRC_URL"))
 
-def trigger_error(request):
-    if(env("DEBUG_MODE")):
-        division_by_zero = 1 / 0
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("illiad/", admin.site.urls),
     path("api/", include("api.urls")),
     path("", include("srl.urls")),
-    #Redirects#
-    path("discord",discord_redirect,name="discord_redirect"),
-    path("twitch",twitch_redirect,name="twitch_redirect"),
-    path("twitter",twitter_redirect,name="twitter_redirect"),
-    path("bluesky",bluesky_redirect,name="bluesky_redirect"),
-    path("youtube",youtube_redirect,name="youtube_redirect"),
-    path("src",src_redirect,name="src_redirect"),
-    path('debug', trigger_error),
-]
+    path("docs/", include("guides.urls")),
+    # REDIRECTS
+    path("discord", discord_redirect, name="discord_redirect"),
+    path("twitch", twitch_redirect, name="twitch_redirect"),
+    path("twitter", twitter_redirect, name="twitter_redirect"),
+    path("bluesky", bluesky_redirect, name="bluesky_redirect"),
+    path("youtube", youtube_redirect, name="youtube_redirect"),
+    path("src", src_redirect, name="src_redirect"),
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 handler404 = "srl.static_views.page_not_found"

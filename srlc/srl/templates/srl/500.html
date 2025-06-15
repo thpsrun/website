@@ -3,12 +3,12 @@
     <head>
         {% load static %}
         <meta charset="utf-8">
-        <meta name="description" content="THPS Speedrun Leaderboards">
-        <meta name="author" content="THPS Speedrun Community">
+        <meta name="description" content="{{ ENV_WEBSITE_DESCRIPTION }}">
+        <meta name="author" content="{{ ENV_WEBSITE_AUTHOR }}">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="keywords" content="speedrun, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+        <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
         
-        <title>SERVER ERROR 500</title>
+        <title>SERVER ERROR 500 - {{ ENV_WEBSITE_NAME }}</title>
         
         <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

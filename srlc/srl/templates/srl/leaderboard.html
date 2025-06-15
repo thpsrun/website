@@ -3,23 +3,27 @@
     <head>
         {% load static %}
         <meta charset="utf-8">
-        <meta name="description" content="THPS Speedrun Leaderboards">
-        <meta name="author" content="THPS Speedrun Community">
+        <meta name="description" content="{{ ENV_WEBSITE_DESCRIPTION }}">
+        <meta name="author" content="{{ ENV_WEBSITE_AUTHOR }}">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="keywords" content="speedrun, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+        <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
 
         {% if "/fullgame" in request.path %}
-            <title>Full Game Leaderboard - thps.run</title>
-        {% elif "/lbs/" in request.path %}
-            {% if game_abbr == "thps12" %}
-                <title>THPS1+2 IL Overall Leaderboard - thps.run</title>
-            {% elif game_abbr == "thps12ce" %}
-                <title>THPS1+2 CE IL Overall Leaderboard - thps.run</title>
+            <title>Full Game Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
+        {% elif "/all" in request.path %}
+            {% if game_slug == "thps12" %}
+                <title>THPS1+2 IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
+            {% elif game_slug == "thps12ce" %}
+                <title>THPS1+2 CE IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
+            {% elif game_slug == "thps34" %}
+                <title>THPS3+4 IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
+            {% elif game_slug == "thps34ce" %}
+                <title>THPS3+4 CE IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
             {% else %}
-                <title>{{ game_abbr|upper }} IL Overall Leaderboard - thps.run</title>
+                <title>{{ game_slug|upper }} IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
             {% endif %}
         {% else %}
-            <title>Overall Leaderboard - thps.run</title>
+            <title>Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
         {% endif %}
         
         <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
@@ -29,6 +33,7 @@
         {% bootstrap_css %}
         {% bootstrap_javascript %}
 
+        <script type="text/javascript" src="{% static 'srl/misc/leaderboard.js' %}"></script>
         <link rel="stylesheet" type="text/css" href="{% static 'srl/misc/css.css' %}">
     </head>
     <body>
@@ -43,15 +48,15 @@
             <br />
         {% endif %}
 
-        <table id="leaderboardTable" class="table table-striped">
+        <table id="leaderboardTable" class="table table-striped table-light table-hover">
             <thead>
                 <tr>
                     {% if "/fullgame" in request.path %}
                         <th colspan="3" class="bg-info">Full Game Leaderboard</th>
                     {% elif "/lbs/" in request.path %}
-                        {% if game_abbr == "thps12" %}
+                        {% if game_slug == "thps12" %}
                             <th colspan="3" class="bg-info">Tony Hawk's Pro Skater 1+2 Overall IL Leaderboard</th>
-                        {% elif game_abbr == "thps12ce" %}
+                        {% elif game_slug == "thps12ce" %}
                             <th colspan="3" class="bg-info">THPS1+2 Category Extensions Overall IL Leaderboard</th>
                         {% else %}
                             <th colspan="3" class="bg-info">{{ game_name }} Overall IL Leaderboard</th>
@@ -116,53 +121,6 @@
                 {% endif %}
             </tbody>
         </table>
-
-        <script>
-            $(document).ready(function() {
-                var originalLeaderboard = JSON.parse(document.getElementById("leaderboard-data").textContent);
-            
-                function populateLeaderboard(data) {
-                    var tableBody = document.getElementById("leaderboardTable").getElementsByTagName('tbody')[0];
-                    tableBody.innerHTML = '';
-            
-                    data.forEach(function(item, index) {
-                        var row = tableBody.insertRow();
-                        var rankCell = row.insertCell();
-                        var playerCell = row.insertCell();
-                        var pointsCell = row.insertCell();
-            
-                        console.log(item);
-                        if (item.countrycode) {
-                            
-                            playerCellContent = '<img src="https://flagcdn.com/h20/' + item.countrycode + '.png" height="15" />' + ' ' + '<a href="/player/' + item.player + '">' + item.player + '</a>';
-                        } else {
-                            playerCellContent = '<a href="/player/' + item.player + '">' + item.player + '</a>';
-                        }
-                        rankCell.textContent = item.rank;
-                        playerCell.innerHTML = playerCellContent;
-                        pointsCell.textContent = item.total_points;
-                    });
-                }
-            
-                $("#searchForm").submit(function(event) {
-                    event.preventDefault();
-                    var searchQuery = $("#searchInput").val().trim();
-                    if (searchQuery === "") {
-                        populateLeaderboard(originalLeaderboard);
-                        return;
-                    }
-                    var url = "{% url 'search_leaderboard' %}";
-                    $.ajax({
-                        url: url,
-                        data: { search: searchQuery },
-                        success: function(data) {
-                            populateLeaderboard(data);
-                        }
-                    });
-                });
-            });
-            
-        </script>
         {% include 'srl/footer.html' %}
     </body>
 </html>

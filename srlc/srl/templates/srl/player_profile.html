@@ -3,27 +3,26 @@
     <head>
         {% load static %}
         <meta charset="utf-8">
-        <meta name="description" content="THPS Speedrun Leaderboards - {{ player.name }} Personal Bests and Statistics">
-        <meta name="author" content="THPS Speedrun Community">
+        <meta name="description" content="{{ ENV_WEBSITE_DESCRIPTION }}">
+        <meta name="author" content="{{ ENV_WEBSITE_AUTHOR }}">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="keywords" content="speedrun, leaderboards, thps, thps1, thps2, thps, World Record, Personal Best">
+        <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
 
         {% load custom_filters %}
         {% if player.nickname %}
-            <title>{{ player.nickname }} - thps.run</title>
+            <title>{{ player.nickname }}{% if "/history" in request.path %}'s Run History{% endif %} - {{ ENV_WEBSITE_NAME }}</title>
         {% else %}
-            <title>{{ player.name }} - thps.run</title>
+            <title>{{ player.name }}{% if "/history" in request.path %}'s Run History{% endif %} - {{ ENV_WEBSITE_NAME }}</title>
         {% endif %}
+
         
         <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
-
-    
+        
         {% load django_bootstrap5 %}
         {% bootstrap_css %}
         {% bootstrap_javascript %}
 
         <link rel="stylesheet" type="text/css" href="{% static 'srl/misc/css.css' %}">
-        
     </head>
     <body>
         {% include 'srl/navbar.html' %}
@@ -36,25 +35,25 @@
                     </div>                    
                     <div class="profile-data">
                         <div class="profile-username">
-                            {% if player.countrycode.id != "vh" %}
-                                {% if player.nickname %}
-                                    <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
-                                {% else %}
-                                    <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> {{ player.name }}
-                                {% endif %}
-                            {% elif player.countrycode.id == "vh" %}
-                                {% if player.nickname %}
-                                    <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
-                                {% else %}
-                                    <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" /> {{ player.name }}
-                                {% endif %}
+                        {% if player.countrycode.id != "vh" %}
+                            {% if player.nickname %}
+                                <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
                             {% else %}
-                                {% if player.nickname %}
-                                    <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
-                                {% else %}
-                                    {{ player.name }}
-                                {% endif %}
+                                <img src="https://flagcdn.com/h20/{{ player.countrycode.id }}.png" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> {{ player.name }}
                             {% endif %}
+                        {% elif player.countrycode.id == "vh" %}
+                            {% if player.nickname %}
+                                <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" /> <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
+                            {% else %}
+                                <img src="{% static 'srl/misc/vh.png' %}" title="{{ player.countrycode.name }}" alt="{{ player.countrycode.name }}" /> {{ player.name }}
+                            {% endif %}
+                        {% else %}
+                            {% if player.nickname %}
+                                <div style="display: inline;" title="{{player.name}}">{{ player.nickname }}</div>
+                            {% else %}
+                                {{ player.name }}
+                            {% endif %}
+                        {% endif %}
                         </div>
                         {% if player.pronouns %}
                             <div class="profile-pronouns">({{ player.pronouns }})</div>
@@ -63,30 +62,61 @@
                             <div class="profile-location">{{ player.location }}</div>
                         {% endif %}
                         <div class="profile-socials">
-                            <p class="socialicons">
+                            <p class="socialicons" style="text-align:center;">
                                 {% if player.twitch %}
-                                    <a href="{{ player.twitch }}" target="_blank"><i class="fab fa-twitch fa-lg"></i></a>
+                                    {% if player.nickname %}
+                                        <a href="{{ player.twitch }}" target="_blank"><i class="fab fa-twitch fa-lg" alt="{{ player.nickname }}'s Twitch" title="{{ player.nickname }}'s Twitch"></i></a>
+                                    {% else %}
+                                        <a href="{{ player.twitch }}" target="_blank"><i class="fab fa-twitch fa-lg" alt="{{ player.name }}'s Twitch" title="{{ player.name }}'s Twitch"></i></a>
+                                    {% endif %}
                                 {% endif %}
-                                {% if player.twitter %}
-                                    <a href="{{ player.twitter }}" target="_blank"><i class="fab fa-twitter fa-lg"></i></a>
-                                {% endif %}
+
                                 {% if player.youtube %}
-                                    <a href="{{ player.youtube }}" target="_blank"><i class="fab fa-youtube fa-lg"></i></a>
+                                    {% if player.nickname %}
+                                        <a href="{{ player.youtube }}" target="_blank"><i class="fab fa-youtube fa-lg" alt="{{ player.nickname }}'s YouTube" title="{{ player.nickname }}'s YouTube"></i></a>
+                                    {% else %}
+                                        <a href="{{ player.youtube }}" target="_blank"><i class="fab fa-youtube fa-lg" alt="{{ player.name }}'s YouTube" title="{{ player.name }}'s YouTube"></i></a>
+                                    {% endif %}
                                 {% endif %}
-                                <a href="https://speedrun.com/user/{{ player.name }}" target="_blank"><i class="fas fa-trophy fa-lg"></i></a>
+
+                                {% if player.twitter %}
+                                    {% if player.nickname %}
+                                        <a href="{{ player.twitter }}" target="_blank"><i class="fab fa-twitter fa-lg" alt="{{ player.nickname }}'s Twitter" title="{{ player.nickname }}'s Twitter"></i></a>
+                                    {% else %}
+                                        <a href="{{ player.twitter }}" target="_blank"><i class="fab fa-twitter fa-lg" alt="{{ player.name }}'s Twitter" title="{{ player.name }}'s Twitter"></i></a>
+                                    {% endif %}
+                                {% endif %}
+
+                                {% if player.bluesky %}
+                                    {% if player.nickname %}
+                                        <a href="{{ player.bluesky }}" target="_blank"><i class="fab fa-bluesky fa-lg" alt="{{ player.nickname}}'s Bluesky" title="{{ player.nickname}}'s Bluesky"></i></a>
+                                    {% else %}
+                                        <a href="{{ player.bluesky }}" target="_blank"><i class="fab fa-bluesky fa-lg" alt="{{ player.name }}'s Bluesky" title="{{ player.name}}'s Bluesky"></i></a>
+                                    {% endif %}
+                                {% endif %}
+                                
+                                {% if player.nickname %}
+                                    <a href="https://speedrun.com/user/{{ player.name }}" target="_blank"><i class="fas fa-trophy fa-lg" alt="{{ player.nickname }}'s Speedrun.com Profile" title="{{ player.nickname }}'s Speedrun.com Profile"></i></a>
+                                {% else %}
+                                    <a href="https://speedrun.com/user/{{ player.name }}" target="_blank"><i class="fas fa-trophy fa-lg" alt="{{ player.name }}'s Speedrun.com Profile" title="{{ player.name }}'s Speedrun.com Profile"></i></a>
+                                {% endif %}
+                                <br />
+                                <a href="/player/{{player.name}}" style="font-size:small;">Stats</a> | <a href="/player/{{player.name}}/history" style="font-size:small;"}>History</a>
                             </p>
                         </div>
                     </div>
-                    <div class="profile-stats">
-                        <p class="stats">Total Points: {{ total_points }}<br />
-                        Overall Rank: {{ player_rank }} / {{ player_count }}<br />
-                        Total Runs: {{ total_runs }}</p>
-                    </div>
+                    {% if "/history" not in request.path %}
+                        <div class="profile-stats">
+                            Total Points: {{ total_points }}<br />
+                            Overall Rank: {{ player_rank }} / {{ player_count }}<br />
+                            Total Runs: {{ total_runs }}
+                        </div>
+                    {% endif %}
                 </div>
             </div>
             {% if awards %}
-            <div>
-                <h6 style="text-decoration:underline;">Awards</h6>
+            <div class="profile-awards">
+                <h6 style="text-decoration: underline;text-align: center;padding-top: 10px;">Awards</h6>
                 {% for award in awards %}
                     {{ award.0 }}<br />
                 {% endfor %}
@@ -95,13 +125,17 @@
         </div>
         <div class="main-page-container">
             {% if main_runs.count > 0 %}
-            {% if il_runs.count > 0 %}
-                <div class="fg-table">
-            {% endif %}
-                <table id="leaderboard-table-1" class="table table-striped">
+                {% if il_runs.count > 0 %}
+                    <div class="fg-table">
+                {% endif %}
+                <table id="leaderboard-table-1" class="table table-striped table-hover">
                     <thead class="bg-info">
                         <tr class="bg-info">
-                            <th colspan="6" class="bg-info">Full Game Speedruns - Points: {{ main_points }} - Rank: {{ main_rank }} / {{ main_count }} </th>
+                            {% if "/history" in request.path %}
+                                <th colspan="7" class="bg-info">All Full Game Speedruns</th>
+                            {% else %}
+                                <th colspan="7" class="bg-info">Full Game Speedruns - Points: {{ main_points }} - Rank: {{ main_rank }} / {{ main_count }} </th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -111,32 +145,66 @@
                                     {% for game in game_runs %}
                                         {% if forloop.first %}
                                         <tr>
-                                            <th colspan="6"  class="bg-info">
+                                            <th colspan="7"  class="bg-info">
                                                 {{ game_name }}
                                             </th>
                                         </tr>
                                         {% endif %}
                                         <tr>
-                                            <td>
-                                                <div class="subcategory">{% if game.subcategory %} {{ game.subcategory }} {% endif %}</div>
-                                            </td>
-                                            <td>
-                                                <div class="placing">{{ game.place }}
-                                                    <br />
-                                                    {% if game.game.defaulttime == "realtime" %}
-                                                            <a href="{{ game.url }}">{{ game.time }}</a>
-                                                    {% elif game.game.defaulttime == "realtime_noloads" %}
-                                                        <a href="{{ game.url }}">{{ game.timenl }}</a>
-                                                    {% else %}
-                                                        <a href="{{ game.url }}">{{ game.timeigt }}</a>
+                                            <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
+                                                <div class="subcategory">
+                                                    {% if game.subcategory %}
+                                                        {% with subcat=game.subcategory|custom_splitter %}
+                                                            {{ subcat.0|trim }}<br />
+                                                            {{ subcat.1|trim }}
+                                                        {% endwith %}
                                                     {% endif %}
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
+                                                {% if game.obsolete == False %}
+                                                    <div class="placing">{{ game.place }}
+                                                {% else %}
+                                                    <div class="placing">---
+                                                {% endif %}
+                                                <br />
+                                                {% if game.game.defaulttime == "realtime"%}
+                                                    <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
+                                                {% elif game.game.defaulttime == "realtime_noloads" %}
+                                                    {% if game.timenl_secs == 0 %}
+                                                        <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
+                                                    {% else %}
+                                                        <a href="{{ game.url }}" target="_blank">{{ game.timenl }}</a>
+                                                    {% endif %}
+                                                {% else %}
+                                                    {% if game.timeigt_secs == 0 %}
+                                                        <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
+                                                    {% else %}
+                                                        <a href="{{ game.url }}" target="_blank">{{ game.timeigt }}</a>
+                                                    {% endif %}
+                                                {% endif %}
+                                                </div>
+                                            </td>
+                                            <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
+                                                {% if game.obsolete == False %}
+                                                    <div class="points">{{ game.points }}</div>
+                                                {% else %}
+                                                    <div class="points">---</div>
+                                                {% endif %}
+                                            </td>
+                                            <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
                                                 <div class="date">{{ game.o_date }}</div>
                                             </td>
-                                            <td>
-                                                <div class="points">{{ game.points }}</div>
+                                            <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
+                                                {% if game.arch_video %}
+                                                    <div class="videos"><a href="{{ game.arch_video }}" alt="Archived Video" target="_blank"><i class="fa-solid fa-cloud" alt="Archived Video" title="Archived Video"></i></a><br />
+                                                {% endif %}
+                                                {% if "yout" in game.video %}
+                                                    <div class="videos"><a href="{{ game.video }}" alt="YouTube" target="_blank"><i class="fab fa-youtube fa-lg" alt="YouTube Video" title="YouTube Video"></i></a><br />
+                                                {% endif %}
+                                                {% if "twitch" in game.video %}
+                                                    <div class="videos"><a href="{{ game.video }}" alt="Twitch" target="_blank"><i class="fab fa-twitch fa-lg" alt="Twitch Video" title="Twitch Video"></i></a>
+                                                {% endif %}
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -151,10 +219,14 @@
                 {% if main_runs.count > 0 %}
                     <div class ="il-table">
                 {% endif %}
-                    <table id="leaderboard-table-3" class="table table-striped">
+                    <table id="leaderboard-table-3" class="table table-striped table-hover">
                         <thead>
                             <tr>
-                                <th colspan="6" class="bg-info">IL Speedruns - Overall Points: {{ il_points }} - Overall Rank: {{ il_rank }} / {{ il_count }}</th>
+                                {% if "/history" in request.path %}
+                                    <th colspan="7" class="bg-info">All IL Speedruns</th>
+                                {% else %}
+                                    <th colspan="7" class="bg-info">IL Speedruns - Overall Points: {{ il_points }} - Overall Rank: {{ il_rank }} / {{ il_count }}</th>
+                                {% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -164,7 +236,7 @@
                                         {% for game in game_runs %}
                                             {% if forloop.first %}
                                             <tr>
-                                                <th colspan="6" class="bg-info">
+                                                <th colspan="7" class="bg-info">
                                                     {{ game_name }}
                                                     {% comment %}{% with leaderboard=game_name|get_rank:player %}
                                                         <h5>Points: {{ leaderboard|get_item:"total_points" }} - Rank: {{ leaderboard|get_item:"rank" }}</h5>
@@ -173,40 +245,60 @@
                                             </tr>
                                             {% endif %}
                                             <tr>
-                                                <td colspan="2">
-                                                    <div class="subcategory">{% if game.subcategory %} {{ game.subcategory }} {% endif %}</div>
-                                                </td>
-                                                <td>
-                                                    <div class="placing">{{ game.place }}
-                                                        <br />
-                                                        {% if game.game.idefaulttime == "realtime" %}
-                                                            <a href="{{ game.url }}">{{ game.time }}</a>
-                                                        {% elif game.game.idefaulttime == "realtime_noloads" %}
-                                                            <a href="{{ game.url }}">{{ game.timenl }}</a>
-                                                        {% else %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
+                                                <td colspan="2" {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
+                                                    <div class="subcategory">
+                                                        {% if game.subcategory %}
+                                                            {% with subcat=game.subcategory|custom_splitter %}
+                                                                {{ subcat.0|trim }}<br />
+                                                                {{ subcat.1|trim }}
+                                                            {% endwith %}
                                                         {% endif %}
-
-                                                        {% comment %} {% if game.game.abbr == "thps2" %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
-                                                        {% elif game.game.abbr == "thps12" %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
-                                                        {% elif game.game.abbr == "thug1" %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
-                                                        {% elif game.game.abbr == "thps12ce" %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
-                                                        {% elif game.game.abbr == "thps4ce" %}
-                                                            <a href="{{ game.url }}">{{ game.timeigt }}</a>
-                                                        {% else %}
-                                                            <a href="{{ game.url }}">{{ game.time }}</a>
-                                                        {% endif %} {% endcomment %}
                                                     </div>
                                                 </td>
-                                                <td>
+                                                <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
+                                                    {% if game.obsolete == False %}
+                                                        <div class="placing">{{ game.place }}
+                                                    {% else %}
+                                                        <div class="placing">---
+                                                    {% endif %}
+                                                    <br />
+                                                    {% if game.game.idefaulttime == "realtime" %}
+                                                        <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
+                                                    {% elif game.game.idefaulttime == "realtime_noloads" %}
+                                                        {% if game.timenl_secs == 0 %}
+                                                            <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
+                                                        {% else %}
+                                                            <a href="{{ game.url }}" target="_blank">{{ game.timenl }}</a>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        {% if game.timeigt_secs == 0%}
+                                                            <a href="{{ game.url }}" target="_blank">{{ game.time }}</a>
+                                                        {% else %}
+                                                            <a href="{{ game.url }}" target="_blank">{{ game.timeigt }}</a>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                    </div>
+                                                </td>
+                                                <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
                                                     <div class="date">{{ game.o_date }}</div>
                                                 </td>
-                                                <td>
-                                                    <div class="points">{{ game.points }}</div>
+                                                <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
+                                                    {% if game.obsolete == False %}
+                                                        <div class="points">{{ game.points }}</div>
+                                                    {% else %}
+                                                        <div class="points">---</div>
+                                                    {% endif %}
+                                                </td>
+                                                <td {% if game.obsolete == False and "/history" in request.path %} class="obsolete-tr" {% endif %}>
+                                                    {% if game.arch_video %}
+                                                        <div class="videos"><a href="{{ game.arch_video }}" alt="Archived Video" target="_blank"><i class="fa-solid fa-cloud"></i></a><br />
+                                                    {% endif %}
+                                                    {% if "yout" in game.video %}
+                                                        <div class="videos"><a href="{{ game.video }}" alt="YouTube" arget="_blank"><i class="fab fa-youtube fa-lg"></i></a><br />
+                                                    {% endif %}
+                                                    {% if "twitch" in game.video %}
+                                                        <div class="videos"><a href="{{ game.video }}" alt="Twitch" target="_blank"><i class="fab fa-twitch fa-lg"></i></a>
+                                                    {% endif %}
                                                 </td>
                                             </tr>
                                         {% endfor %}

@@ -1,52 +1,45 @@
+volumes:
+    static_files:
+      name: thpsrun_static_files
+    postgres_data:
+      name: thpsrun_postgres_data
+
 services:
   postgres:
     container_name: postgres
-    image: postgres:latest
+    image: postgres:17.5-bookworm
     restart: unless-stopped
     shm_size: 128mb
     environment:
-      POSTGRES_DB: ${POSTGRES_NAME}
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./db:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     networks:
-      - srlc
+      - thpsrun
 
   django:
     container_name: django
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: /app/start.sh server
     restart: unless-stopped
-    build: .
     ports:
-      - "8000:8001"
+      - "8001:8001"
     env_file:
       - .env
     depends_on:
       - postgres
       - redis
     volumes:
-      - ./srlc:/srlc
-      - ./static:/srlc/static
+      - ./srlc:/app
+      - static_files:/app/static:rw
+      - ../guides:/app/docs
     networks:
-      - srlc
+      - thpsrun
 
-  npm:
-    container_name: nginx-proxy-manager
-    restart: unless-stopped
-    image: "jc21/nginx-proxy-manager:latest"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "81:81"
-    depends_on:
-      - django
-      - postgres
-    volumes:
-      - ./npm/data:/data
-      - ./npm/letsencrypt:/etc/letsencrypt
-    networks:
-      - srlc
-  
   redis:
     container_name: redis
     image: redis:alpine
@@ -54,8 +47,8 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - srlc
+      - thpsrun
 
 networks:
-  srlc:
+  thpsrun:
     driver: bridge

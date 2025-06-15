@@ -1,0 +1,72 @@
+volumes:
+  postgres_data:
+    name: slrc_app_data
+  static_files:
+    name: thpsrun_static_files
+  nginx_config:
+    name: thpsrun_nginx_config
+
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:17.5-bookworm
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - thpsrun
+
+  django:
+    container_name: django
+    restart: unless-stopped
+    build: .
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./thpsrun:/app
+      - static_files:/app/static
+      - ../guides:/app/docs
+    networks:
+      - thpsrun
+
+  redis:
+    container_name: redis
+    image: redis:alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - thpsrun
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    image: nginx:1.27.5-bookworm
+    container_name: nginx
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - django
+    env_file:
+      - .env
+    volumes:
+      - static_files:/app/static:ro
+      - nginx_config:/etc/nginx/:rw
+    networks:
+      - thpsrun
+
+networks:
+  thpsrun:
+    driver: bridge
