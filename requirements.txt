@@ -1,7 +1,7 @@
 aiohttp==3.11.16
 asgiref==3.8.1
 celery[redis]
-certifi==2025.1.31
+certifi==2025.6.15
 crispy-bootstrap5==2025.4
 Django>=5.2
 django-bootstrap5==25.1
