@@ -48,24 +48,24 @@ services:
     networks:
       - thpsrun
 
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    image: nginx:1.27.5-bookworm
-    container_name: nginx
-    ports:
-      - 80:80
-      - 443:443
-    depends_on:
-      - django
-    env_file:
-      - .env
-    volumes:
-      - static_files:/app/static:ro
-      - nginx_config:/etc/nginx/:rw
-    networks:
-      - thpsrun
+  #nginx:
+    #build:
+      #context: ./nginx
+      #dockerfile: Dockerfile
+    #image: nginx:1.27.5-bookworm
+    #container_name: nginx
+    #ports:
+      #- 80:80
+      #- 443:443
+    #depends_on:
+      #- django
+    #env_file:
+      #- .env
+    #volumes:
+      #- static_files:/app/static:ro
+      #- nginx_config:/etc/nginx/:rw
+    #networks:
+      #- thpsrun
 
 networks:
   thpsrun:
