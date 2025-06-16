@@ -1,3 +1,8 @@
+### v3.0.1
+###### June 16, 2025
+*   Disabled (commented out) Nginx in the primary install to thps.run.
+    *   Everything still works, but just using Nginx Proxy Manager for now. If you wanna use it, un-comment the the Nginx info in `docker-compose.PROD.yml`!
+
 ## v3.0 - The Open Source Update
 ###### June 15, 2025
 *   [!!!!] This project is now open source! For more information on this, please check out the project's GitHub here: [https://github.com/thpsrun/website/](https://github.com/thpsrun/website/)
