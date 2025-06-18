@@ -1,3 +1,7 @@
+### v3.0.2
+###### June 18, 2025
+*   Fixed an issue where a co-op run's second player had improper variable names, resulting in a `Server Error 500` response.
+
 ### v3.0.1
 ###### June 16, 2025
 *   Disabled (commented out) Nginx in the primary install to thps.run.

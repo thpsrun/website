@@ -512,7 +512,6 @@ def GameLeaderboard(request, slug, category=None):
     runs_list = []
 
     if category is None:
-        # mainruns    = mainruns.exclude(values__in=hidden_cats)
         categories = sorted(
             [
                 subcategory[0]
@@ -585,7 +584,7 @@ def GameLeaderboard(request, slug, category=None):
                 )
 
             if "co-op" in run.subcategory.lower():
-                player2 = player2.name if player2 != "Anonymous" else "Anonymous"
+                player2_name = player2.name if player2 != "Anonymous" else "Anonymous"
                 player2_nn = player2.nickname if player2 != "Anonymous" else None
 
                 player2_cc = (
@@ -602,7 +601,7 @@ def GameLeaderboard(request, slug, category=None):
 
                 run_add.update(
                     {
-                        "player2": player2,
+                        "player2": player2_name,
                         "player2nickname": player2_nn,
                         "countrycode2": player2_cc,
                         "countryname2": player2_cn,
