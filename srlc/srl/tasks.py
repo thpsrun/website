@@ -34,7 +34,9 @@ def update_game(
         src_game (dict): Usually from Speedrun.com's API. This includes information about a specific
             game that will be imported in to the `Games` model.
     """
-    src_game = src_api(f"https://speedrun.com/api/v1/games/{src_game}?embed=platforms")
+    src_game: dict[dict, str] = src_api(
+        f"https://speedrun.com/api/v1/games/{src_game}?embed=platforms"
+    )
     if isinstance(src_game, dict):
         twitch_get = (
             src_game.get("names").get("twitch")
@@ -116,7 +118,7 @@ def update_game_runs(
         Levels.objects.filter(game=game_id).delete()
         Runs.objects.filter(game=game_id, obsolete=False).delete()
 
-        game_check = src_api(
+        game_check: dict[dict, str] = src_api(
             f"https://speedrun.com/api/v1/games/"
             f"{game_id}?embed=platforms,levels,categories,variables"
         )
@@ -142,7 +144,7 @@ def update_game_runs(
         all_runs = Runs.objects.only("id").filter(game=game_id)
 
         series_id = Series.objects.all().first().id
-        series_info = src_api(
+        series_info: dict[dict, str] = src_api(
             f"https://speedrun.com/api/v1/series/{series_id}/games?max=50"
         )
         series_list = []
@@ -307,7 +309,9 @@ def update_category_runs(
         - `invoke_runs`
     """
 
-    def iterate_combinations(var_dict):
+    def iterate_combinations(
+        var_dict: dict,
+    ) -> list:
         if not var_dict:
             return [[]]
 
@@ -317,7 +321,10 @@ def update_category_runs(
         combinations = product(*values_lists)
         return [list(zip(keys, values)) for values in combinations]
 
-    def get_variable_combinations(scope_types, variable_list):
+    def get_variable_combinations(
+        scope_types: dict[dict, str],
+        variable_list: dict[dict, str],
+    ) -> list:
         lb_list = {}
 
         for variable in variable_list:
@@ -332,7 +339,12 @@ def update_category_runs(
 
         return iterate_combinations(lb_list)
 
-    def fetch_leaderboard(game_id, category_id, il_id=None, combo=None):
+    def fetch_leaderboard(
+        game_id: str,
+        category_id: str,
+        il_id: str = None,
+        combo: str = None,
+    ):
         base_url = "https://speedrun.com/api/v1/leaderboards/"
         if il_id:
             url = f"{base_url}{game_id}/level/{il_id}/{category_id}"
@@ -354,33 +366,68 @@ def update_category_runs(
 
     if is_il:
         for il in il_check:
-            variable_list = src_api(
+            variable_list: dict[dict, str] = src_api(
                 f"https://www.speedrun.com/api/v1/levels/{il['id']}/variables"
             )
-            combo_list = get_variable_combinations(scope_types, variable_list)
+            combo_list = get_variable_combinations(
+                scope_types,
+                variable_list,
+            )
 
             if combo_list:
                 for combo in combo_list:
                     leaderboard = fetch_leaderboard(
-                        game_id, category["id"], il["id"], combo
+                        game_id,
+                        category["id"],
+                        il["id"],
+                        combo,
                     )
                     chain(invoke_runs.s(game_id, category, leaderboard))()
             else:
-                leaderboard = fetch_leaderboard(game_id, category["id"], il["id"])
-                chain(invoke_runs.s(game_id, category, leaderboard))()
+                leaderboard = fetch_leaderboard(
+                    game_id,
+                    category["id"],
+                    il["id"],
+                )
+                chain(
+                    invoke_runs.s(
+                        game_id,
+                        category,
+                        leaderboard,
+                    )
+                )()
     else:
         variable_list = src_api(
             f"https://www.speedrun.com/api/v1/categories/{category['id']}/variables"
         )
-        combo_list = get_variable_combinations(scope_types, variable_list)
+        combo_list = get_variable_combinations(
+            scope_types,
+            variable_list,
+        )
 
         if combo_list:
             for combo in combo_list:
-                leaderboard = fetch_leaderboard(game_id, category["id"], combo)
-                chain(invoke_runs.s(game_id, category, leaderboard))()
+                leaderboard = fetch_leaderboard(
+                    game_id,
+                    category["id"],
+                    combo,
+                )
+                chain(
+                    invoke_runs.s(
+                        game_id,
+                        category,
+                        leaderboard,
+                    )
+                )()
         else:
             leaderboard = fetch_leaderboard(game_id, category["id"])
-            chain(invoke_runs.s(game_id, category, leaderboard))()
+            chain(
+                invoke_runs.s(
+                    game_id,
+                    category,
+                    leaderboard,
+                )
+            )()
 
 
 @shared_task
@@ -405,7 +452,7 @@ def update_player(
     Called Functions:
         - `src_api`
     """
-    player_data: dict[dict, [dict, dict]] = src_api(
+    player_data: dict[dict, str] = src_api(
         f"https://speedrun.com/api/v1/users/{player}"
     )
 
@@ -428,9 +475,9 @@ def update_player(
         else:
             file_path = None
 
-        location = player_data.get("location")
-        country = location.get("country") if location is not None else None
-        c_code = country.get("code") if country is not None else None
+        location: dict = player_data.get("location")
+        country: dict = location.get("country") if location is not None else None
+        c_code: str = country.get("code") if country is not None else None
 
         cc = standardize_tag(c_code.replace("/", "_")) if c_code is not None else None
 
@@ -445,7 +492,10 @@ def update_player(
                 .get("international")
             )
             with transaction.atomic():
-                CountryCodes.objects.update_or_create(id=cc, defaults={"name": cc_name})
+                CountryCodes.objects.update_or_create(
+                    id=cc,
+                    defaults={"name": cc_name},
+                )
 
         try:
             cc_get = CountryCodes.objects.only("id").get(id=cc)
@@ -491,7 +541,11 @@ def update_player(
 
 
 @shared_task
-def invoke_runs(game_id, category, leaderboard):
+def invoke_runs(
+    game_id: str,
+    category: dict,
+    leaderboard: dict,
+) -> None:
     """Iterates through the `leaderboard` argument to process all runs within it to import.
 
     Processes the `leaderboard (dict)` argument to determine what the world record speedrun is,
@@ -503,8 +557,6 @@ def invoke_runs(game_id, category, leaderboard):
             category.
         leaderboard (dict): Includes all of the runs about a specific category and/or subcategory,
             to include the world record and subsequent speedruns.
-        var_name (str): None is default. This is the full "name" for the category and/or subcategory
-            combination. This will be deprecated in a future release.
 
     Called Functions:
         - `invoke_players`
@@ -512,7 +564,10 @@ def invoke_runs(game_id, category, leaderboard):
         - `time_conversion`
     """
 
-    def build_var_name(base_name, run_variables):
+    def build_var_name(
+        base_name: str,
+        run_variables: dict[dict, str],
+    ) -> str:
         if len(run_variables) > 0:
             var_name = base_name + " ("
             for key, value in run_variables.items():
@@ -865,7 +920,10 @@ def invoke_runs(game_id, category, leaderboard):
 
 
 @shared_task
-def invoke_players(players_data, player=None):
+def invoke_players(
+    players_data: dict[dict, str],
+    player: str = None,
+) -> None:
     """Processes a specific player into the Speedrun.com API to gather metdata.
 
     Processes all of the metadata from a specific player, iterated through the `players_data`
@@ -904,9 +962,9 @@ def invoke_players(players_data, player=None):
             else:
                 file_path = None
 
-            location = p_data.get("location")
-            country = location.get("country") if location is not None else None
-            c_code = country.get("code") if country is not None else None
+            location: dict = p_data.get("location")
+            country: dict = location.get("country") if location is not None else None
+            c_code: str = country.get("code") if country is not None else None
 
             cc = (
                 standardize_tag(c_code.replace("/", "_"))
@@ -975,7 +1033,10 @@ def invoke_players(players_data, player=None):
 
 
 @shared_task
-def import_obsolete(player, download_pfp=False):
+def import_obsolete(
+    player: str,
+    download_pfp: bool = False,
+):
     """Iterates through a player's ENTIRE speedrun.com history to find runs related to the series.
 
     Once presented with a player name or ID, this will iterate through that player's ENTIRE
@@ -994,9 +1055,11 @@ def import_obsolete(player, download_pfp=False):
         - `src_api`
         - `add_run`
     """
-    from api.tasks import add_run
+    from api.tasks import add_run  # Makes sure we don't get loops.
 
-    run_data = src_api(f"https://speedrun.com/api/v1/runs?user={player}&max=200", True)
+    run_data: dict[dict, str] = src_api(
+        f"https://speedrun.com/api/v1/runs?user={player}&max=200", True
+    )
 
     if isinstance(run_data, dict) and run_data is not None:
         all_runs = run_data["data"]
@@ -1004,7 +1067,7 @@ def import_obsolete(player, download_pfp=False):
 
         while run_data["pagination"]["max"] == run_data["pagination"]["size"]:
             offset += 200
-            run_data = src_api(
+            run_data: dict[dict, str] = src_api(
                 f"https://speedrun.com/api/v1/"
                 f"runs?user={player}&max=200&offset={offset}?embed=players",
                 True,
@@ -1017,7 +1080,7 @@ def import_obsolete(player, download_pfp=False):
                 if Games.objects.filter(id=run["game"]).exists():
                     if not Runs.objects.filter(id=run["id"]).exists():
                         if run["level"]:
-                            lb_info = src_api(
+                            lb_info: dict[dict, str] = src_api(
                                 f"https://speedrun.com/api/v1/leaderboards/"
                                 f"{run['game']}/level/{run['level']}/{run['category']}"
                                 f"?embed=game,category,level,players,variables"
@@ -1029,13 +1092,13 @@ def import_obsolete(player, download_pfp=False):
 
                             lb_var = lb_variables.rstrip("&")
 
-                            lb_info = src_api(
+                            lb_info: dict[dict, str] = src_api(
                                 f"https://speedrun.com/api/v1/leaderboards/"
                                 f"{run['game']}/category/{run['category']}?{lb_var}"
                                 f"&embed=game,category,level,players,variables"
                             )
                         else:
-                            lb_info = src_api(
+                            lb_info: dict[dict, str] = src_api(
                                 f"https://speedrun.com/api/v1/leaderboards/"
                                 f"{run['game']}/category/{run['category']}"
                                 f"?embed=game,category,level,players,variables"

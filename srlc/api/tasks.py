@@ -183,7 +183,10 @@ def add_run(
         - `invoke_single_run`
     """
 
-    def build_var_name(base_name, run_variables) -> str:
+    def build_var_name(
+        base_name,
+        run_variables,
+    ) -> str:
         if len(run_variables) > 0:
             var_name = base_name + " ("
             for key, value in run_variables.items():
