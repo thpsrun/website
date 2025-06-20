@@ -8,8 +8,8 @@ from celery import chain, shared_task
 from django.db import transaction
 from langcodes import standardize_tag
 
-from .m_tasks import points_formula, src_api, time_conversion
-from .models import (
+from srl.m_tasks import points_formula, src_api, time_conversion
+from srl.models import (
     Categories,
     CountryCodes,
     Games,
@@ -1036,7 +1036,7 @@ def invoke_players(
 def import_obsolete(
     player: str,
     download_pfp: bool = False,
-):
+) -> None:
     """Iterates through a player's ENTIRE speedrun.com history to find runs related to the series.
 
     Once presented with a player name or ID, this will iterate through that player's ENTIRE

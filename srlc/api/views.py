@@ -419,15 +419,23 @@ class API_Players(APIView):
             Response: A response object containing the JSON data of a speedrun.
         """
 
-        if len(id) >= 15:
+        if len(id) > 15:
             return Response(
                 {"ERROR": "id must be 15 characters or less."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         player = (
-            Players.objects.only("id", "name", "twitch", "youtube", "ex_stream")
-            .filter(Q(id__iexact=id) | Q(name__iexact=id))
+            Players.objects.only(
+                "id",
+                "name",
+                "twitch",
+                "youtube",
+                "ex_stream",
+            )
+            .filter(
+                Q(id__iexact=id) | Q(name__iexact=id),
+            )
             .first()
         )
 
@@ -447,7 +455,7 @@ class API_Players(APIView):
 
             if serializer.is_valid():
                 serializer.save()
-                chain(update_player(player_id))()
+                chain(update_player.s(player_id))()
 
                 return Response(
                     serializer.data,
@@ -460,7 +468,7 @@ class API_Players(APIView):
                 )
         else:
             try:
-                chain(update_player(id))()
+                chain(update_player.s(id))()
 
                 return Response(
                     "ok",

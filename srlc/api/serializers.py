@@ -1009,7 +1009,7 @@ class PlayerSerializerPost(serializers.ModelSerializer):
 
     def validate_ex_stream(
         self,
-        ex_stream: Union[bool, str],
+        ex_stream: Union[bool, str] = None,
     ) -> bool:
         """Validates if the ex_stream field is properly setup."""
         if isinstance(ex_stream, bool):
@@ -1023,13 +1023,17 @@ class PlayerSerializerPost(serializers.ModelSerializer):
 
     def validate_nickname(
         self,
-        nickname: str,
+        nickname: str = None,
     ) -> str:
         """Validates if the nickname field is properly setup."""
-        if len(nickname) > 30:
+        if not nickname:
+            return
+        elif len(nickname) > 30:
             raise serializers.ValidationError(
                 "nickname field must be 30 characters or less."
             )
+        else:
+            return nickname
 
     class Meta:
         model = Players
