@@ -22,7 +22,7 @@ class YTInlineProcessor(InlineProcessor):
         self,
         m: Match[str],
         data,
-    ) -> tuple[Element[str], str, str]:
+    ) -> tuple[str, str, str]:
         align = m.group(1) or "center"
         width = m.group(2) or "560"
         height = m.group(3) or "315"
