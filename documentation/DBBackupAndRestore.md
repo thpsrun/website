@@ -29,7 +29,15 @@ This script will automatically backup the ENTIRE database to a gunzip'd SQL file
 ## Restoring Database
 ### NOTE: This operation will remove everything from the database, then add everything back from the file you specify. If you are going to do this, backup first!
 
--   `chmod x ./db_restore.sh`
+-   `chmod +x ./db_restore.sh`
 -   `./db_restore.sh`
 
 You will be prompted with all *.sql.gz files in the backups directory. Pick the one you want and it'll overwrite the database.
+
+## Crontab Syntax
+### NOTE: This obviously only works on *nix-based operating systems.
+
+-   `0 0 * * * cd ~/website; ./db_backup.sh`
+    -   Every day at midnight (for the server), the backup is executed.
+-   `*/10 * * * * docker exec django python3 manage.py collectstatic --noinput`
+    -   Every 10 minutes, static image collection is ran.

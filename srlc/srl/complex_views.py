@@ -1,14 +1,17 @@
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncDate
-from django.http import JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 
 from .leaderboard_view import Leaderboard
 from .models import Games, NowStreaming, Players, Runs
 
 
-def PlayerProfile(request, name):
+def PlayerProfile(
+    request: HttpRequest,
+    name: str,
+) -> HttpResponse:
     """View that gathers all of the information on a player before passing it to a template.
 
     This view processes practically all of the information about a player in the `Players` model.
@@ -57,7 +60,7 @@ def PlayerProfile(request, name):
             "v_date",
             "vid_status",
         )
-        .main()
+        .filter(runtype="main")
         .filter(Q(player_id=player.id) | Q(player2_id=player.id))
         .annotate(o_date=TruncDate("v_date"))
     )
@@ -90,8 +93,7 @@ def PlayerProfile(request, name):
             "v_date",
             "vid_status",
         )
-        .il()
-        .filter(player_id=player.id)
+        .filter(runtype="il", player_id=player.id)
         .annotate(o_date=TruncDate("v_date"))
     )
 
@@ -169,7 +171,10 @@ def PlayerProfile(request, name):
         return render(request, "srl/player_profile.html", context)
 
 
-def PlayerHistory(request, name):
+def PlayerHistory(
+    request: HttpRequest,
+    name: str,
+) -> HttpResponse:
     """View that gathers all of the information on a player's speedrun history.
 
     This view processes practically all of the speedruns within the database belonging to the
@@ -193,7 +198,7 @@ def PlayerHistory(request, name):
     games = Games.objects.all().order_by("name")
     main_runs = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"])
-        .main()
+        .filter(runtype="main")
         .filter(Q(player_id=player.id) | Q(player2_id=player.id))
         .annotate(o_date=TruncDate("date"))
         .order_by("-o_date")
@@ -201,8 +206,7 @@ def PlayerHistory(request, name):
 
     il_runs = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"])
-        .il()
-        .filter(player_id=player.id)
+        .filter(runtype="il", player_id=player.id)
         .annotate(o_date=TruncDate("date"))
         .order_by("subcategory")
     )
@@ -233,7 +237,9 @@ def PlayerHistory(request, name):
     return render(request, "srl/player_profile.html", context)
 
 
-def FG_Leaderboard(request):
+def FG_Leaderboard(
+    request: HttpRequest,
+) -> HttpResponse:
     """View that displays a leaderboard the combined points for a runner across all games.
 
     This view gathers the combined point values of all runners across all games and generates a
@@ -259,7 +265,10 @@ def FG_Leaderboard(request):
     return render(request, "srl/leaderboard.html", context)
 
 
-def IL_Leaderboard(request, game_slug):
+def IL_Leaderboard(
+    request: HttpRequest,
+    game_slug: str,
+) -> HttpResponse:
     """View that displays a leaderboard the combined points for a runner for a specific IL game.
 
     This view gathers the combined point values of all runners across for a specific game's ILs
@@ -299,7 +308,9 @@ def IL_Leaderboard(request, game_slug):
     return render(request, "srl/leaderboard.html", context)
 
 
-def search_leaderboard(request):
+def search_leaderboard(
+    request: HttpRequest,
+) -> HttpResponse:
     """Used in cases when a leaderboard is paginated; this will allow you to look up a runner"""
     search_query = request.GET.get("search", "")
     players_all = Players.objects.all()
@@ -311,16 +322,19 @@ def search_leaderboard(request):
     for player in players_all:
         main_points = (
             Runs.objects.exclude(vid_status__in=["new", "rejected"])
-            .main()
-            .filter(obsolete=False, points__gt=0)
+            .filter(runtype="main", obsolete=False, points__gt=0)
             .filter(Q(player_id=player.id) | Q(player2_id=player.id))
             .aggregate(total_points=Sum("points"))
         )["total_points"]
 
         il_points = (
             Runs.objects.exclude(vid_status__in=["new", "rejected"])
-            .il()
-            .filter(obsolete=False, player_id=player.id, points__gt=0)
+            .filter(
+                runtype="il",
+                obsolete=False,
+                player_id=player.id,
+                points__gt=0,
+            )
             .aggregate(total_points=Sum("points"))
         )["total_points"]
 
@@ -354,7 +368,11 @@ def search_leaderboard(request):
     return JsonResponse(leaderboard, safe=False)
 
 
-def ILGameLeaderboard(request, slug, category=None):
+def ILGameLeaderboard(
+    request: HttpRequest,
+    slug: str,
+    category: str = None,
+) -> HttpResponse:
     """View that displays a leaderboard for a specific game that supports individual levels.
 
     This view gathers the speedruns and players for a specified game and ranks them in a leaderboard
@@ -372,10 +390,11 @@ def ILGameLeaderboard(request, slug, category=None):
     try:
         game = Games.objects.filter(slug__iexact=slug)
         players = Players.objects.all()
-        ilruns = (
-            Runs.objects.exclude(vid_status__in=["new", "rejected"])
-            .il()
-            .filter(game_id=game[0].id, points__gt=0, obsolete=False)
+        ilruns = Runs.objects.exclude(vid_status__in=["new", "rejected"]).filter(
+            runtype="il",
+            game_id=game[0].id,
+            points__gt=0,
+            obsolete=False,
         )
     except Games.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
@@ -481,7 +500,11 @@ def ILGameLeaderboard(request, slug, category=None):
         return render(request, "srl/il_leaderboard.html", context)
 
 
-def GameLeaderboard(request, slug, category=None):
+def GameLeaderboard(
+    request: HttpRequest,
+    slug: str,
+    category: str = None,
+) -> HttpResponse:
     """View that displays a leaderboard for a specific game that supports full game speedruns.
 
     This view gathers the `Runs` and `Players` for a specified game and ranks them in a leaderboard
@@ -498,10 +521,8 @@ def GameLeaderboard(request, slug, category=None):
     try:
         game = Games.objects.get(slug=slug)
         players = Players.objects.all()
-        mainruns = (
-            Runs.objects.exclude(vid_status__in=["new", "rejected"])
-            .main()
-            .filter(game_id=game.id, points__gt=0, obsolete=False)
+        mainruns = Runs.objects.exclude(vid_status__in=["new", "rejected"]).filter(
+            runtype="main", game_id=game.id, points__gt=0, obsolete=False
         )
         # hidden_cats = VariableValues.objects.filter(hidden=True)
     except Games.DoesNotExist:
@@ -623,7 +644,9 @@ def GameLeaderboard(request, slug, category=None):
     return render(request, "srl/il_leaderboard.html", context)
 
 
-def MainPage(request):
+def MainPage(
+    request: HttpRequest,
+) -> HttpResponse:
     """View that displays the main page for the entire website/project.
 
     This view gathers the world records, most recent speedruns/world records, and those currently
@@ -679,8 +702,7 @@ def MainPage(request):
     runs = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"], obsolete=True)
         .exclude(exclusion_filter)
-        .main()
-        .filter(place=1, subcategory__in=subcategories)
+        .filter(runtype="main", place=1, subcategory__in=subcategories)
         .order_by("-subcategory")
         .annotate(o_date=TruncDate("date"))
     )

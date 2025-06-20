@@ -197,8 +197,7 @@ def Leaderboard(request, profile=None, game=None):
             "player2",
             "player2_countrycode",
         )
-        .main()
-        .filter(obsolete=False)
+        .filter(runtype="main", obsolete=False)
     )
 
     il_runs_all = (
@@ -211,8 +210,7 @@ def Leaderboard(request, profile=None, game=None):
             "player2",
             "player2_countrycode",
         )
-        .il()
-        .filter(obsolete=False)
+        .filter(runtype="il", obsolete=False)
     )
 
     if profile == 1:

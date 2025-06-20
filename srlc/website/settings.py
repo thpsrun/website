@@ -11,6 +11,7 @@ if os.getenv("SENTRY_ENABLED") == "True":
     sentry_sdk.init(
         dsn=os.getenv("SENTRY_DSN"),
         send_default_pii=True,
+        traces_sample_rate=1.0,
     )
 
 SECRET_KEY = os.getenv("SECRET_KEY")

@@ -130,7 +130,11 @@ class API_Runs(APIView):
         "record",
     }
 
-    def get(self, request: HttpRequest, id: str) -> HttpResponse:
+    def get(
+        self,
+        request: HttpRequest,
+        id: str,
+    ) -> HttpResponse:
         """Returns a speedrun based on its ID.
 
         Args:
@@ -199,10 +203,14 @@ class API_Runs(APIView):
             else:
                 return Response(
                     {"ERROR": "run id provided does not exist."},
-                    status=status.HTTP_200_OK,
+                    status=status.HTTP_404_NOT_FOUND,
                 )
 
-    def post(self, _, id: str) -> HttpResponse:
+    def post(
+        self,
+        _,
+        id: str,
+    ) -> HttpResponse:
         """Creates a new speedrun object based on its ID.
 
         After the `id` is given, the data is normalized, processed, and validated before it is
@@ -239,7 +247,11 @@ class API_Runs(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-    def put(self, _, id) -> HttpResponse:
+    def put(
+        self,
+        _,
+        id,
+    ) -> HttpResponse:
         """Updates (or creates) a speedrun object based on its ID.
 
         After the `id` is given, the data is normalized, processed, and validated before it is
@@ -327,7 +339,11 @@ class API_Players(APIView):
 
     ALLOWED_QUERIES = {"streams"}
 
-    def get(self, request: HttpRequest, id: str) -> HttpResponse:
+    def get(
+        self,
+        request: HttpRequest,
+        id: str,
+    ) -> HttpResponse:
         """Returns a specific player's information based on its ID.
 
         Args:
@@ -386,7 +402,11 @@ class API_Players(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-    def put(self, request: HttpRequest, id: str) -> HttpResponse:
+    def put(
+        self,
+        request: HttpRequest,
+        id: str,
+    ) -> HttpResponse:
         """Forces the `player` object to be updated from the Speedrun.com API.
 
         After the `id` is given, the player's data will be normalized and their player information
@@ -412,25 +432,44 @@ class API_Players(APIView):
         )
 
         if player:
+            player_id = player.id
+
             if not request.data.get("ex_stream"):
                 request.data.update({"ex_stream": player.ex_stream})
 
-            serializer = PlayerSerializerPost(instance=player, data=request.data)
+            if not request.data.get("nickname"):
+                request.data.update({"nickname": player.nickname})
+
+            serializer = PlayerSerializerPost(
+                instance=player,
+                data=request.data,
+            )
 
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+                chain(update_player(player_id))()
+
+                return Response(
+                    serializer.data,
+                    status=status.HTTP_202_ACCEPTED,
+                )
             else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    serializer.errors,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         else:
             try:
                 chain(update_player(id))()
 
-                return Response("ok", status=status.HTTP_200_OK)
+                return Response(
+                    "ok",
+                    status=status.HTTP_200_OK,
+                )
             except AttributeError:
                 return Response(
                     {"ERROR": "Player ID or name does not exist."},
-                    status=status.HTTP_400_BAD_REQUEST,
+                    status=status.HTTP_404_NOT_FOUND,
                 )
             except Exception:
                 return Response(
@@ -541,7 +580,11 @@ class API_PlayerRecords(APIView):
 
     ALLOWED_EMBEDS = {"categories", "levels", "games", "platforms"}
 
-    def get(self, request: HttpRequest, id: str) -> HttpResponse:
+    def get(
+        self,
+        request: HttpRequest,
+        id: str,
+    ) -> HttpResponse:
         """Returns a player's full record history based on its ID.
 
         This endpoint returns all full-game and individual level speedruns for a specific player.
@@ -583,8 +626,16 @@ class API_PlayerRecords(APIView):
         if player:
             player_data = PlayerSerializer(player).data
 
-            main_runs = Runs.objects.main().filter(player=player).filter(obsolete=False)
-            il_runs = Runs.objects.il().filter(player=player).filter(obsolete=False)
+            main_runs = Runs.objects.filter(
+                runtype="main",
+                player=player,
+                obsolete=False,
+            )
+            il_runs = Runs.objects.filter(
+                runtype="il",
+                player=player,
+                obsolete=False,
+            )
 
             main_runs = main_runs.order_by("-v_date")
             il_runs = il_runs.order_by("-v_date")
@@ -646,7 +697,11 @@ class API_Games(APIView):
 
     ALLOWED_EMBEDS = {"categories", "levels", "platforms"}
 
-    def get(self, request: HttpRequest, id: str) -> HttpResponse:
+    def get(
+        self,
+        request: HttpRequest,
+        id: str,
+    ) -> HttpResponse:
         """Returns a specific game's metadata based on its ID.
 
         If a game ID or slug is provided, returns that specific game's details. "All" can also be
@@ -738,7 +793,11 @@ class API_Categories(APIView):
 
     ALLOWED_EMBEDS = {"game", "variables"}
 
-    def get(self, request: HttpRequest, id: str) -> HttpResponse:
+    def get(
+        self,
+        request: HttpRequest,
+        id: str,
+    ) -> HttpResponse:
         """Returns a single category and its metadata based on its ID.
 
         Parameters:
@@ -816,7 +875,11 @@ class API_Variables(APIView):
 
     ALLOWED_EMBEDS = {"game", "values"}
 
-    def get(self, request: HttpRequest, id: str) -> HttpResponse:
+    def get(
+        self,
+        request: HttpRequest,
+        id: str,
+    ) -> HttpResponse:
         """Returns a single variable's metadata and values based on its ID.
 
         Parameters:
@@ -891,7 +954,11 @@ class API_Values(APIView):
 
     ALLOWED_EMBEDS = {"variable"}
 
-    def get(self, request: HttpRequest, id: str) -> HttpResponse:
+    def get(
+        self,
+        request: HttpRequest,
+        id: str,
+    ) -> HttpResponse:
         """Returns a single value's metadata and related variable based on its ID.
 
         Parameters:
@@ -964,7 +1031,11 @@ class API_Levels(APIView):
 
     ALLOWED_EMBEDS = {"game"}
 
-    def get(self, request: HttpRequest, id: str) -> HttpResponse:
+    def get(
+        self,
+        request: HttpRequest,
+        id: str,
+    ) -> HttpResponse:
         """Returns a single level based on its ID.
 
         Parameters:
@@ -1001,7 +1072,8 @@ class API_Levels(APIView):
             )
         else:
             return Response(
-                {"ERROR": "Level ID does not exist"}, status=status.HTTP_404_NOT_FOUND
+                {"ERROR": "Level ID does not exist"},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
 
@@ -1048,14 +1120,20 @@ class API_Streams(APIView):
         ```
     """
 
-    def get(self, _) -> HttpResponse:
+    def get(
+        self,
+        _,
+    ) -> HttpResponse:
         """Returns a list of all available streams currently in the database."""
         return Response(
             StreamSerializer(NowStreaming.objects.all(), many=True).data,
             status=status.HTTP_200_OK,
         )
 
-    def post(self, request: HttpRequest) -> HttpResponse:
+    def post(
+        self,
+        request: HttpRequest,
+    ) -> HttpResponse:
         """Creates a new livestream object.
 
         Args:
@@ -1080,7 +1158,10 @@ class API_Streams(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-    def put(self, request: HttpRequest) -> HttpResponse:
+    def put(
+        self,
+        request: HttpRequest,
+    ) -> HttpResponse:
         """Updates (or creates) a livestream object.
 
         Args:
@@ -1105,7 +1186,10 @@ class API_Streams(APIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request: HttpRequest) -> HttpResponse:
+    def delete(
+        self,
+        request: HttpRequest,
+    ) -> HttpResponse:
         """Removes a livestream object.
 
         Args:

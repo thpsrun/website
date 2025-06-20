@@ -9,8 +9,6 @@ from django.db import transaction
 from langcodes import standardize_tag
 
 from .m_tasks import points_formula, src_api, time_conversion
-
-# from .automations import *
 from .models import (
     Categories,
     CountryCodes,
@@ -27,7 +25,9 @@ from .models import (
 
 
 @shared_task
-def update_game(src_game):
+def update_game(
+    src_game: dict[dict, dict],
+) -> None:
     """Creates or updates a `Games` model object based on the `src_game` argument.
 
     Args:
@@ -76,7 +76,10 @@ def update_game(src_game):
 
 
 @shared_task
-def update_game_runs(game_id, reset):
+def update_game_runs(
+    game_id: str,
+    reset: int,
+) -> None:
     """Beginning of a function chain that updates (or resets) a specific game based upon its ID.
 
     Args:
@@ -97,7 +100,7 @@ def update_game_runs(game_id, reset):
         - `update_category_runs`
         - `normalize_src`
     """
-    from api.tasks import normalize_src
+    from api.tasks import normalize_src  # Done to prevent issues with loops.
 
     # Within the Admin Panel, you will select "Reset Game Runs" if you want to reset all
     # non-obsolete runs. This essentially is a hard reset, and shouldn't be used often. When that
@@ -152,7 +155,10 @@ def update_game_runs(game_id, reset):
 
 
 @shared_task
-def update_category(category, game_id):
+def update_category(
+    category: dict[dict, dict],
+    game_id: str,
+) -> None:
     """Creates or updates a `Categories` model object based on the `category` argument.
 
     Args:
@@ -175,7 +181,9 @@ def update_category(category, game_id):
 
 
 @shared_task
-def update_platform(platform):
+def update_platform(
+    platform: dict[dict, dict],
+) -> None:
     """Creates or updates a `Platforms` model object based on the `platform` argument.
 
     Args:
@@ -189,7 +197,10 @@ def update_platform(platform):
 
 
 @shared_task
-def update_level(level, game_id):
+def update_level(
+    level: dict[dict, dict],
+    game_id: str,
+) -> None:
     """Creates or updates a `Levels` model object based on the `level` argument.
 
     Args:
@@ -211,7 +222,10 @@ def update_level(level, game_id):
 
 
 @shared_task
-def update_variable(gameid, variable):
+def update_variable(
+    gameid: str,
+    variable: dict[dict, dict],
+) -> None:
     """Creates or updates a `Variables` model object based on the `variable` argument.
 
     Args:
@@ -246,7 +260,10 @@ def update_variable(gameid, variable):
 
 
 @shared_task
-def update_variable_value(variable, value):
+def update_variable_value(
+    variable: dict[dict, dict],
+    value: str,
+) -> None:
     """Creates or updates a `VariableValues` model object based on the `value` argument.
 
     Args:
@@ -266,7 +283,11 @@ def update_variable_value(variable, value):
 
 
 @shared_task
-def update_category_runs(game_id, category, il_check):
+def update_category_runs(
+    game_id: str,
+    category: dict[dict, dict],
+    il_check: dict[dict, dict],
+) -> None:
     """Iterates through all categories in the `category` argument to input into `Categories` model.
 
     Begins a function chain that will iterate through the `category` and its dictionary in order to
@@ -363,7 +384,10 @@ def update_category_runs(game_id, category, il_check):
 
 
 @shared_task
-def update_player(player, download_pfp=True):
+def update_player(
+    player: str,
+    download_pfp: bool = True,
+) -> None:
     """Processes a specific player into the Speedrun.com API to gather metdata.
 
     Gathers information about a specific player (based on the `player` varaible) and converts it
@@ -381,7 +405,9 @@ def update_player(player, download_pfp=True):
     Called Functions:
         - `src_api`
     """
-    player_data = src_api(f"https://speedrun.com/api/v1/users/{player}")
+    player_data: dict[dict, [dict, dict]] = src_api(
+        f"https://speedrun.com/api/v1/users/{player}"
+    )
 
     if isinstance(player_data, dict) and player_data is not None:
         if player_data["assets"]["image"]["uri"] is not None and download_pfp:

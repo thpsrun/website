@@ -10,7 +10,7 @@ body:
     id: terms
     attributes:
       label: Guidelines
-      description: By submitting this issue, you agree to follow the [thps.run Contributing Guidelines](https://github.com/thpsrun/website/.github/blob/main/CONTRIBUTING.md).
+      description: By submitting this issue, you agree to follow the [thps.run Contributing Guidelines](https://github.com/thpsrun/website/blob/main/.github/CONTRIBUTING.md).
       options:
         - label: I agree to follow this project's Contributing Guidelines.
           required: true

@@ -11,7 +11,9 @@ from .tasks import (
 )
 
 
-def init_series(series_id):
+def init_series(
+    series_id,
+) -> None:
     """Initializes the gathering of all data for the entire Series from the Speedrun.com API"""
 
     # Removes all objects from all of the listed models below.
@@ -73,7 +75,9 @@ def init_series(series_id):
             redo = redo + 1
 
 
-async def init_series_async(series_id):
+async def init_series_async(
+    series_id,
+) -> None:
     """Asynchronously starts the data collection from the Series."""
     # Actually kicks off the initialization of the code.
     # Kinda ass, should be fixed sometime. But, if it ain't broke...

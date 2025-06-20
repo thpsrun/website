@@ -335,30 +335,9 @@ class Players(models.Model):
         return self.name
 
 
-class RunQuerySet(models.QuerySet):
-    def main(self):
-        return self.filter(runtype="main")
-
-    def il(self):
-        return self.filter(runtype="il")
-
-
-class RunManager(models.Manager):
-    def get_queryset(self):
-        return RunQuerySet(self.model, using=self._db)
-
-    def main(self):
-        return self.get_queryset().main()
-
-    def il(self):
-        return self.get_queryset().il()
-
-
 class Runs(models.Model):
     class Meta:
         verbose_name_plural = "Runs"
-
-    objects = RunManager()
 
     statuschoices = [
         ("verified", "Verified"),
