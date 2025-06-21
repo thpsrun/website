@@ -16,15 +16,20 @@
 *   Updated SentrySDK to give better verbose logging.
 *   Updated libraries.
 
+* * *
 
 ### v3.0.2
 ###### June 18, 2025
 *   Fixed an issue where a co-op run's second player had improper variable names, resulting in a `Server Error 500` response.
 
+* * *
+
 ### v3.0.1
 ###### June 16, 2025
 *   Disabled (commented out) Nginx in the primary install to thps.run.
     *   Everything still works, but just using Nginx Proxy Manager for now. If you wanna use it, un-comment the the Nginx info in `docker-compose.PROD.yml`!
+
+* * *
 
 ## v3.0 - The Open Source Update
 ###### June 15, 2025
