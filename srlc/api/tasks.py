@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import Any
 
 from celery import chain, shared_task
 from django.db import transaction
@@ -20,7 +21,10 @@ from srl.tasks import update_category, update_game, update_player, update_variab
 
 
 @shared_task
-def normalize_src(id, series_id_list=None):
+def normalize_src(
+    id,
+    series_id_list=None,
+) -> Any:
     """Normalizes information about a specific speedrun from the Speedrun.com API.
 
     Normalizes all information and metadata about a speedrun from the Speedrun.com API based on its
@@ -156,7 +160,7 @@ def add_run(
     obsolete=False,
     point_reset=True,
     download_pfp=True,
-):
+) -> None:
     """Retrieves and normalizes Speedrun.com API data before importing it into the database.
 
     Continues normalization of SRC API data from `normalize_src`, this is used to normalize the data
@@ -179,7 +183,10 @@ def add_run(
         - `invoke_single_run`
     """
 
-    def build_var_name(base_name, run_variables):
+    def build_var_name(
+        base_name,
+        run_variables,
+    ) -> str:
         if len(run_variables) > 0:
             var_name = base_name + " ("
             for key, value in run_variables.items():
@@ -221,7 +228,7 @@ def invoke_single_run(
     obsolete=False,
     point_reset=True,
     download_pfp=True,
-):
+) -> None:
     """Creates or updates a `Runs` object with Speedrun.com API information.
 
     Args:
@@ -347,20 +354,24 @@ def invoke_single_run(
 
         if category["type"] == "per-game":
             reset_points = "Main"
-            wr_pull = (
-                Runs.objects.main()
-                .filter(game=game_id, subcategory=var_name, obsolete=False, place=1)
-                .first()
-            )
+            wr_pull = Runs.objects.filter(
+                runtype="main",
+                game=game_id,
+                subcategory=var_name,
+                obsolete=False,
+                place=1,
+            ).first()
 
             defaulttime = Games.objects.only("defaulttime").get(id=game_id).defaulttime
         else:
             reset_points = "IL"
-            wr_pull = (
-                Runs.objects.il()
-                .filter(game=game_id, subcategory=var_name, obsolete=False, place=1)
-                .first()
-            )
+            wr_pull = Runs.objects.filter(
+                runtype="il",
+                game=game_id,
+                subcategory=var_name,
+                obsolete=False,
+                place=1,
+            ).first()
 
             defaulttime = Games.objects.only("defaulttime").get(id=game_id).idefaulttime
 
@@ -422,7 +433,10 @@ def invoke_single_run(
             default["points"] = points
 
         with transaction.atomic():
-            run_obj, _ = Runs.objects.update_or_create(id=run_id, defaults=default)
+            run_obj, _ = Runs.objects.update_or_create(
+                id=run_id,
+                defaults=default,
+            )
 
         if len(run["run"]["values"]) > 0:
             for var_id, val_id in run["run"]["values"].items():
@@ -441,7 +455,12 @@ def invoke_single_run(
 
 
 @shared_task
-def update_points(game_id, subcategory, max_points, reset_points):
+def update_points(
+    game_id,
+    subcategory,
+    max_points,
+    reset_points,
+) -> None:
     """Retrieves all speedruns within a game and subcategory and resets placings and points.
 
     Retrieves all speedruns within a game's subcateogyr and resets the `place` field for that run,
@@ -469,22 +488,32 @@ def update_points(game_id, subcategory, max_points, reset_points):
     }
 
     if reset_points == "Main":
-        all_runs = (
-            Runs.objects.only(
-                "place", "points", "time_secs", "timenl_secs", "timeigt_secs"
-            )
-            .main()
-            .filter(game=game_id, subcategory=subcategory, obsolete=False)
+        all_runs = Runs.objects.only(
+            "place",
+            "points",
+            "time_secs",
+            "timenl_secs",
+            "timeigt_secs",
+        ).filter(
+            runtype="main",
+            game=game_id,
+            subcategory=subcategory,
+            obsolete=False,
         )
 
         default_time = Games.objects.only("defaulttime").get(id=game_id).defaulttime
     else:
-        all_runs = (
-            Runs.objects.only(
-                "place", "points", "time_secs", "timenl_secs", "timeigt_secs"
-            )
-            .il()
-            .filter(game=game_id, subcategory=subcategory, obsolete=False)
+        all_runs = Runs.objects.only(
+            "place",
+            "points",
+            "time_secs",
+            "timenl_secs",
+            "timeigt_secs",
+        ).filter(
+            runtype="il",
+            game=game_id,
+            subcategory=subcategory,
+            obsolete=False,
         )
 
         default_time = Games.objects.only("idefaulttime").get(id=game_id).idefaulttime
@@ -533,7 +562,12 @@ def update_points(game_id, subcategory, max_points, reset_points):
 
 
 @shared_task
-def remove_obsolete(game_id, subcategory, players, run_type):
+def remove_obsolete(
+    game_id,
+    subcategory,
+    players,
+    run_type,
+) -> None:
     """Updates speedrun entries that should be obsolete.
 
     Retrieves all current runs by the player (depending on `game_id`, `subcategory`, and `run_type`)
@@ -574,12 +608,12 @@ def remove_obsolete(game_id, subcategory, players, run_type):
                         "timeigt_secs",
                     )
                     .filter(
+                        runtype="main",
                         game=game_id,
                         player=player["id"],
                         subcategory=subcategory,
                         obsolete=False,
                     )
-                    .main()
                 )
             else:
                 default_time = (
@@ -598,12 +632,12 @@ def remove_obsolete(game_id, subcategory, players, run_type):
                         "timeigt_secs",
                     )
                     .filter(
+                        runtype="il",
                         game=game_id,
                         player=player["id"],
                         subcategory=subcategory,
                         obsolete=False,
                     )
-                    .il()
                 )
 
             duplicated_subcategories = (

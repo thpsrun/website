@@ -3,6 +3,7 @@ import os
 
 import markdown
 from django.db.models import Q
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from srl.models import Games, Players
@@ -12,7 +13,9 @@ from .youtube_shortcode import YTEmbedProcessor
 DOCS_PATH = "/srlc/docs/"
 
 
-def parse_md_file(file_path):
+def parse_md_file(
+    file_path: str,
+) -> tuple[str, str, list]:
     """Returns internal metadata information on .MD files located in the `/srlc/docs` directory.
 
     Returns information about .MD files, including the title of the file, any website tags, and who
@@ -51,7 +54,10 @@ def parse_md_file(file_path):
     return title, author, content_output
 
 
-def render_guides_list(request, game):
+def render_guides_list(
+    request: HttpRequest,
+    game: str,
+) -> HttpResponse:
     """Returns a game's directory that includes .MD files.
 
     Returns .MD files within a specific directory when they are in the `/srlc/docs` folder. This
@@ -111,7 +117,11 @@ def render_guides_list(request, game):
     )
 
 
-def render_markdown(request, game, doc):
+def render_markdown(
+    request: HttpRequest,
+    game: str,
+    doc: str,
+) -> HttpResponse:
     """Renders the raw markdown of .MD files into Django HTML templates.
 
     Args:

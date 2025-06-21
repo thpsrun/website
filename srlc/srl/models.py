@@ -25,9 +25,18 @@ class Series(models.Model):
     class Meta:
         verbose_name_plural = "Series"
 
-    id = models.CharField(max_length=10, primary_key=True, verbose_name="Series ID")
-    name = models.CharField(max_length=20, verbose_name="Name")
-    url = models.URLField(verbose_name="URL")
+    id = models.CharField(
+        max_length=10,
+        primary_key=True,
+        verbose_name="Series ID",
+    )
+    name = models.CharField(
+        max_length=20,
+        verbose_name="Name",
+    )
+    url = models.URLField(
+        verbose_name="URL",
+    )
 
     def __str__(self):
         return self.name
@@ -38,8 +47,15 @@ class Platforms(models.Model):
         verbose_name_plural = "Platforms"
         ordering = ["name"]
 
-    id = models.CharField(max_length=10, primary_key=True, verbose_name="Platform ID")
-    name = models.CharField(max_length=30, verbose_name="Name")
+    id = models.CharField(
+        max_length=10,
+        primary_key=True,
+        verbose_name="Platform ID",
+    )
+    name = models.CharField(
+        max_length=30,
+        verbose_name="Name",
+    )
 
     def __str__(self):
         return self.name
@@ -56,16 +72,35 @@ class Games(models.Model):
         ("ingame", "IGT"),
     ]
 
-    id = models.CharField(max_length=10, primary_key=True, verbose_name="SRL Game ID")
-    name = models.CharField(max_length=55, verbose_name="Name")
-    slug = models.CharField(max_length=20, verbose_name="Abbreviation/Slug")
-    twitch = models.CharField(
-        max_length=55, verbose_name="Twitch Name", null=True, blank=True
+    id = models.CharField(
+        max_length=10,
+        primary_key=True,
+        verbose_name="SRL Game ID",
     )
-    release = models.DateField(verbose_name="Release Date")
-    boxart = models.URLField(verbose_name="Box Art URL")
+    name = models.CharField(
+        max_length=55,
+        verbose_name="Name",
+    )
+    slug = models.CharField(
+        max_length=20,
+        verbose_name="Abbreviation/Slug",
+    )
+    twitch = models.CharField(
+        max_length=55,
+        verbose_name="Twitch Name",
+        null=True,
+        blank=True,
+    )
+    release = models.DateField(
+        verbose_name="Release Date",
+    )
+    boxart = models.URLField(
+        verbose_name="Box Art URL",
+    )
     defaulttime = models.CharField(
-        verbose_name="Default Time", choices=leaderboard_choices, default="realtime"
+        verbose_name="Default Time",
+        choices=leaderboard_choices,
+        default="realtime",
     )
     idefaulttime = models.CharField(
         verbose_name="ILs Default Time",
@@ -78,7 +113,10 @@ class Games(models.Model):
             "being created and must be set manually."
         ),
     )
-    platforms = models.ManyToManyField(Platforms, verbose_name="Platforms")
+    platforms = models.ManyToManyField(
+        Platforms,
+        verbose_name="Platforms",
+    )
     pointsmax = models.IntegerField(
         verbose_name="Full Game WR Point Maximum",
         default=1000,
@@ -118,17 +156,35 @@ class Categories(models.Model):
         ("per-game", "Full Game"),
     ]
 
-    id = models.CharField(max_length=10, primary_key=True, verbose_name="Category ID")
+    id = models.CharField(
+        max_length=10,
+        primary_key=True,
+        verbose_name="Category ID",
+    )
     game = models.ForeignKey(
         Games, verbose_name="Linked Game", null=True, on_delete=models.SET_NULL
     )
-    name = models.CharField(max_length=50, verbose_name="Name")
-    type = models.CharField(verbose_name="Type (IL/FG)", choices=type_choices)
-    url = models.URLField(verbose_name="URL")
-    rules = models.TextField(
-        max_length=1000, verbose_name="Rules", blank=True, null=True
+    name = models.CharField(
+        max_length=50,
+        verbose_name="Name",
     )
-    hidden = models.BooleanField(verbose_name="Hide Category", default=False)
+    type = models.CharField(
+        verbose_name="Type (IL/FG)",
+        choices=type_choices,
+    )
+    url = models.URLField(
+        verbose_name="URL",
+    )
+    rules = models.TextField(
+        max_length=1000,
+        verbose_name="Rules",
+        blank=True,
+        null=True,
+    )
+    hidden = models.BooleanField(
+        verbose_name="Hide Category",
+        default=False,
+    )
 
     def __str__(self):
         return self.name
@@ -139,14 +195,29 @@ class Levels(models.Model):
         verbose_name_plural = "Levels"
         ordering = ["name"]
 
-    id = models.CharField(max_length=10, primary_key=True, verbose_name="Level ID")
-    game = models.ForeignKey(
-        Games, verbose_name="Linked Game", null=True, on_delete=models.SET_NULL
+    id = models.CharField(
+        max_length=10,
+        primary_key=True,
+        verbose_name="Level ID",
     )
-    name = models.CharField(max_length=75, verbose_name="Name")
-    url = models.URLField(verbose_name="URL")
+    game = models.ForeignKey(
+        Games,
+        verbose_name="Linked Game",
+        null=True,
+        on_delete=models.SET_NULL,
+    )
+    name = models.CharField(
+        max_length=75,
+        verbose_name="Name",
+    )
+    url = models.URLField(
+        verbose_name="URL",
+    )
     rules = models.TextField(
-        max_length=1000, verbose_name="Rules", blank=True, null=True
+        max_length=1000,
+        verbose_name="Rules",
+        blank=True,
+        null=True,
     )
 
     def __str__(self):
@@ -164,10 +235,20 @@ class Variables(models.Model):
         ("single-level", "Specific IL"),
     ]
 
-    id = models.CharField(max_length=10, primary_key=True, verbose_name="Variable ID")
-    name = models.CharField(max_length=50, verbose_name="Name")
+    id = models.CharField(
+        max_length=10,
+        primary_key=True,
+        verbose_name="Variable ID",
+    )
+    name = models.CharField(
+        max_length=50,
+        verbose_name="Name",
+    )
     game = models.ForeignKey(
-        Games, verbose_name="Linked Game", null=True, on_delete=models.SET_NULL
+        Games,
+        verbose_name="Linked Game",
+        null=True,
+        on_delete=models.SET_NULL,
     )
     cat = models.ForeignKey(
         Categories,
@@ -185,7 +266,10 @@ class Variables(models.Model):
             "must be blank."
         ),
     )
-    scope = models.CharField(verbose_name="Scope (FG/IL)", choices=type_choices)
+    scope = models.CharField(
+        verbose_name="Scope (FG/IL)",
+        choices=type_choices,
+    )
     level = models.ForeignKey(
         Levels,
         verbose_name="Associated Level",
@@ -197,7 +281,10 @@ class Variables(models.Model):
             "keep null."
         ),
     )
-    hidden = models.BooleanField(verbose_name="Hide Variable", default=False)
+    hidden = models.BooleanField(
+        verbose_name="Hide Variable",
+        default=False,
+    )
 
     def clean(self):
         if (self.cat is None) and (not self.all_cats):
@@ -226,13 +313,29 @@ class VariableValues(models.Model):
         verbose_name_plural = "Variable Values"
 
     var = models.ForeignKey(
-        Variables, verbose_name="Linked Variable", null=True, on_delete=models.SET_NULL
+        Variables,
+        verbose_name="Linked Variable",
+        null=True,
+        on_delete=models.SET_NULL,
     )
-    name = models.CharField(max_length=50, verbose_name="Name")
-    value = models.CharField(max_length=10, primary_key=True, verbose_name="Value ID")
-    hidden = models.BooleanField(verbose_name="Hide Value", default=False)
+    name = models.CharField(
+        max_length=50,
+        verbose_name="Name",
+    )
+    value = models.CharField(
+        max_length=10,
+        primary_key=True,
+        verbose_name="Value ID",
+    )
+    hidden = models.BooleanField(
+        verbose_name="Hide Value",
+        default=False,
+    )
     rules = models.TextField(
-        max_length=1000, verbose_name="Rules", blank=True, null=True
+        max_length=1000,
+        verbose_name="Rules",
+        blank=True,
+        null=True,
     )
 
     def __str__(self):
@@ -243,7 +346,11 @@ class Awards(models.Model):
     class Meta:
         verbose_name_plural = "Awards"
 
-    name = models.CharField(max_length=50, verbose_name="Award Name", unique=True)
+    name = models.CharField(
+        max_length=50,
+        verbose_name="Award Name",
+        unique=True,
+    )
     image = ResizedImageField(
         size=[64, 64],
         upload_to="srl/static/srl/imgs/awards",
@@ -257,7 +364,10 @@ class Awards(models.Model):
         ),
     )
     description = models.CharField(
-        max_length=500, verbose_name="Award Description", blank=True, null=True
+        max_length=500,
+        verbose_name="Award Description",
+        blank=True,
+        null=True,
     )
 
     def __str__(self):
@@ -270,9 +380,14 @@ class CountryCodes(models.Model):
         ordering = ["name"]
 
     id = models.CharField(
-        max_length=10, primary_key=True, verbose_name="Country Code ID"
+        max_length=10,
+        primary_key=True,
+        verbose_name="Country Code ID",
     )
-    name = models.CharField(max_length=50, verbose_name="Country Name")
+    name = models.CharField(
+        max_length=50,
+        verbose_name="Country Name",
+    )
 
     def __str__(self):
         return self.name
@@ -283,8 +398,16 @@ class Players(models.Model):
         verbose_name_plural = "Players"
         ordering = ["name"]
 
-    id = models.CharField(max_length=10, primary_key=True, verbose_name="Player ID")
-    name = models.CharField(max_length=30, verbose_name="Name", default="Anonymous")
+    id = models.CharField(
+        max_length=10,
+        primary_key=True,
+        verbose_name="Player ID",
+    )
+    name = models.CharField(
+        max_length=30,
+        verbose_name="Name",
+        default="Anonymous",
+    )
     nickname = models.CharField(
         max_length=30,
         verbose_name="Nickname",
@@ -295,7 +418,9 @@ class Players(models.Model):
             "shown versus their SRC name."
         ),
     )
-    url = models.URLField(verbose_name="URL")
+    url = models.URLField(
+        verbose_name="URL",
+    )
     countrycode = models.ForeignKey(
         CountryCodes,
         verbose_name="Country Code",
@@ -304,15 +429,37 @@ class Players(models.Model):
         on_delete=models.SET_NULL,
     )
     pfp = models.CharField(
-        max_length=100, verbose_name="Profile Picture URL", blank=True, null=True
+        max_length=100,
+        verbose_name="Profile Picture URL",
+        blank=True,
+        null=True,
     )
     pronouns = models.CharField(
-        max_length=20, verbose_name="Pronouns", blank=True, null=True
+        max_length=20,
+        verbose_name="Pronouns",
+        blank=True,
+        null=True,
     )
-    twitch = models.URLField(verbose_name="Twitch", blank=True, null=True)
-    youtube = models.URLField(verbose_name="YouTube", blank=True, null=True)
-    twitter = models.URLField(verbose_name="Twitter", blank=True, null=True)
-    bluesky = models.URLField(verbose_name="Bluesky", blank=True, null=True)
+    twitch = models.URLField(
+        verbose_name="Twitch",
+        blank=True,
+        null=True,
+    )
+    youtube = models.URLField(
+        verbose_name="YouTube",
+        blank=True,
+        null=True,
+    )
+    twitter = models.URLField(
+        verbose_name="Twitter",
+        blank=True,
+        null=True,
+    )
+    bluesky = models.URLField(
+        verbose_name="Bluesky",
+        blank=True,
+        null=True,
+    )
     ex_stream = models.BooleanField(
         verbose_name="Stream Exception",
         default=False,
@@ -335,30 +482,9 @@ class Players(models.Model):
         return self.name
 
 
-class RunQuerySet(models.QuerySet):
-    def main(self):
-        return self.filter(runtype="main")
-
-    def il(self):
-        return self.filter(runtype="il")
-
-
-class RunManager(models.Manager):
-    def get_queryset(self):
-        return RunQuerySet(self.model, using=self._db)
-
-    def main(self):
-        return self.get_queryset().main()
-
-    def il(self):
-        return self.get_queryset().il()
-
-
 class Runs(models.Model):
     class Meta:
         verbose_name_plural = "Runs"
-
-    objects = RunManager()
 
     statuschoices = [
         ("verified", "Verified"),
@@ -371,11 +497,21 @@ class Runs(models.Model):
         ("il", "Individual Level"),
     ]
 
-    id = models.CharField(max_length=10, primary_key=True, verbose_name="Run ID")
-    runtype = models.CharField(
-        max_length=5, choices=runtype, verbose_name="Full-Game or IL"
+    id = models.CharField(
+        max_length=10,
+        primary_key=True,
+        verbose_name="Run ID",
     )
-    game = models.ForeignKey(Games, verbose_name="Game", on_delete=models.CASCADE)
+    runtype = models.CharField(
+        max_length=5,
+        choices=runtype,
+        verbose_name="Full-Game or IL",
+    )
+    game = models.ForeignKey(
+        Games,
+        verbose_name="Game",
+        on_delete=models.CASCADE,
+    )
     category = models.ForeignKey(
         Categories,
         verbose_name="Category",
@@ -384,10 +520,17 @@ class Runs(models.Model):
         on_delete=models.SET_NULL,
     )
     level = models.ForeignKey(
-        Levels, verbose_name="Level", blank=True, null=True, on_delete=models.SET_NULL
+        Levels,
+        verbose_name="Level",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     subcategory = models.CharField(
-        max_length=100, verbose_name="Subcategory Name", blank=True, null=True
+        max_length=100,
+        verbose_name="Subcategory Name",
+        blank=True,
+        null=True,
     )
     variables = models.ManyToManyField(
         Variables,
@@ -411,30 +554,64 @@ class Runs(models.Model):
         on_delete=models.SET_NULL,
         related_name="runs_p2",
     )
-    place = models.IntegerField(verbose_name="Placing")
-    url = models.URLField(verbose_name="URL")
-    video = models.URLField(verbose_name="Video", blank=True, null=True)
-    date = models.DateTimeField(verbose_name="Submitted Date", blank=True, null=True)
-    v_date = models.DateTimeField(verbose_name="Verified Date", blank=True, null=True)
+    place = models.IntegerField(
+        verbose_name="Placing",
+    )
+    url = models.URLField(
+        verbose_name="URL",
+    )
+    video = models.URLField(
+        verbose_name="Video",
+        blank=True,
+        null=True,
+    )
+    date = models.DateTimeField(
+        verbose_name="Submitted Date",
+        blank=True,
+        null=True,
+    )
+    v_date = models.DateTimeField(
+        verbose_name="Verified Date",
+        blank=True,
+        null=True,
+    )
     time = models.CharField(
-        max_length=25, verbose_name="RTA Time", blank=True, null=True
+        max_length=25,
+        verbose_name="RTA Time",
+        blank=True,
+        null=True,
     )
     time_secs = models.FloatField(
-        verbose_name="RTA Time (Seconds)", blank=True, null=True
+        verbose_name="RTA Time (Seconds)",
+        blank=True,
+        null=True,
     )
     timenl = models.CharField(
-        max_length=25, verbose_name="LRT Time", blank=True, null=True
+        max_length=25,
+        verbose_name="LRT Time",
+        blank=True,
+        null=True,
     )
     timenl_secs = models.FloatField(
-        verbose_name="LRT Time (Seconds)", blank=True, null=True
+        verbose_name="LRT Time (Seconds)",
+        blank=True,
+        null=True,
     )
     timeigt = models.CharField(
-        max_length=25, verbose_name="IGT Time", blank=True, null=True
+        max_length=25,
+        verbose_name="IGT Time",
+        blank=True,
+        null=True,
     )
     timeigt_secs = models.FloatField(
-        verbose_name="IGT Time (Seconds)", blank=True, null=True
+        verbose_name="IGT Time (Seconds)",
+        blank=True,
+        null=True,
     )
-    points = models.IntegerField(verbose_name="Packle Points", default=0)
+    points = models.IntegerField(
+        verbose_name="Packle Points",
+        default=0,
+    )
     platform = models.ForeignKey(
         Platforms,
         verbose_name="Platform",
@@ -442,7 +619,10 @@ class Runs(models.Model):
         null=True,
         on_delete=models.SET_NULL,
     )
-    emulated = models.BooleanField(verbose_name="Emulated?", default=False)
+    emulated = models.BooleanField(
+        verbose_name="Emulated?",
+        default=False,
+    )
     vid_status = models.CharField(
         verbose_name="SRC Status",
         choices=statuschoices,
@@ -479,7 +659,10 @@ class Runs(models.Model):
         ),
     )
     description = models.TextField(
-        max_length=1000, verbose_name="Description", blank=True, null=True
+        max_length=1000,
+        verbose_name="Description",
+        blank=True,
+        null=True,
     )
 
     def __str__(self):
@@ -487,7 +670,11 @@ class Runs(models.Model):
 
     def set_variables(self, variable_value_map: dict):
         for variable, value in variable_value_map.items():
-            VariableValues.objects.create(run=self, variable=variable, value=value)
+            VariableValues.objects.create(
+                run=self,
+                variable=variable,
+                value=value,
+            )
 
 
 class RunVariableValues(models.Model):
@@ -495,13 +682,23 @@ class RunVariableValues(models.Model):
         verbose_name_plural = "Run Variable Values"
         constraints = [
             models.UniqueConstraint(
-                fields=["run", "variable"], name="unique_variable_and_value"
+                fields=["run", "variable"],
+                name="unique_variable_and_value",
             )
         ]
 
-    run = models.ForeignKey(Runs, on_delete=models.CASCADE)
-    variable = models.ForeignKey(Variables, on_delete=models.CASCADE)
-    value = models.ForeignKey(VariableValues, on_delete=models.CASCADE)
+    run = models.ForeignKey(
+        Runs,
+        on_delete=models.CASCADE,
+    )
+    variable = models.ForeignKey(
+        Variables,
+        on_delete=models.CASCADE,
+    )
+    value = models.ForeignKey(
+        VariableValues,
+        on_delete=models.CASCADE,
+    )
 
     def __str__(self):
         return f"{self.run} - {self.variable.name}: {self.value.name}"
@@ -513,12 +710,21 @@ class NowStreaming(models.Model):
         verbose_name_plural = "Streams"
 
     streamer = models.OneToOneField(
-        Players, primary_key=True, verbose_name="Streamer", on_delete=models.CASCADE
+        Players,
+        primary_key=True,
+        verbose_name="Streamer",
+        on_delete=models.CASCADE,
     )
     game = models.ForeignKey(
-        Games, verbose_name="Game", null=True, on_delete=models.SET_NULL
+        Games,
+        verbose_name="Game",
+        null=True,
+        on_delete=models.SET_NULL,
     )
-    title = models.CharField(max_length=100, verbose_name="Twitch Title")
+    title = models.CharField(
+        max_length=100,
+        verbose_name="Twitch Title",
+    )
     offline_ct = models.IntegerField(
         verbose_name="Offline Count",
         help_text=(
@@ -528,7 +734,9 @@ class NowStreaming(models.Model):
             "embeds and/or remove this record."
         ),
     )
-    stream_time = models.DateTimeField(verbose_name="Started Stream")
+    stream_time = models.DateTimeField(
+        verbose_name="Started Stream",
+    )
 
     def __str__(self):
         return f"Streaming: {self.streamer.name}"

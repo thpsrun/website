@@ -1,11 +1,35 @@
+### v3.1.0
+###### June 20, 2025
+### Added
+*   Added return types to functions across the project.
+*   Added additional PUT `/players` endpoint option to update a player's nickname through the API.
+*   Added new crontab commands in the documentation for backing up the database every night and collecting static images regularly.
+
+### Fixed
+*   Fixed an issue where some API functions would return an `HTTP 200 OK` response instead of `HTTP 404 NOT FOUND` when something didn't exist.
+
+### Changes
+*   Changed the PUT `/players` endpoint so that it will use the player's unique ID to query SRC instead of their name.
+    *   If they changed their username, it would return a 404.
+
+### Misc.
+*   Updated SentrySDK to give better verbose logging.
+*   Updated libraries.
+
+* * *
+
 ### v3.0.2
 ###### June 18, 2025
 *   Fixed an issue where a co-op run's second player had improper variable names, resulting in a `Server Error 500` response.
+
+* * *
 
 ### v3.0.1
 ###### June 16, 2025
 *   Disabled (commented out) Nginx in the primary install to thps.run.
     *   Everything still works, but just using Nginx Proxy Manager for now. If you wanna use it, un-comment the the Nginx info in `docker-compose.PROD.yml`!
+
+* * *
 
 ## v3.0 - The Open Source Update
 ###### June 15, 2025

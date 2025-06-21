@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any, Union
 
 from django.db.models import Q
 from rest_framework import serializers
@@ -48,22 +49,31 @@ class RunSerializer(serializers.ModelSerializer):
     videos = serializers.SerializerMethodField()
     meta = serializers.SerializerMethodField()
 
-    def get_game(self, obj: Runs):
-        """Serailizes game information, to include optional embeds."""
+    def get_game(
+        self,
+        obj: Runs,
+    ) -> Union[str, int, dict[str, Any]]:
+        """Serializes game information, to include optional embeds."""
         if any(item in self.context.get("embed", []) for item in ["games", "game"]):
             return GameSerializer(Games.objects.get(id=obj.game.id)).data
         else:
             return obj.game.id
 
-    def get_category(self, obj: Runs):
-        """Serailizes category information, to include optional embeds."""
+    def get_category(
+        self,
+        obj: Runs,
+    ) -> Union[str, int, dict[str, Any]]:
+        """Serializes category information, to include optional embeds."""
         if "category" in self.context.get("embed", []):
             return CategorySerializer(Categories.objects.get(id=obj.category.id)).data
         else:
             return obj.category.id
 
-    def get_level(self, obj: Runs):
-        """Serailizes level information, to include optional embeds."""
+    def get_level(
+        self,
+        obj: Runs,
+    ) -> Union[str, int, dict[str, Any]]:
+        """Serializes level information, to include optional embeds."""
         if "level" in self.context.get("embed", []):
             return LevelSerializer(Levels.objects.get(id=obj.level.id)).data
         elif obj.level:
@@ -71,8 +81,11 @@ class RunSerializer(serializers.ModelSerializer):
         else:
             return None
 
-    def get_times(self, obj: Runs):
-        """Serailizes time information."""
+    def get_times(
+        self,
+        obj: Runs,
+    ) -> dict[dict, str]:
+        """Serializes time information."""
         return {
             "defaulttime": obj.game.defaulttime,
             "time": obj.time,
@@ -83,7 +96,10 @@ class RunSerializer(serializers.ModelSerializer):
             "timeigt_secs": obj.timeigt_secs,
         }
 
-    def get_record(self, obj):
+    def get_record(
+        self,
+        obj: Runs,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes the world record associated with the run's subcategory"""
 
         if "record" in self.context.get("embed", []):
@@ -101,8 +117,11 @@ class RunSerializer(serializers.ModelSerializer):
                 .id
             )
 
-    def get_players(self, obj: Runs):
-        """Serailizes player information, to include optional embeds."""
+    def get_players(
+        self,
+        obj: Runs,
+    ) -> Union[str, int, dict[str, Any]]:
+        """Serializes player information, to include optional embeds."""
         if "players" in self.context.get("embed", []):
             player1 = PlayerSerializer(Players.objects.get(id=obj.player.id)).data
 
@@ -123,8 +142,11 @@ class RunSerializer(serializers.ModelSerializer):
 
             return p1, p2
 
-    def get_system(self, obj: Runs):
-        """Serailizes platform information, to include optional embeds."""
+    def get_system(
+        self,
+        obj: Runs,
+    ) -> dict[dict, str]:
+        """Serializes platform information, to include optional embeds."""
         if "platform" in self.context.get("embed", []):
             plat = PlatformSerializer(Platforms.objects.get(id=obj.platform.id)).data
         else:
@@ -135,8 +157,11 @@ class RunSerializer(serializers.ModelSerializer):
             "emulated": obj.emulated,
         }
 
-    def get_status(self, obj: Runs):
-        """Serailizes run status information."""
+    def get_status(
+        self,
+        obj: Runs,
+    ) -> dict[dict, str]:
+        """Serializes run status information."""
         return {
             "vid_status": obj.vid_status,
             "approver": obj.approver.id if obj.approver else None,
@@ -144,15 +169,21 @@ class RunSerializer(serializers.ModelSerializer):
             "obsolete": obj.obsolete,
         }
 
-    def get_videos(self, obj: Runs):
+    def get_videos(
+        self,
+        obj: Runs,
+    ) -> dict[dict, str]:
         """Serializes video information."""
         return {
             "video": obj.video,
             "arch_video": obj.arch_video,
         }
 
-    def get_variables(self, obj: Runs):
-        """Serailizes variable information, to include optional embeds."""
+    def get_variables(
+        self,
+        obj: Runs,
+    ) -> Union[str, int, dict[str, Any]]:
+        """Serializes variable information, to include optional embeds."""
 
         variable_list = (
             RunVariableValues.objects.only("variable_id", "value_id")
@@ -190,15 +221,21 @@ class RunSerializer(serializers.ModelSerializer):
 
         return output
 
-    def get_meta(self, obj: Runs):
-        """Serailizes the run's metadata."""
+    def get_meta(
+        self,
+        obj: Runs,
+    ) -> dict[dict, str]:
+        """Serializes the run's metadata."""
 
         return {
             "points": obj.points,
             "url": obj.url,
         }
 
-    def to_representation(self, instance):
+    def to_representation(
+        self,
+        instance,
+    ) -> dict[dict, Any]:
         """Customizes the serialized output of the object.
 
         This method overrides default fields normally returned by the JSON object. All of these
@@ -287,14 +324,20 @@ class PlatformSerializer(serializers.ModelSerializer):
 
     games = serializers.SerializerMethodField()
 
-    def get_games(self, obj: Runs):
+    def get_games(
+        self,
+        obj: Runs,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes game information, to include optional embeds."""
         if "games" in self.context.get("embed", []):
             return GameSerializer(obj.game).data if obj.game else None
         else:
             return None
 
-    def to_representation(self, instance):
+    def to_representation(
+        self,
+        instance,
+    ) -> dict[str, Any]:
         """Customizes the serialized output of the object.
 
         This method overrides default fields normally returned by the JSON object. All of these
@@ -335,7 +378,10 @@ class PlayerSerializer(serializers.ModelSerializer):
     country = serializers.SerializerMethodField()
     awards = serializers.SerializerMethodField()
 
-    def get_stats(self, obj: Runs):
+    def get_stats(
+        self,
+        obj: Runs,
+    ) -> dict[dict, str]:
         """Serializes basic stats for the player, including rankings and points."""
         main_runs = (
             Runs.objects.only("points", "obsolete")
@@ -360,21 +406,30 @@ class PlayerSerializer(serializers.ModelSerializer):
             "total_runs": total_runs,
         }
 
-    def get_country(self, obj: Players):
+    def get_country(
+        self,
+        obj: Players,
+    ) -> str:
         """Serializes country information."""
         if obj.countrycode:
             return obj.countrycode.name
         else:
             return None
 
-    def get_awards(self, obj: Players):
+    def get_awards(
+        self,
+        obj: Players,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes award information."""
         if obj.awards:
             return AwardSerializer(obj.awards, many=True).data
         else:
             return None
 
-    def to_representation(self, instance):
+    def to_representation(
+        self,
+        instance,
+    ) -> dict[str, Any]:
         """Customizes the serialized output of the object.
 
         This method overrides default fields normally returned by the JSON object. All of these
@@ -422,14 +477,20 @@ class PlayerStreamSerializer(serializers.ModelSerializer):
 
     twitch = serializers.SerializerMethodField()
 
-    def get_twitch(self, obj: Players):
+    def get_twitch(
+        self,
+        obj: Players,
+    ) -> str:
         """Serializes Twitch.tv metadata for players."""
         if obj.twitch:
             return obj.twitch.replace("https://www.twitch.tv/", "")
         else:
             obj.twitch
 
-    def to_representation(self, instance):
+    def to_representation(
+        self,
+        instance,
+    ) -> dict[str, Any]:
         """Customizes the serialized output of the object.
 
         This method overrides default fields normally returned by the JSON object. All of these
@@ -465,7 +526,10 @@ class GameSerializer(serializers.ModelSerializer):
     levels = serializers.SerializerMethodField()
     platforms = serializers.SerializerMethodField()
 
-    def get_categories(self, obj: Games):
+    def get_categories(
+        self,
+        obj: Games,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes category information, to include optional embeds."""
         if "categories" in self.context.get("embed", []):
             return CategorySerializer(
@@ -474,21 +538,30 @@ class GameSerializer(serializers.ModelSerializer):
         else:
             return None
 
-    def get_levels(self, obj: Games):
+    def get_levels(
+        self,
+        obj: Games,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes level information, to include optional embeds."""
         if "levels" in self.context.get("embed", []):
             return LevelSerializer(Levels.objects.filter(game=obj), many=True).data
         else:
             return None
 
-    def get_platforms(self, obj: Games):
+    def get_platforms(
+        self,
+        obj: Games,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes platform information, to include optional embeds."""
         if "platforms" in self.context.get("embed", []):
             return PlatformSerializer(obj.platforms, many=True).data
         else:
             return None
 
-    def to_representation(self, instance):
+    def to_representation(
+        self,
+        instance,
+    ) -> dict[str, Any]:
         """Customizes the serialized output of the object.
 
         This method overrides default fields normally returned by the JSON object. All of these
@@ -546,14 +619,20 @@ class LevelSerializer(serializers.ModelSerializer):
 
     game = serializers.SerializerMethodField()
 
-    def get_game(self, obj: Runs):
+    def get_game(
+        self,
+        obj: Runs,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes game information, to include optional embeds."""
         if "game" in self.context.get("embed", []):
             return GameSerializer(Games.objects.get(id=obj.game.id)).data
         else:
             return None
 
-    def to_representation(self, instance):
+    def to_representation(
+        self,
+        instance,
+    ) -> dict[str, Any]:
         """Customizes the serialized output of the object.
 
         This method overrides default fields normally returned by the JSON object. All of these
@@ -593,14 +672,20 @@ class CategorySerializer(serializers.ModelSerializer):
     game = serializers.SerializerMethodField()
     variables = serializers.SerializerMethodField()
 
-    def get_game(self, obj: Runs):
+    def get_game(
+        self,
+        obj: Runs,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes game information, to include optional embeds."""
         if "game" in self.context.get("embed", []):
             return GameSerializer(Games.objects.filter(id=obj.game.id)).data
         else:
             return None
 
-    def get_variables(self, obj: Variables):
+    def get_variables(
+        self,
+        obj: Variables,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes variable information, to include optional embeds."""
         if "variables" in self.context.get("embed", []):
             return VariableSerializer(
@@ -609,7 +694,10 @@ class CategorySerializer(serializers.ModelSerializer):
         else:
             return None
 
-    def to_representation(self, instance):
+    def to_representation(
+        self,
+        instance,
+    ) -> dict[str, Any]:
         """Customizes the serialized output of the object.
 
         This method overrides default fields normally returned by the JSON object. All of these
@@ -655,14 +743,20 @@ class VariableSerializer(serializers.ModelSerializer):
     game = serializers.SerializerMethodField()
     values = serializers.SerializerMethodField()
 
-    def get_game(self, obj: Runs):
+    def get_game(
+        self,
+        obj: Runs,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes game information, to include optional embeds."""
         if "game" in self.context.get("embed", []):
             return GameSerializer(Games.objects.filter(id=obj.game.id), many=True).data
         else:
             return None
 
-    def get_values(self, obj: Variables):
+    def get_values(
+        self,
+        obj: Variables,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes value information, to include optional embeds."""
         if "values" in self.context.get("embed", []):
             return ValueSerializer(
@@ -671,7 +765,10 @@ class VariableSerializer(serializers.ModelSerializer):
         else:
             return None
 
-    def to_representation(self, instance):
+    def to_representation(
+        self,
+        instance,
+    ) -> dict[str, Any]:
         """Customizes the serialized output of the object.
 
         This method overrides default fields normally returned by the JSON object. All of these
@@ -715,14 +812,20 @@ class ValueSerializer(serializers.ModelSerializer):
 
     variable = serializers.SerializerMethodField()
 
-    def get_variable(self, obj: VariableValues):
+    def get_variable(
+        self,
+        obj: VariableValues,
+    ) -> Union[str, int, dict[str, Any]]:
         """Serializes variable information, to include optional embeds."""
         if "variable" in self.context.get("embed", []):
             return VariableSerializer(Variables.objects.get(id=obj.var.id)).data
         else:
             return obj.var.id
 
-    def to_representation(self, instance):
+    def to_representation(
+        self,
+        instance,
+    ) -> dict[str, Any]:
         """Customizes the serialized output of the object.
 
         This method overrides default fields normally returned by the JSON object. All of these
@@ -766,7 +869,10 @@ class StreamSerializer(serializers.ModelSerializer):
     streamer = serializers.SerializerMethodField()
     game = serializers.SerializerMethodField()
 
-    def get_streamer(self, obj: NowStreaming):
+    def get_streamer(
+        self,
+        obj: NowStreaming,
+    ) -> dict[dict, str]:
         """Serializes streamer information."""
         return {
             "player": obj.streamer.name,
@@ -774,7 +880,10 @@ class StreamSerializer(serializers.ModelSerializer):
             "youtube": obj.streamer.youtube,
         }
 
-    def get_game(self, obj: NowStreaming):
+    def get_game(
+        self,
+        obj: NowStreaming,
+    ) -> dict[dict, str]:
         """Serializes game information."""
         return {
             "id": obj.game.id,
@@ -807,7 +916,10 @@ class StreamSerializerPost(serializers.ModelSerializer):
     offline_ct = serializers.IntegerField()
     stream_time = serializers.CharField()
 
-    def validate_streamer(self, streamer):
+    def validate_streamer(
+        self,
+        streamer: str,
+    ) -> Players:
         """Validates if the streamer exists in the `Streamer` model."""
         try:
             return Players.objects.get(
@@ -818,10 +930,13 @@ class StreamSerializerPost(serializers.ModelSerializer):
         except Players.DoesNotExist:
             raise serializers.ValidationError("streamer name or ID does not exist.")
 
-    def validate_game(self, gameid):
+    def validate_game(
+        self,
+        gameid,
+    ) -> Games:
         """Validates if the game exists in the `Games` model."""
         try:
-            return Games.objects.get(
+            return Games.objects.only("id").get(
                 Q(id__iexact=gameid) | Q(name__iexact=gameid) | Q(slug__iexact=gameid)
             )
         except Games.DoesNotExist:
@@ -829,26 +944,35 @@ class StreamSerializerPost(serializers.ModelSerializer):
                 "game name, ID, or slug/abbreviation does not exist."
             )
 
-    def validate_title(self, title):
+    def validate_title(
+        self,
+        title: str,
+    ) -> str:
         """Validates if the stream's title is above 0 and below 100."""
         if len(title) == 0 or len(title) > 100:
             raise serializers.ValidationError("title length is 0 or greater than 100.")
-        else:
-            return title
 
-    def validate_offline_ct(self, count):
+        return title
+
+    def validate_offline_ct(
+        self,
+        count: int,
+    ) -> str:
         """Validates if the offline counter is an integer and above 0."""
-        try:
-            if count < 0:
-                raise serializers.ValidationError(
-                    "offline_ct must be a positive integer."
-                )
-            else:
-                return count
-        except Exception:
+        if isinstance(count, str):
             raise serializers.ValidationError("offline_ct must be an integer.")
 
-    def validate_stream_time(self, streamtime):
+        if count < 0:
+            raise serializers.ValidationError("offline_ct must be a positive integer.")
+        elif count > 0:
+            return count
+        else:
+            raise serializers.ValidationError("offline_ct must be an integer.")
+
+    def validate_stream_time(
+        self,
+        streamtime: str,
+    ) -> str:
         """Validates if the stream start time is a valid date/time field."""
         try:
             correct_time = datetime.fromisoformat(
@@ -881,8 +1005,12 @@ class PlayerSerializerPost(serializers.ModelSerializer):
     """
 
     ex_stream = serializers.BooleanField()
+    nickname = serializers.CharField()
 
-    def validate_ex_stream(self, ex_stream):
+    def validate_ex_stream(
+        self,
+        ex_stream: Union[bool, str] = None,
+    ) -> bool:
         """Validates if the ex_stream field is properly setup."""
         if isinstance(ex_stream, bool):
             return ex_stream
@@ -893,6 +1021,20 @@ class PlayerSerializerPost(serializers.ModelSerializer):
         else:
             raise serializers.ValidationError("ex_stream is a boolean True or False.")
 
+    def validate_nickname(
+        self,
+        nickname: str = None,
+    ) -> str:
+        """Validates if the nickname field is properly setup."""
+        if not nickname:
+            return
+        elif len(nickname) > 30:
+            raise serializers.ValidationError(
+                "nickname field must be 30 characters or less."
+            )
+        else:
+            return nickname
+
     class Meta:
         model = Players
-        fields = ["ex_stream"]
+        fields = ["ex_stream", "nickname"]

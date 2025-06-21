@@ -11,7 +11,9 @@ from .tasks import (
 )
 
 
-def init_series(series_id):
+def init_series(
+    series_id,
+) -> None:
     """Initializes the gathering of all data for the entire Series from the Speedrun.com API"""
 
     # Removes all objects from all of the listed models below.
@@ -47,19 +49,30 @@ def init_series(series_id):
                 update_game.delay(game["id"])
 
                 for category in game_check["categories"]["data"]:
-                    update_category.delay(category, game["id"])
+                    update_category.delay(
+                        category,
+                        game["id"],
+                    )
 
                 if len(game_check["levels"]["data"]) > 0:
                     for level in game_check["levels"]["data"]:
-                        update_level.delay(level, game["id"])
+                        update_level.delay(
+                            level,
+                            game["id"],
+                        )
 
                 if len(game_check["variables"]["data"]) > 0:
                     for variable in game_check["variables"]["data"]:
-                        update_variable.delay(game["id"], variable)
+                        update_variable.delay(
+                            game["id"],
+                            variable,
+                        )
 
                 for category in game_check["categories"]["data"]:
                     update_category_runs.delay(
-                        game_check["id"], category, game_check["levels"]["data"]
+                        game_check["id"],
+                        category,
+                        game_check["levels"]["data"],
                     )
 
     # Speedrun.com API sucks sometimes and will miss some runs; this reiterates to add runs it
@@ -73,7 +86,9 @@ def init_series(series_id):
             redo = redo + 1
 
 
-async def init_series_async(series_id):
+async def init_series_async(
+    series_id,
+) -> None:
     """Asynchronously starts the data collection from the Series."""
     # Actually kicks off the initialization of the code.
     # Kinda ass, should be fixed sometime. But, if it ain't broke...

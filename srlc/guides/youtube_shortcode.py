@@ -1,4 +1,5 @@
 import re
+from typing import Match
 from xml.etree.ElementTree import Element
 
 from markdown.extensions import Extension
@@ -17,7 +18,11 @@ YOUTUBE_URL_RE = re.compile(
 class YTInlineProcessor(InlineProcessor):
     """Custom processor class that turns the [youtube] tag in .MD into embedded YouTube videos."""
 
-    def handleMatch(self, m, data):
+    def handleMatch(
+        self,
+        m: Match[str],
+        data,
+    ) -> tuple[str, str, str]:
         align = m.group(1) or "center"
         width = m.group(2) or "560"
         height = m.group(3) or "315"
@@ -48,7 +53,10 @@ class YTInlineProcessor(InlineProcessor):
 class YTEmbedProcessor(Extension):
     """Processor for the [youtube] tag in .MD files."""
 
-    def extendMarkdown(self, md):
+    def extendMarkdown(
+        self,
+        md,
+    ) -> None:
         md.inlinePatterns.register(
             YTInlineProcessor(YOUTUBE_RE, md), "youtube_shortcode", 175
         )

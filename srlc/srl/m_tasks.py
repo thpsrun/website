@@ -1,10 +1,13 @@
 import math
 import time
+from typing import Any, TypedDict
 
 import requests
 
 
-def convert_time(secs):
+def convert_time(
+    secs,
+) -> str:
     """Converts the time given into a string.
 
     Args:
@@ -46,7 +49,10 @@ def convert_time(secs):
     return final_time
 
 
-def src_api(url, paginate=False):
+def src_api(
+    url: str,
+    paginate: bool = False,
+) -> Any:
     """Processes a Speedrun.com API GET request to return values from any of its endpoints.
 
     This function is primarily used to connect to a Speedrun.com API endpoint via GET. However,
@@ -80,7 +86,11 @@ def src_api(url, paginate=False):
     return response
 
 
-def points_formula(wr, run, max_points):
+def points_formula(
+    wr: int,
+    run: int,
+    max_points: int,
+) -> int:
     """Processes points based on algorithmic formula
 
     Args:
@@ -94,7 +104,15 @@ def points_formula(wr, run, max_points):
     return math.floor((0.008 * math.pow(math.e, (4.8284 * (wr / run)))) * max_points)
 
 
-def time_conversion(time):
+class TimeDict(TypedDict):
+    realtime_t: int
+    realtime_noloads_t: int
+    ingame_t: int
+
+
+def time_conversion(
+    time: TimeDict,
+) -> tuple[str, str, str]:
     """Processes the returned time values of a run entry in a string.
 
     Args:
