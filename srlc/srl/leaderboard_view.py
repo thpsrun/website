@@ -225,22 +225,31 @@ def Leaderboard(
         - `profile_four`
         - `overall_leaderboard`
     """
-    players_all = Players.objects.only(
-        "id",
-        "name",
-        "nickname",
-        "url",
-        "countrycode",
-    ).all()
+    players_all = (
+        Players.objects.select_related("countrycode")
+        .only(
+            "id",
+            "name",
+            "nickname",
+            "url",
+            "countrycode",
+        )
+        .defer("awards")
+        .all()
+    )
 
-    games_all = Games.objects.only(
-        "id",
-        "name",
-        "slug",
-        "release",
-        "defaulttime",
-        "idefaulttime",
-    ).all()
+    games_all = (
+        Games.objects.only(
+            "id",
+            "name",
+            "slug",
+            "release",
+            "defaulttime",
+            "idefaulttime",
+        )
+        .defer("platforms")
+        .all()
+    )
 
     main_runs_all = (
         Runs.objects.exclude(
@@ -254,6 +263,11 @@ def Leaderboard(
             "player_countrycode",
             "player2",
             "player2_countrycode",
+        )
+        .defer(
+            "variables",
+            "platform",
+            "description",
         )
         .filter(runtype="main", obsolete=False)
     )
@@ -270,6 +284,11 @@ def Leaderboard(
             "player_countrycode",
             "player2",
             "player2_countrycode",
+        )
+        .defer(
+            "variables",
+            "platform",
+            "description",
         )
         .filter(
             runtype="il",

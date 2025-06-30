@@ -1,5 +1,5 @@
 # thps.run Website
-## Version 3.1.0
+## Version 3.2.0
 
 ![Django](https://img.shields.io/badge/Django-5.2-green.svg?logo=django&logoColor=white)
 ![DjangoREST](https://img.shields.io/badge/django--rest--framework-3.16-blue?labelColor=333333&logo=django&logoColor=white&color=green)
@@ -14,16 +14,18 @@ thps.run is essentially a 1:1 cache of the Speedrun.com leaderboards for the [To
 When you initially setup this project in your environment, you will need to import a `Series ID` into the `Series` model in the Admin Panel (easily gettable if you just take the series ID from any `https://speedrun.com/api/v1/series/<SERIES_SLUG>` request). While this means that ONLY communitys who have a Series for their game can use this project, it will allow you to have greater dynamic control of your community's speedruns.
 
 ### But why?
-While SRC has improved a little bit over the last few years, every community should be free to create a decentralized leaderboard of some kind. Very large communitys (like Megaman) already have their own websites, and this project serves as a way to quickly build one for your community.  
+While SRC has improved a little bit over the last few years, every community should be free to create a decentralized leaderboard of some kind. Very large communities (like Megaman) already have their own websites, and this project serves as a way to quickly build one for your community.  
   
 Will this work for everyone? No. Can you curate it to fit your community? Yes!
 
 ### Can I fork this project?
 1.  This project assumes you are familar with Python and/or Django. A lot of processes and procedures are largely automated, but there may be some tweaks that you need to apply for your use case.
     *   Example: Currently, this project doesn't support speedruns with more than two players. If you support a community with more than 2, you will need to take this and curate things.
+        *   Later versions will fix this.
     * Another example: THPS doesn't have any game with more than two sub-categories (variables), so you will need to customize things a bit.
+        *   Later versions will also fix this.
 2.  This project assumes you have permission to use the HaloRuns points system. [See below](#note-on-points).
-3.  Contributing to this project is encouraged, but definitely not necessary. Commits to this project are **primarily** meant to enhance the thps.run experience.
+3.  Contributing to this project is encouraged, but definitely not necessary. Commits to this project are **primarily** meant to enhance the thps.run experience or fix security problems.
 
 ### Requirements
 * [Docker](https://www.docker.com/products/docker-desktop/) (Desktop or Docker Compose is fine)
