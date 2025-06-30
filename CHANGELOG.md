@@ -1,3 +1,11 @@
+### v3.2.0
+###### June 30, 2025
+*   Took first major pass at reducing the number of N+1 queries popping up. [#61](https://github.com/thpsrun/website/issues/61)
+*   Removed some redundant code and unused variables.
+*   Fixed some grammar mistakes because I are bad.
+
+* * *
+
 ### v3.1.0
 ###### June 20, 2025
 ### Added
