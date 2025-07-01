@@ -267,7 +267,7 @@ class RunSerializer(serializers.ModelSerializer):
         data.pop("url", None)
 
         if "record" in self.context.get("embed", []):
-            if data["record"]:
+            if data.get("record"):
                 data["record"].pop("record", None)
 
         return data
