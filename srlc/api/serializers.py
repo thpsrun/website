@@ -101,21 +101,19 @@ class RunSerializer(serializers.ModelSerializer):
         obj: Runs,
     ) -> Union[str, int, dict[str, Any]]:
         """Serializes the world record associated with the run's subcategory"""
-
-        if "record" in self.context.get("embed", []):
-            record = Runs.objects.filter(
-                game=obj.game, subcategory=obj.subcategory, place=1
-            ).first()
-
-            get_record = RunSerializer(Runs.objects.get(id=record.id)).data
-            return get_record
+        record = (
+            Runs.objects.only("id")
+            .filter(game=obj.game, subcategory=obj.subcategory, place=1)
+            .first()
+        )
+        if record:
+            if "record" in self.context.get("embed", []):
+                get_record = RunSerializer(Runs.objects.get(id=record.id)).data
+                return get_record
+            else:
+                return record.id
         else:
-            return (
-                Runs.objects.only("id")
-                .filter(game=obj.game, subcategory=obj.subcategory, place=1)
-                .first()
-                .id
-            )
+            return None
 
     def get_players(
         self,
