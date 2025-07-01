@@ -104,6 +104,9 @@ def PlayerProfile(
     leaderboard = Leaderboard(request, 3)
     u_game_names = games.order_by("release").values_list("name", "release")
 
+    player_rank = 0
+    main_rank = 0
+    il_rank = 0
     if isinstance(leaderboard, tuple):
         for index, item in enumerate(leaderboard[0]):
             if item["player"] == player.name:
@@ -114,15 +117,11 @@ def PlayerProfile(
             if item["player"] == player.name:
                 main_rank = index + 1
                 break
-            else:
-                main_rank = 0
 
         for index, item in enumerate(leaderboard[2]):
             if item["player"] == player.name:
                 il_rank = index + 1
                 break
-            else:
-                il_rank = 0
 
         player_count = len(leaderboard[0])
         main_count = len(leaderboard[1])
@@ -176,7 +175,7 @@ def PlayerHistory(
     except Exception:
         return render(request, "srl/500.html")
 
-    games = Games.objects.all().order_by("name")
+    games = Games.objects.only("name", "release").all().order_by("name")
     runs = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"])
         .select_related(

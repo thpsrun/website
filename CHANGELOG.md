@@ -1,3 +1,10 @@
+### v3.2.1
+###### July 1, 2025
+*   Took a second pass at reducing the number of N+1 queries. [#61 (continued)](https://github.com/thpsrun/website/issues/61)
+*   Fixed an issue where a server error would be returned if a player hasn't been given a rank (e.g. no approved runs).
+
+* * *
+
 ### v3.2.0.1
 ###### June 30, 2025
 *   Fixed an issue where the `/runs/` endpoint would return a server error when no world record exists for a category.
