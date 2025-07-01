@@ -6,7 +6,7 @@ from django.db.models.functions import TruncDate
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
-from .models import Games, Players, Runs
+from .models import Players, Runs
 
 
 def get_country_info(
@@ -24,7 +24,7 @@ def get_main_points(
     runs_list: QuerySet["Runs"],
 ) -> int | None:
     """Returns the combined points of a player for full-game speedruns."""
-    runs = runs_list.filter(Q(player_id=player.id) | Q(player2_id=player.id))
+    runs = runs_list.filter(Q(player_id=player) | Q(player2_id=player))
 
     # If a runner has been in multiple co-op speedruns, they *could* be player1 for one run
     # and player2 for the other; this makes it so only the run with the most points is counted.
@@ -36,19 +36,16 @@ def get_main_points(
         )
         runs = runs.exclude(id__in=exclude)
 
+    runs = runs.only("points")
     return runs.aggregate(total_points=Sum("points"))["total_points"] or 0
 
 
 def get_il_points(
     player: Players,
-    game_id: str,
     runs_list: QuerySet["Runs"],
 ) -> int | None:
     """Returns the combined points of a player for individual level speedruns."""
-    il_runs = runs_list.filter(player_id=player.id)
-
-    if game_id:
-        il_runs = il_runs.filter(game_id=game_id)
+    il_runs = runs_list.only("points").filter(player_id=player)
 
     return il_runs.aggregate(total_points=Sum("points"))["total_points"] or 0
 
@@ -76,39 +73,42 @@ def leaderboard_entry(
 
 
 def profile_one(
-    players_all: QuerySet["Players"],
+    players_all: list,
     runs_list: QuerySet["Runs"],
 ) -> list[dict[str, Any]]:
     """Returns a sorted leaderboard that is used to display ALL full-game speedrunners."""
     leaderboard = []
 
     for player in players_all:
-        points = get_main_points(player, runs_list)
-        leaderboard.append(leaderboard_entry(player, points))
+        player_lookup = (
+            Players.objects.select_related("countrycode").defer("awards").get(id=player)
+        )
+        points = get_main_points(player_lookup, runs_list)
+        leaderboard.append(leaderboard_entry(player_lookup, points))
 
     return sorted(leaderboard, key=lambda x: x["total_points"], reverse=True)
 
 
 def profile_two(
-    players_all: QuerySet["Players"],
-    games_all: QuerySet["Games"],
+    players_all: list,
     runs_list: QuerySet["Runs"],
-    game: str,
 ) -> list[dict[str, Any]]:
     """Returns a sorted leaderboard that is used to display ALL individual level speedruns."""
     il_lb = []
-    game_id = games_all.get(slug=game).id
 
     for player in players_all:
-        il_points = get_il_points(player, game_id, runs_list)
+        player_lookup = (
+            Players.objects.select_related("countrycode").defer("awards").get(id=player)
+        )
+        il_points = get_il_points(player_lookup, runs_list)
         if il_points > 0:
-            il_lb.append(leaderboard_entry(player, il_points))
+            il_lb.append(leaderboard_entry(player_lookup, il_points))
 
     return sorted(il_lb, key=lambda x: x["total_points"], reverse=True)
 
 
 def profile_three(
-    players_all: QuerySet["Players"],
+    players_all: list,
     main_runs_all: QuerySet["Runs"],
     il_runs_all: QuerySet["Runs"],
 ) -> tuple[int, int]:
@@ -117,13 +117,16 @@ def profile_three(
     il_lb = []
 
     for player in players_all:
-        main_points = get_main_points(player, main_runs_all)
-        il_points = get_il_points(player, None, il_runs_all)
+        player_lookup = (
+            Players.objects.select_related("countrycode").defer("awards").get(id=player)
+        )
+        main_points = get_main_points(player_lookup, main_runs_all)
+        il_points = get_il_points(player_lookup, il_runs_all)
 
         if main_points > 0:
-            fg_lb.append(leaderboard_entry(player, main_points))
+            fg_lb.append(leaderboard_entry(player_lookup, main_points))
         if il_points > 0:
-            il_lb.append(leaderboard_entry(player, il_points))
+            il_lb.append(leaderboard_entry(player_lookup, il_points))
 
     fg_lb = sorted(fg_lb, key=lambda x: x["total_points"], reverse=True)
     il_lb = sorted(il_lb, key=lambda x: x["total_points"], reverse=True)
@@ -132,24 +135,25 @@ def profile_three(
 
 
 def profile_four(
-    players_all: QuerySet["Players"],
-    games_all: QuerySet["Games"],
+    players_all: list,
     runs_list: QuerySet["Runs"],
-    game: str,
 ) -> tuple[list[dict[str, Any]], QuerySet[tuple[Any, Any]]]:
     """Returns a sorted leaderboard for all individual level speedruns and historical data."""
     il_lb = []
-    game_id = games_all.get(slug=game).id
-    il_runs = runs_list.filter(game_id=game_id)
 
     for player in players_all:
-        wr_count = il_runs.filter(player_id=player.id, place=1).count()
+        wr_count = runs_list.only("id").filter(player_id=player, place=1).count()
         if wr_count > 1:
-            countrycode, countryname = get_country_info(player)
+            player_check = (
+                Players.objects.select_related("countrycode")
+                .defer("awards")
+                .get(id=player)
+            )
+            countrycode, countryname = get_country_info(player_check)
             il_lb.append(
                 {
-                    "player": player.name,
-                    "nickname": player.nickname,
+                    "player": player_check.name,
+                    "nickname": player_check.nickname,
                     "countrycode": countrycode,
                     "countryname": countryname,
                     "il_wrs": wr_count,
@@ -163,8 +167,10 @@ def profile_four(
     )
 
     il_runs_old = (
-        il_runs.filter(points=100)
-        .exclude(level_id="rdnoro6w")
+        runs_list.filter(points=100)
+        .exclude(
+            level_id="rdnoro6w"  # Excludes the Hippos Zoo goal cause everyone has WR
+        )
         .order_by("date")
         .annotate(o_date=TruncDate("date"))
         .values_list("subcategory", "time", "o_date")
@@ -175,7 +181,7 @@ def profile_four(
 
 def overall_leaderboard(
     request: HttpRequest,
-    players_all: QuerySet["Players"],
+    players_all: list,
     main_runs_all: QuerySet["Runs"],
     il_runs_all: QuerySet["Runs"],
 ) -> HttpResponse:
@@ -183,10 +189,13 @@ def overall_leaderboard(
     leaderboard = []
 
     for player in players_all:
-        main_points = get_main_points(player, main_runs_all)
-        il_points = get_il_points(player, None, il_runs_all)
+        player_lookup = (
+            Players.objects.select_related("countrycode").defer("awards").get(id=player)
+        )
+        main_points = get_main_points(player_lookup, main_runs_all)
+        il_points = get_il_points(player_lookup, il_runs_all)
         total_points = main_points + il_points
-        leaderboard.append(leaderboard_entry(player, total_points))
+        leaderboard.append(leaderboard_entry(player_lookup, total_points))
 
     leaderboard = sorted(leaderboard, key=lambda x: x["total_points"], reverse=True)
     paginator = Paginator(leaderboard, 50)
@@ -225,33 +234,7 @@ def Leaderboard(
         - `profile_four`
         - `overall_leaderboard`
     """
-    players_all = (
-        Players.objects.select_related("countrycode")
-        .only(
-            "id",
-            "name",
-            "nickname",
-            "url",
-            "countrycode",
-        )
-        .defer("awards")
-        .all()
-    )
-
-    games_all = (
-        Games.objects.only(
-            "id",
-            "name",
-            "slug",
-            "release",
-            "defaulttime",
-            "idefaulttime",
-        )
-        .defer("platforms")
-        .all()
-    )
-
-    main_runs_all = (
+    all_runs = (
         Runs.objects.exclude(
             vid_status__in=["new", "rejected"],
             place=0,
@@ -260,68 +243,61 @@ def Leaderboard(
             "game",
             "category",
             "player",
-            "player_countrycode",
+            "player__countrycode",
             "player2",
-            "player2_countrycode",
+            "player2__countrycode",
         )
         .defer(
             "variables",
             "platform",
             "description",
         )
-        .filter(runtype="main", obsolete=False)
+        .filter(obsolete=False)
     )
 
-    il_runs_all = (
-        Runs.objects.exclude(
-            vid_status__in=["new", "rejected"],
-            place=0,
-        )
-        .select_related(
-            "game",
-            "category",
-            "player",
-            "player_countrycode",
-            "player2",
-            "player2_countrycode",
-        )
-        .defer(
-            "variables",
-            "platform",
-            "description",
-        )
-        .filter(
-            runtype="il",
-            obsolete=False,
-        )
+    if game:
+        all_runs = all_runs.filter(game__slug=game)
+
+    players_all = list(
+        all_runs.filter(player__isnull=False)
+        .values_list("player__id", flat=True)
+        .distinct()
     )
 
     if profile == 1:
+        main_runs_all = all_runs.filter(runtype="main")
+
         return profile_one(
             players_all,
             main_runs_all,
         )
     elif profile == 2:
+        il_runs_all = all_runs.filter(runtype="il")
+
         return profile_two(
             players_all,
-            games_all,
             il_runs_all,
-            game,
         )
     elif profile == 3:
+        main_runs_all = all_runs.filter(runtype="main")
+        il_runs_all = all_runs.filter(runtype="il")
+
         return profile_three(
             players_all,
             main_runs_all,
             il_runs_all,
         )
     elif profile == 4:
+        il_runs_all = all_runs.filter(runtype="il")
+
         return profile_four(
             players_all,
-            games_all,
             il_runs_all,
-            game,
         )
     else:
+        main_runs_all = all_runs.filter(runtype="main")
+        il_runs_all = all_runs.filter(runtype="il")
+
         return overall_leaderboard(
             request,
             players_all,
