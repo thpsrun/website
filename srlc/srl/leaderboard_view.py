@@ -24,7 +24,11 @@ def get_main_points(
     runs_list: QuerySet["Runs"],
 ) -> int | None:
     """Returns the combined points of a player for full-game speedruns."""
-    runs = runs_list.filter(Q(player_id=player) | Q(player2_id=player))
+    runs = runs_list.only(
+        "id",
+        "subcategory",
+        "points",
+    ).filter(Q(player_id=player) | Q(player2_id=player))
 
     # If a runner has been in multiple co-op speedruns, they *could* be player1 for one run
     # and player2 for the other; this makes it so only the run with the most points is counted.

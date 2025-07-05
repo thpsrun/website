@@ -4,7 +4,8 @@ from django.db.models.functions import TruncDate
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from .leaderboard_view import Leaderboard
+from srl.leaderboard_view import Leaderboard
+
 from .models import Games, NowStreaming, Players, Runs
 
 
@@ -175,7 +176,6 @@ def PlayerHistory(
     except Exception:
         return render(request, "srl/500.html")
 
-    games = Games.objects.only("name", "release").all().order_by("name")
     runs = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"])
         .select_related(
@@ -193,20 +193,26 @@ def PlayerHistory(
         .annotate(o_date=TruncDate("date"))
     )
 
-    main_runs = runs.filter(runtype="main").order_by("-o_date")
-    il_runs = runs.filter(runtype="il").order_by("subcategory")
+    main_runs = runs.filter(runtype="main").order_by("subcategory", "-o_date")
+    il_runs = runs.filter(runtype="il").order_by("subcategory", "-o_date")
 
     # For co-op, runners could be player 1 or 2 and it would count as two runs.
     # This would remove the slower of the two and not count it towards points.
     if main_runs.filter(subcategory__contains="Co-Op"):
         exclude = (
-            main_runs.filter(subcategory__contains="Co-Op")
+            main_runs.only("id", "points")
+            .filter(subcategory__contains="Co-Op")
             .order_by("-points")
             .values("id")
         )[1:]
         main_runs = main_runs.exclude(id__in=exclude)
 
-    u_game_names = games.order_by("release").values_list("name", "release")
+    u_game_names = (
+        Games.objects.only("name", "release")
+        .all()
+        .order_by("release")
+        .values_list("name", "release")
+    )
 
     context = {
         "player": player,
@@ -383,16 +389,11 @@ def ILGameLeaderboard(
         the context needed to dynamically generate the webpage.
     """
     try:
-        game = Games.objects.only(
-            "id",
-            "name",
-            "slug",
-            "defaulttime",
-            "idefaulttime",
-        ).filter(slug__iexact=slug)
+        game = Games.objects.only("id").get(slug__iexact=slug)
         ilruns = (
             Runs.objects.exclude(vid_status__in=["new", "rejected"])
             .select_related(
+                "game",
                 "player",
                 "player__countrycode",
             )
@@ -403,7 +404,7 @@ def ILGameLeaderboard(
             )
             .filter(
                 runtype="il",
-                game_id=game[0].id,
+                game_id=game.id,
                 points__gt=0,
                 obsolete=False,
             )
@@ -519,10 +520,11 @@ def GameLeaderboard(
         the context needed to dynamically generate the webpage.
     """
     try:
-        game = Games.objects.get(slug=slug)
+        game = Games.objects.only("id").get(slug__iexact=slug)
         mainruns = (
             Runs.objects.exclude(vid_status__in=["new", "rejected"])
             .select_related(
+                "game",
                 "player",
                 "player__countrycode",
                 "player2",
@@ -558,7 +560,7 @@ def GameLeaderboard(
         )
 
         for run in mainruns:
-            defaulttime = game.defaulttime
+            defaulttime = run.game.defaulttime
 
             if defaulttime == "realtime":
                 run_time = run.time
@@ -719,13 +721,18 @@ def MainPage(
     for game in exempt_games:
         exclusion_filter |= Q(game__name__icontains=game)
 
-    streamers = NowStreaming.objects.select_related("streamer", "game").all()
+    streamers = NowStreaming.objects.select_related(
+        "streamer",
+        "streamer__countrycode",
+        "game",
+    ).all()
     runs = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"], obsolete=True)
         .exclude(exclusion_filter)
         .select_related(
             "game",
             "player",
+            "player__countrycode",
         )
         .defer(
             "variables",
@@ -777,6 +784,7 @@ def MainPage(
         .select_related(
             "game",
             "player",
+            "player__countrycode",
         )
         .defer(
             "variables",
@@ -792,6 +800,7 @@ def MainPage(
         .select_related(
             "game",
             "player",
+            "player__countrycode",
         )
         .defer(
             "variables",
