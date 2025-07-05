@@ -1,5 +1,5 @@
 ### v3.2.2
-###### July 5, 2025
+###### July 4, 2025
 *   Third round against nefarious N+1 queries. [#61 (continued)](https://github.com/thpsrun/website/issues/61)
 *   Changed behavior of `/player/<user>/history` to be ordered by category name THEN by approval date.
 
