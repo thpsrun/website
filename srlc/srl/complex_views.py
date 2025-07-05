@@ -389,10 +389,11 @@ def ILGameLeaderboard(
         the context needed to dynamically generate the webpage.
     """
     try:
-        game = Games.objects.only("id").filter(slug__iexact=slug).first()
+        game = Games.objects.only("id").get(slug__iexact=slug)
         ilruns = (
             Runs.objects.exclude(vid_status__in=["new", "rejected"])
             .select_related(
+                "game",
                 "player",
                 "player__countrycode",
             )
@@ -519,10 +520,11 @@ def GameLeaderboard(
         the context needed to dynamically generate the webpage.
     """
     try:
-        game = Games.objects.get(slug=slug)
+        game = Games.objects.only("id").get(slug__iexact=slug)
         mainruns = (
             Runs.objects.exclude(vid_status__in=["new", "rejected"])
             .select_related(
+                "game",
                 "player",
                 "player__countrycode",
                 "player2",
@@ -558,7 +560,7 @@ def GameLeaderboard(
         )
 
         for run in mainruns:
-            defaulttime = game.defaulttime
+            defaulttime = run.game.defaulttime
 
             if defaulttime == "realtime":
                 run_time = run.time
