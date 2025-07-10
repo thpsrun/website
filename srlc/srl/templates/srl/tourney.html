@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        {% load static %}
+        <meta charset="utf-8">
+        <meta name="description" content="{{ ENV_WEBSITE_DESCRIPTION }}">
+        <meta name="author" content="{{ ENV_WEBSITE_AUTHOR }}">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
+        
+        <title>THPS3+4 Speedrun Mode Tournament - {{ ENV_WEBSITE_NAME }}</title>
+        
+        <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+        {% load django_bootstrap5 %}
+        {% bootstrap_css %}
+        {% bootstrap_javascript %}
+
+        <link rel="stylesheet" type="text/css" href="{% static 'srl/misc/css.css' %}">
+    </head>
+    <body>
+        {% include 'srl/navbar.html' %}
+        <br />
+        <table id="privacy" class="privacy">
+            <thead>
+                <tr>
+                    <th colspan="3" id="top" class="bg-info">THPS3+4 Speedrun Mode Tournament</th>
+                </tr>
+            </thead>
+            <tbody>
+                <td>
+                    <div class="markdown-body">
+                        <h3>Prize Pool: $550</h3>
+                        <h3>Single-Elimination</h3>
+                        <h3>Best-of-3 [Semifinals and Finals is Best-of-5]</h3>
+                        <hr />
+
+                        <h3>Season Timeline:</h3>
+                        <ul>
+                            <li>Now - July 18: Speedrun Embargo (Enjoy the game!!)</li>
+                            <li>July 18 - July 20: Pre-Season</li>
+                            <li>July 20 - July 27: Qualifying</li>
+                            <li>July 27: Seeding + Final Checks</li>
+                            <li>July 28 - ???: Tournament</li>
+                        </ul>
+
+                        <h3>Winnings ($550 Prize Pool)</h3>
+                        <ul>
+                            <li>1st: $300</li>
+                            <li>2nd: $150</li>
+                            <li>3rd: $75</li>
+                            <li>4th: $25</li>
+                            <li>If you wanna donate to the prize pool, lemme know!</li>
+                        </ul>
+
+                        <h3>Qualifying Information</h3>
+                        <ul>
+                            <li>All runners are required to join the <a href="/discord" target="_blank">THPS Speedrun Discord</a> and agree to the community rules. No exceptions.</li>
+                            <li>PLEASE make sure your Discord name in this server is the same (or similar enough to) what is on Speedrun.com or thps.run!</li>
+                            <li>6 maps will be selected from the pool before qualifying begins, excluding newly introduced maps:
+                                <ul>    
+                                    <li>THPS3: Foundry + 2 Random</li>
+                                    <li>THPS4: College + 2 Random</li>
+                                </ul>
+                            </li>
+                            <li>Tournament will use PacklePoints (found on thps.run) from those 6 maps for seeding. Tie-breakers are, in order:
+                                <ol>
+                                    <li>Average placement</li>
+                                    <li>Most WRs</li>
+                                    <li>Most second places</li>
+                                    <li>Most third places</li>
+                                    <li>Coin Flip</li>
+                                </ol>
+                            </li>
+                            <li>[!] Runners will need to input a tag in the description of the submission for their run to count.
+                                <ul>
+                                    <li>This is to easily distinguish between who doesn't want to play and who does.</li>
+                                    <li>If you submit a run, but forget to include the tag or would like to submit it after approval; lemme know!</li>
+                                </ul>
+                            </li>
+                            <li>A special page will be shown on thps.run to display up-to-date/approved runs, separate from the real THPS3+4 board.</li>
+                        </ul>
+
+                        <h3>Tournament Rules will be shown closer to the event, but it is pretty much the same as THPS1+2's except for map striking.</h3>
+                    </td>
+                </div>
+            </tbody>
+        </table>
+        <br />
+        {% include 'srl/footer.html' %}
+    </body>
+</html>
+

@@ -1,3 +1,10 @@
+### v3.2.3
+###### July 9, 2025
+*   Added information on the THPS3+4 Speedrun Mode Tournament to the top navbar.
+*   Added the THUG1 SDL mod to the list of Mods on the top navbar.
+
+* * *
+
 ### v3.2.2
 ###### July 4, 2025
 *   Third round against nefarious N+1 queries. [#61 (continued)](https://github.com/thpsrun/website/issues/61)
