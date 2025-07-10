@@ -9,6 +9,13 @@ def PrivacyPolicy(
     return render(request, "srl/privacy_policy.html")
 
 
+def TourneyView(
+    request: HttpRequest,
+) -> HttpResponse:
+    """Returns tournament information."""
+    return render(request, "srl/tourney.html")
+
+
 def Changelog(
     request: HttpRequest,
 ) -> HttpResponse:
