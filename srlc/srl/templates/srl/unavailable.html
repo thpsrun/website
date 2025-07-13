@@ -8,7 +8,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
         
-        <title>SERVER ERROR 500 - {{ ENV_WEBSITE_NAME }}</title>
+        <title>{{ game_slug }} Unavailable - {{ ENV_WEBSITE_NAME }}</title>
         
         <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -25,10 +25,10 @@
         <table id="privacy" class="privacy">
             <thead class="bg-info">
                 <tr>
-                    <th>Server Error 500 - Internal Server Error</th>
+                    <th>{{ game_slug }} is Unavailable</th>
                 </tr>
                 <tr>
-                    <th>An error occurred when looking up the specified user. This error has been reported.</th>
+                    <th>This game has no approved speedruns. Check back later!</th>
                 </tr>
             </thead>
         </table>

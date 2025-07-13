@@ -1,3 +1,22 @@
+### v3.3
+###### July 13, 2025
+
+### Added
+*   Added a new page that appears when a game is in the database, but there are no available/approved speedruns.
+*   Added some missing types to functions.
+*   Added THPS3+4 to the full game and IL navigation bar menus.
+    *   If no runs are approved, you'll get the "error" page listed above.
+
+### Changes
+*   Changed the navigation bar and added a few sub-menus to help with separating games.
+*   Changed how slugs for games are given to contexts to render on web pages.
+*   Changed the title tags for  `*leaderboard.html` templates to be more consistent.
+*   Changed location of the "Currently Streaming" table to display on the bottom-right of a full main page, not top-right.
+    *   This was changed since, if there are a lot of streams at once, it will push down the "Latest World Records" and "Latest Runs" tables.
+*   Changed the "Currently Streaming" table to be slimmer.
+
+* * *
+
 ### v3.2.3
 ###### July 9, 2025
 *   Added information on the THPS3+4 Speedrun Mode Tournament to the top navbar.

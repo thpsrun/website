@@ -2,7 +2,7 @@ import environ
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.shortcuts import redirect
+from django.shortcuts import HttpResponse, HttpResponseRedirect, redirect
 from django.urls import include, path
 
 env = environ.Env()
@@ -13,7 +13,9 @@ admin.site.site_title = env("SITE_NAME")
 admin.site.index_title = "Admin Panel"
 
 
-def discord_redirect(request):
+def discord_redirect(
+    request: HttpResponse,
+) -> HttpResponseRedirect:
     """Return Discord when accessing `WEBSITE.com/discord`."""
     if env("DISCORD_URL"):
         return redirect(env("DISCORD_URL"))
@@ -21,7 +23,9 @@ def discord_redirect(request):
         return redirect("/")
 
 
-def twitch_redirect(request):
+def twitch_redirect(
+    request: HttpResponse,
+) -> HttpResponseRedirect:
     """Return Twitch when accessing `WEBSITE.com/twitch`."""
     if env("TWITCH_URL"):
         return redirect(env("TWITCH_URL"))
@@ -29,7 +33,9 @@ def twitch_redirect(request):
         return redirect("/")
 
 
-def twitter_redirect(request):
+def twitter_redirect(
+    request: HttpResponse,
+) -> HttpResponseRedirect:
     """Return Twitter when accessing `WEBSITE.com/twitter`."""
     if env("TWITTER_URL"):
         return redirect(env("TWITTER_URL"))
@@ -37,7 +43,9 @@ def twitter_redirect(request):
         return redirect("/")
 
 
-def youtube_redirect(request):
+def youtube_redirect(
+    request: HttpResponse,
+) -> HttpResponseRedirect:
     """Return YouTube when accessing `WEBSITE.com/youtube`."""
     if env("YOUTUBE_URL"):
         return redirect(env("YOUTUBE_URL"))
@@ -45,7 +53,9 @@ def youtube_redirect(request):
         return redirect("/")
 
 
-def bluesky_redirect(request):
+def bluesky_redirect(
+    request: HttpResponse,
+) -> HttpResponseRedirect:
     """Return Bluesky when accessing `WEBSITE.com/bluesky`."""
     if env("BLUESKY_URL"):
         return redirect(env("BLUESKY_URL"))
@@ -53,7 +63,9 @@ def bluesky_redirect(request):
         return redirect("/")
 
 
-def src_redirect(request):
+def src_redirect(
+    request: HttpResponse,
+) -> HttpResponseRedirect:
     """Returns Speedrun.com when accessing `WEBSITE.com/src`."""
     return redirect(env("SRC_URL"))
 

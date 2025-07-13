@@ -8,17 +8,9 @@
         <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
 
         {% if "/ils" in request.path %}
-            {% if game_slug == "thps12" %}
-                <title>THPS1+2 IL Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
-            {% else %}
-                <title>{{ game_slug|upper }} IL Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
-            {% endif %}
+            <title>{{ game_slug }} IL Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
         {% else %}
-            {% if game_slug == "thps12" %}
-                <title>THPS1+2 Full Game Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
-            {% else %}
-                <title>{{ game_slug|upper }} Full Game Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
-            {% endif %}
+            <title>{{ game_slug }} Full Game Leaderboards - {{ ENV_WEBSITE_NAME }}</title>
         {% endif %}
 
         <link rel="icon" href="{% static 'srl/imgs/favicon.png' %}" type="image/x-icon">

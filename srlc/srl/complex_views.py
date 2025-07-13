@@ -254,7 +254,7 @@ def FG_Leaderboard(
 
 def IL_Leaderboard(
     request: HttpRequest,
-    game_slug: str,
+    slug: str,
 ) -> HttpResponse:
     """View that displays a leaderboard the combined points for a runner for a specific IL game.
 
@@ -262,20 +262,20 @@ def IL_Leaderboard(
     and generates a dynamic webpage (to include searching).
 
     Args:
-        game_slug (str): The slug (abbreviation) for a game from the `Games` model.
+        slug (str): The slug (abbreviation) for a game from the `Games` model.
 
     Returns:
         render (request, template, context): Request is sent to a specific template, which includes
         the context needed to dynamically generate the webpage.
     """
     try:
-        game = Games.objects.only("id", "name", "slug").get(slug=game_slug)
+        game = Games.objects.only("id", "name", "slug").get(slug=slug)
     except Games.DoesNotExist:
         return render(request, "srl/resource_no_exist.html")
     except Exception:
         return render(request, "srl/500.html")
 
-    leaderboard = Leaderboard(request, 2, game_slug)
+    leaderboard = Leaderboard(request, 2, slug)
 
     paginator = Paginator(leaderboard, 50)
     page_number = request.GET.get("page")
@@ -286,10 +286,20 @@ def IL_Leaderboard(
         item["rank"] = rank_start
         rank_start += 1
 
+    slug_map = {
+        "thpsce": "THPS CE",
+        "thps4ce": "THPS4 CE",
+        "thps12": "THPS1+2",
+        "thps12ce": "THPS1+2 CE",
+        "thps34": "THPS3+4",
+        "thps34ce": "THPS3+4 CE",
+    }
+    slug = slug_map.get(slug, slug.upper())
+
     context = {
         "leaderboard": leaderboard_page,
         "game_name": game.name,
-        "game_slug": game_slug,
+        "game_slug": slug,
     }
 
     return render(request, "srl/leaderboard.html", context)
@@ -486,19 +496,37 @@ def ILGameLeaderboard(
 
     leaderboard = sorted(runs_list, key=lambda x: x["place"], reverse=False)
 
-    context = {
-        "runs": leaderboard,
-        "wr_count": wr_count,
-        "old_runs": old_runs,
-        "subcategories": il_categories,
-        "game_slug": slug,
-        "selected_category": category,
+    slug_map = {
+        "thpsce": "THPS CE",
+        "thps4ce": "THPS4 CE",
+        "thps12": "THPS1+2",
+        "thps12ce": "THPS1+2 CE",
+        "thps34": "THPS3+4",
+        "thps34ce": "THPS3+4 CE",
     }
 
-    if "thps4/ils" in request.path_info:
-        return render(request, "srl/il_leaderboard_expanded.html", context)
+    slug = slug_map.get(slug, slug.upper())
+
+    if len(leaderboard) > 0:
+        context = {
+            "runs": leaderboard,
+            "wr_count": wr_count,
+            "old_runs": old_runs,
+            "subcategories": il_categories,
+            "game_slug": slug,
+            "selected_category": category,
+        }
+
+        if "thps4/ils" in request.path_info:
+            return render(request, "srl/il_leaderboard_expanded.html", context)
+        else:
+            return render(request, "srl/il_leaderboard.html", context)
     else:
-        return render(request, "srl/il_leaderboard.html", context)
+        context = {
+            "game_slug": slug,
+        }
+
+        return render(request, "srl/unavailable.html", context)
 
 
 def GameLeaderboard(
@@ -657,14 +685,32 @@ def GameLeaderboard(
 
         leaderboard = sorted(runs_list, key=lambda x: x["place"], reverse=False)
 
-    context = {
-        "runs": leaderboard,
-        "subcategories": categories,
-        "game_slug": slug,
-        "selected_category": category,
+    slug_map = {
+        "thpsce": "THPS CE",
+        "thps4ce": "THPS4 CE",
+        "thps12": "THPS1+2",
+        "thps12ce": "THPS1+2 CE",
+        "thps34": "THPS3+4",
+        "thps34ce": "THPS3+4 CE",
     }
 
-    return render(request, "srl/il_leaderboard.html", context)
+    slug = slug_map.get(slug, slug.upper())
+
+    if len(leaderboard) > 0:
+        context = {
+            "runs": leaderboard,
+            "subcategories": categories,
+            "game_slug": slug,
+            "selected_category": category,
+        }
+
+        return render(request, "srl/il_leaderboard.html", context)
+    else:
+        context = {
+            "game_slug": slug,
+        }
+
+        return render(request, "srl/unavailable.html", context)
 
 
 def MainPage(
