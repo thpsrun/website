@@ -84,52 +84,6 @@
             </div>
 
             <div class="side-table">
-                {% if streamers.count > 0 %}
-                <div class="now-streaming-table">
-                    <table class="table table-striped table-light table-hover">
-                        <thead>
-                            <tr>
-                                <th colspan="2" class="bg-info">Currently Streaming</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for streamer in streamers %}
-                                <tr>
-                                    <td>
-                                        <a href="{{ streamer.streamer.twitch }}" target="_blank"><img src="{% static 'pfp/'|add:streamer.streamer.id|add:'.jpg' %}" onerror="this.onerror=null; this.src='{% static 'pfp/default.png' %}'" title="{{ streamer.streamer.name }}" class="pfp-img-streaming" /></a>
-                                    </td>
-                                    <td class="now-streaming">
-                                        {% if streamer.streamer.countrycode.id != "vh" %}
-                                            {% if streamer.streamer.nickname %}
-                                                <img src="https://flagcdn.com/h20/{{ streamer.streamer.countrycode.id }}.png" class="flag-streaming" title="{{ streamer.streamer.countrycode.name }}" alt="{{ streamer.streamer.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> <div style="display: inline;" title="{{streamer.streamer.name}}">{{ streamer.streamer.nickname }}</div>
-                                            {% else %}
-                                                <img src="https://flagcdn.com/h20/{{ streamer.streamer.countrycode.id }}.png" class="flag-streaming" title="{{ streamer.streamer.countrycode.name }}" alt="{{ streamer.streamer.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> {{ streamer.streamer.name }}
-                                            {% endif %}
-                                        {% elif streamer.streamer.countrycode.id == "vh" %}
-                                            {% if streamer.streamer.nickname %}
-                                                <img src="{% static 'srl/misc/vh.png' %}" class="flag-streaming" title="{{ streamer.streamer.countrycode.name }}" alt="{{ streamer.streamer.countrycode.name }}" /> <div style="display: inline;" title="{{streamer.streamer.name}}">{{ streamer.streamer.nickname }}</div>
-                                            {% else %}
-                                                <img src="{% static 'srl/misc/vh.png' %}" class="flag-streaming" title="{{ streamer.streamer.countrycode.name }}" alt="{{ streamer.streamer.countrycode.name }}" /> {{ streamer.streamer.name }}
-                                            {% endif %}
-                                        {% else %}
-                                            {% if streamer.streamer.nickname %}
-                                                <div style="display: inline;" title="{{streamer.streamer.name}}">{{ streamer.streamer.nickname }}</div>
-                                            {% else %}
-                                                {{ streamer.streamer.name }}
-                                            {% endif %}
-                                        {% endif %}
-                                        | <a href="/player/{{ streamer.streamer.name }}">Profile</a> | <a href="{{ streamer.streamer.twitch }}" target="_blank">Twitch</a>
-                                        <br />
-                                        <div class="stream-game">{{ streamer.game.name }}</div>
-                                        <div class="stream-title">{{ streamer.title }}</div>
-                                        <div class="stream-time">Started {{ streamer.stream_time|time_since }}</div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %}
                 <div class="latest-wrs-table">
                     <table  class="table table-striped table-light table-hover">
                         <thead>
@@ -254,6 +208,61 @@
                         </tbody>
                     </table>
                 </div>
+
+                {% if streamers.count > 0 %}
+                <div class="now-streaming-table">
+                    <table class="table table-striped table-light table-hover">
+                        <thead>
+                            <tr>
+                                <th colspan="2" class="bg-info">Currently Streaming</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for streamer in streamers %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ streamer.streamer.twitch }}" target="_blank"><img src="{% static 'pfp/'|add:streamer.streamer.id|add:'.jpg' %}" onerror="this.onerror=null; this.src='{% static 'pfp/default.png' %}'" title="{{ streamer.streamer.name }}" class="pfp-img-streaming" /></a>
+                                    </td>
+                                    <td class="now-streaming">
+                                        {% if streamer.streamer.countrycode.id != "vh" %}
+                                            {% if streamer.streamer.nickname %}
+                                                <img src="https://flagcdn.com/h20/{{ streamer.streamer.countrycode.id }}.png" class="flag-streaming" title="{{ streamer.streamer.countrycode.name }}" alt="{{ streamer.streamer.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> <div style="display: inline;" title="{{streamer.streamer.name}}">{{ streamer.streamer.nickname }}</div>
+                                            {% else %}
+                                                <img src="https://flagcdn.com/h20/{{ streamer.streamer.countrycode.id }}.png" class="flag-streaming" title="{{ streamer.streamer.countrycode.name }}" alt="{{ streamer.streamer.countrycode.name }}" onerror="this.onerror=null; this.src=''" /> {{ streamer.streamer.name }}
+                                            {% endif %}
+                                        {% elif streamer.streamer.countrycode.id == "vh" %}
+                                            {% if streamer.streamer.nickname %}
+                                                <img src="{% static 'srl/misc/vh.png' %}" class="flag-streaming" title="{{ streamer.streamer.countrycode.name }}" alt="{{ streamer.streamer.countrycode.name }}" /> <div style="display: inline;" title="{{streamer.streamer.name}}">{{ streamer.streamer.nickname }}</div>
+                                            {% else %}
+                                                <img src="{% static 'srl/misc/vh.png' %}" class="flag-streaming" title="{{ streamer.streamer.countrycode.name }}" alt="{{ streamer.streamer.countrycode.name }}" /> {{ streamer.streamer.name }}
+                                            {% endif %}
+                                        {% else %}
+                                            {% if streamer.streamer.nickname %}
+                                                <div style="display: inline;" title="{{streamer.streamer.name}}">{{ streamer.streamer.nickname }}</div>
+                                            {% else %}
+                                                {{ streamer.streamer.name }}
+                                            {% endif %}
+                                        {% endif %}
+                                        | <a href="/player/{{ streamer.streamer.name }}">Profile</a> | <a href="{{ streamer.streamer.twitch }}" target="_blank">Twitch</a>
+                                        <br />
+                                        <div class="stream-title">
+                                            {% if streamer.game.slug == "thps12" %}
+                                                [THPS1+2]
+                                            {% elif streamer.game.slug == "thps34" %}
+                                                [THPS3+4]
+                                            {% else %}
+                                                {{ streamer.game.name }}
+                                            {% endif %}
+                                            {{ streamer.title }}
+                                        </div>
+                                        <div class="stream-time">Started {{ streamer.stream_time|time_since }}</div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% include 'srl/footer.html' %}

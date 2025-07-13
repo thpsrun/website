@@ -26,7 +26,7 @@ urlpatterns = [
     path("player/<str:name>", PlayerProfile, name="PlayerProfile"),
     path("player/<str:name>/history", PlayerHistory, name="PlayerHistory"),
     path("<str:slug>/", GameLeaderboard, name="CategorySelection"),
-    path("<str:game_slug>/all", IL_Leaderboard, name="GameLeaderboard"),
+    path("<str:slug>/all", IL_Leaderboard, name="GameLeaderboard"),
     path("<str:slug>/ils", ILGameLeaderboard, name="CategorySelection"),
     path("lbs/search", search_leaderboard, name="search_leaderboard"),
 ]

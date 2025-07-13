@@ -9,19 +9,9 @@
         <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
 
         {% if "/fullgame" in request.path %}
-            <title>Full Game Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
+            <title>{{ game_slug }}} Full Game Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
         {% elif "/all" in request.path %}
-            {% if game_slug == "thps12" %}
-                <title>THPS1+2 IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
-            {% elif game_slug == "thps12ce" %}
-                <title>THPS1+2 CE IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
-            {% elif game_slug == "thps34" %}
-                <title>THPS3+4 IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
-            {% elif game_slug == "thps34ce" %}
-                <title>THPS3+4 CE IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
-            {% else %}
-                <title>{{ game_slug|upper }} IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
-            {% endif %}
+            <title>{{ game_slug }} IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
         {% else %}
             <title>Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
         {% endif %}
