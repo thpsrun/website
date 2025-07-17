@@ -1,4 +1,5 @@
 import environ
+from debug_toolbar.toolbar import debug_toolbar_urls
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -83,5 +84,8 @@ urlpatterns = [
     path("youtube", youtube_redirect, name="youtube_redirect"),
     path("src", src_redirect, name="src_redirect"),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+if settings.DEBUG:
+    urlpatterns = urlpatterns + debug_toolbar_urls()
 
 handler404 = "srl.static_views.page_not_found"

@@ -1,3 +1,26 @@
+### v3.4
+###### July 18, 2025
+
+### Added
+*   Added a devoted THPS3+4 Tournament Seeding page.
+    *   This is temporary until ~July 31st, 2025.
+*   Added the combined IL leaderboard for THPS3+4 to the navbar.
+
+### Changes
+*   Changed a large amount of Django ORM requests to make a lot of player pages faster.
+    *   Players with a large amount of speedruns will see a HUGE increase in speed (from ~5.5s to ~.5s!!!!).
+
+### Fixed
+*   Fixed some weird curly brackets being in weird places in some weird files.
+*   Fixed an issue where overall community rankings were not accurate in most cases.
+    *   The overall leaderboard was always correct, now they are both accurate!
+
+### Removed
+*   Removed overall rankings for full game and all individual level attempts from a player's main profile.
+    *   If people want this re-added, let me know! Most of the code is still there, just commented out.
+
+* * *
+
 ### v3.3.1
 ###### July 15, 2025
 *   Added external links to other THPS sub-communities in the navigation bar.

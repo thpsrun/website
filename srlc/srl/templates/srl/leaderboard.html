@@ -9,7 +9,7 @@
         <meta name="keywords" content="{{ ENV_WEBSITE_KEYWORDS }}">
 
         {% if "/fullgame" in request.path %}
-            <title>{{ game_slug }}} Full Game Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
+            <title>{{ game_slug }} Full Game Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
         {% elif "/all" in request.path %}
             <title>{{ game_slug }} IL Overall Leaderboard - {{ ENV_WEBSITE_NAME }}</title>
         {% else %}
