@@ -1,4 +1,5 @@
-from datetime import date
+import zoneinfo
+from datetime import date, datetime
 from typing import Any, Optional
 
 from django.core.paginator import Paginator
@@ -263,6 +264,34 @@ def Leaderboard(
         il_runs_all: list[Runs] = list(all_runs.filter(runtype="il"))
 
         return profile_four(
+            players_all,
+            il_runs_all,
+        )
+    # Temporary for THPS3+4 Tournament
+    elif profile == 5:
+        level_ids = [
+            "wj7z431w",  # Foundry
+            "wp7x4e4w",  # Airport
+            "wkk648xw",  # LA
+            "920qe36d",  # College
+            "9vm7njx9",  # San Francisco
+            "w6qo5r6d",  # Shipyard
+        ]
+
+        end_time = datetime(2025, 7, 31, 11, 59, 59).astimezone(
+            zoneinfo.ZoneInfo("America/New_York")
+        )
+
+        il_runs_all: list[Runs] = list(
+            all_runs.filter(
+                runtype="il",
+                description__icontains="THPSTourney",
+                level_id__in=level_ids,
+                date__lt=end_time,
+            )
+        )
+
+        return profile_two(
             players_all,
             il_runs_all,
         )

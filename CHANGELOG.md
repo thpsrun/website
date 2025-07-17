@@ -1,14 +1,15 @@
 ### v3.4
-###### July 18, 2025
+###### July 17, 2025
 
 ### Added
 *   Added a devoted THPS3+4 Tournament Seeding page.
-    *   This is temporary until ~July 31st, 2025.
+    *   This is temporary until ~August 1st, 2025.
 *   Added the combined IL leaderboard for THPS3+4 to the navbar.
 
 ### Changes
 *   Changed a large amount of Django ORM requests to make a lot of player pages faster.
     *   Players with a large amount of speedruns will see a HUGE increase in speed (from ~5.5s to ~.5s!!!!).
+    *   Histories for players with a lot of speedruns also saw a huge increase in speed!
 
 ### Fixed
 *   Fixed some weird curly brackets being in weird places in some weird files.
