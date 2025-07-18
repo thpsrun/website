@@ -96,7 +96,10 @@ WSGI_APPLICATION = "website.wsgi.application"
 if os.getenv("DEBUG_MODE") == "True":
     DEBUG = True
     CSRF_TRUSTED_ORIGINS = ["http://localhost:8001"]
+    INSTALLED_APPS.append("debug_toolbar")
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
 else:
+    DEBUG = False
     APPEND_SLASH = True
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True

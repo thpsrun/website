@@ -1,5 +1,5 @@
 # thps.run Website
-## Version 3.3.1
+## Version 3.4
 
 ![Django](https://img.shields.io/badge/Django-5.2-green.svg?logo=django&logoColor=white)
 ![DjangoREST](https://img.shields.io/badge/django--rest--framework-3.16-blue?labelColor=333333&logo=django&logoColor=white&color=green)

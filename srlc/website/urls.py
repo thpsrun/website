@@ -84,4 +84,9 @@ urlpatterns = [
     path("src", src_redirect, name="src_redirect"),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
+if settings.DEBUG:
+    from debug_toolbar.toolbar import debug_toolbar_urls
+
+    urlpatterns = urlpatterns + debug_toolbar_urls()
+
 handler404 = "srl.static_views.page_not_found"

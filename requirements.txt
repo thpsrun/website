@@ -8,6 +8,7 @@ Django==5.2.*
 django-bootstrap5==25.*
 django-classy-tags==4.1.*
 django-cors-headers==4.7.*
+django-debug-toolbar==5.2.*
 django-environ==0.12.*
 django-ratelimit==4.1.*
 django-resized==1.0.*

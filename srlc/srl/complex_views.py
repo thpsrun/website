@@ -1,3 +1,6 @@
+from collections import defaultdict
+from typing import Optional, Tuple
+
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncDate
@@ -5,8 +8,7 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 
 from srl.leaderboard_view import Leaderboard
-
-from .models import Games, NowStreaming, Players, Runs
+from srl.models import Games, NowStreaming, Players, Runs
 
 
 def PlayerProfile(
@@ -33,18 +35,7 @@ def PlayerProfile(
     except Exception:
         return render(request, "srl/500.html")
 
-    games = (
-        Games.objects.only(
-            "id",
-            "name",
-            "release",
-            "slug",
-        )
-        .all()
-        .order_by("name")
-    )
-
-    main_runs = (
+    runs_query = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"])
         .select_related(
             "game",
@@ -57,32 +48,27 @@ def PlayerProfile(
             "platform",
             "description",
         )
-        .filter(runtype="main")
-        .filter(Q(player_id=player.id) | Q(player2_id=player.id))
         .annotate(o_date=TruncDate("v_date"))
+        .order_by("game__release", "subcategory", "-o_date")
     )
 
-    il_runs = (
-        Runs.objects.exclude(vid_status__in=["new", "rejected"])
-        .select_related(
-            "game",
-            "player",
-            "level",
-        )
-        .prefetch_related("player__awards")
-        .defer(
-            "variables",
-            "platform",
-            "description",
-        )
-        .filter(runtype="il", player_id=player.id)
-        .annotate(o_date=TruncDate("v_date"))
+    list_runs = list(runs_query.filter(player_id=player.id)) + list(
+        runs_query.filter(player2_id=player.id)
     )
 
-    total_runs = len(main_runs) + len(il_runs)
+    main_runs: list[Runs] = []
+    il_runs: list[Runs] = []
 
-    main_runs = main_runs.filter(obsolete=False)
-    il_runs = il_runs.filter(obsolete=False)
+    for run in list_runs:
+        if run.runtype == "main" and run.obsolete is False:
+            main_runs.append(run)
+        elif run.runtype == "il" and run.obsolete is False:
+            il_runs.append(run)
+
+    total_runs = len(list_runs)
+    main_points = sum(run.points for run in main_runs)
+    il_points = sum(run.points for run in il_runs)
+    total_points = main_points + il_points
 
     # hidden_cats = VariableValues.objects.filter(hidden=True)
     # main_runs = main_runs.exclude(values__in=hidden_cats)
@@ -90,66 +76,64 @@ def PlayerProfile(
     # For co-op categories, runners could be player 1 or player 2 and it
     # would count as two different runs.
     # This would remove the slower of the two and not count it towards points.
-    if main_runs.filter(subcategory="Classic Mode - Co-Op (Normal)"):
-        exclude = (
-            main_runs.filter(subcategory__contains="Co-Op")
-            .order_by("-points")
-            .values("id")
-        )[1:]
-        main_runs = main_runs.exclude(id__in=exclude)
 
-    main_points = sum(run.points for run in main_runs)
-    il_points = sum(run.points for run in il_runs)
-    total_points = main_points + il_points
+    coop_runs: list[Runs] = [r for r in main_runs if "Co-Op" in r.subcategory]
+    best_coop: defaultdict[Tuple[str, int], Optional[Runs]] = defaultdict(lambda: None)
 
-    leaderboard = Leaderboard(request, 3)
-    u_game_names = games.order_by("release").values_list("name", "release")
+    for run in coop_runs:
+        key = run.subcategory
+        if not best_coop[key] or run.points > best_coop[key].points:
+            best_coop[key] = run
+
+    best_ids = {run.id for run in best_coop.values()}
+    main_runs = [
+        r for r in main_runs if "Co-Op" not in r.subcategory or r.id in best_ids
+    ]
+
+    all_boards = Leaderboard(request, 3)
+
+    game_ids: list = [run.game.id for run in list_runs]
+    u_game_names: list[str, str] = (
+        Games.objects.only(
+            "id",
+            "name",
+            "release",
+            "slug",
+        )
+        .filter(id__in=game_ids)
+        .order_by("release")
+        .values_list(
+            "name",
+            "release",
+        )
+    )
 
     player_rank = 0
-    main_rank = 0
-    il_rank = 0
-    if isinstance(leaderboard, tuple):
-        for index, item in enumerate(leaderboard[0]):
-            if item["player"] == player.name:
-                player_rank = index + 1
-                break
+    for index, item in enumerate(all_boards):
+        if item["player"] == player.name:
+            player_rank = index + 1
+            break
 
-        for index, item in enumerate(leaderboard[1]):
-            if item["player"] == player.name:
-                main_rank = index + 1
-                break
+    player_count = len(all_boards)
 
-        for index, item in enumerate(leaderboard[2]):
-            if item["player"] == player.name:
-                il_rank = index + 1
-                break
-
-        player_count = len(leaderboard[0])
-        main_count = len(leaderboard[1])
-        il_count = len(leaderboard[2])
-
-        award_set = []
-        for award in player.awards.all():
-            award_set.append([award.name, award.image.name.rsplit("/")[-1]])
-
-        context = {
-            "player": player,
-            "main_runs": main_runs,
-            "il_runs": il_runs,
-            "main_points": main_points,
-            "il_points": il_points,
-            "total_points": total_points,
-            "total_runs": total_runs,
-            "player_rank": player_rank,
-            "main_rank": main_rank,
-            "il_rank": il_rank,
-            "player_count": player_count,
-            "main_count": main_count,
-            "il_count": il_count,
-            "unique_game_names": u_game_names,
-            "awards": award_set,
-        }
-        return render(request, "srl/player_profile.html", context)
+    award_set: list = []
+    for award in player.awards.all():
+        award_set.append([award.name, award.image.name.rsplit("/")[-1]])
+    # a = 0 / 0
+    context = {
+        "player": player,
+        "main_runs": main_runs,
+        "il_runs": il_runs,
+        "main_points": main_points,
+        "il_points": il_points,
+        "total_points": total_points,
+        "total_runs": total_runs,
+        "player_rank": player_rank,
+        "player_count": player_count,
+        "unique_game_names": u_game_names,
+        "awards": award_set,
+    }
+    return render(request, "srl/player_profile.html", context)
 
 
 def PlayerHistory(
@@ -176,7 +160,7 @@ def PlayerHistory(
     except Exception:
         return render(request, "srl/500.html")
 
-    runs = (
+    runs_query = (
         Runs.objects.exclude(vid_status__in=["new", "rejected"])
         .select_related(
             "game",
@@ -191,27 +175,53 @@ def PlayerHistory(
         )
         .filter(Q(player_id=player.id) | Q(player2_id=player.id))
         .annotate(o_date=TruncDate("date"))
+        .order_by("game__release", "subcategory", "-o_date")
     )
 
-    main_runs = runs.filter(runtype="main").order_by("subcategory", "-o_date")
-    il_runs = runs.filter(runtype="il").order_by("subcategory", "-o_date")
+    list_runs = list(runs_query.filter(player_id=player.id)) + list(
+        runs_query.filter(player2_id=player.id)
+    )
 
-    # For co-op, runners could be player 1 or 2 and it would count as two runs.
+    main_runs: list[Runs] = []
+    il_runs: list[Runs] = []
+
+    for run in list_runs:
+        if run.runtype == "main":
+            main_runs.append(run)
+        elif run.runtype == "il":
+            il_runs.append(run)
+
+    # For co-op categories, runners could be player 1 or player 2 and it
+    # would count as two different runs.
     # This would remove the slower of the two and not count it towards points.
-    if main_runs.filter(subcategory__contains="Co-Op"):
-        exclude = (
-            main_runs.only("id", "points")
-            .filter(subcategory__contains="Co-Op")
-            .order_by("-points")
-            .values("id")
-        )[1:]
-        main_runs = main_runs.exclude(id__in=exclude)
 
-    u_game_names = (
-        Games.objects.only("name", "release")
-        .all()
+    coop_runs: list[Runs] = [r for r in main_runs if "Co-Op" in r.subcategory]
+    best_coop: defaultdict[Tuple[str, int], Optional[Runs]] = defaultdict(lambda: None)
+
+    for run in coop_runs:
+        key = run.subcategory
+        if not best_coop[key] or run.points > best_coop[key].points:
+            best_coop[key] = run
+
+    best_ids = {run.id for run in best_coop.values()}
+    main_runs = [
+        r for r in main_runs if "Co-Op" not in r.subcategory or r.id in best_ids
+    ]
+
+    game_ids: list = [run.game.id for run in list_runs]
+    u_game_names: list[str, str] = (
+        Games.objects.only(
+            "id",
+            "name",
+            "release",
+            "slug",
+        )
+        .filter(id__in=game_ids)
         .order_by("release")
-        .values_list("name", "release")
+        .values_list(
+            "name",
+            "release",
+        )
     )
 
     context = {

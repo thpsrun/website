@@ -41,7 +41,7 @@ def filter_game_name(
     return [
         game
         for game in game_runs
-        if Games.objects.get(id=game.game.id).name == game_name
+        if Games.objects.only("id", "name").get(id=game.game.id).name == game_name
     ]
 
 
