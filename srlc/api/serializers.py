@@ -43,6 +43,7 @@ class RunSerializer(serializers.ModelSerializer):
     variables = serializers.SerializerMethodField()
     times = serializers.SerializerMethodField()
     record = serializers.SerializerMethodField()
+    lb_count = serializers.SerializerMethodField()
     players = serializers.SerializerMethodField()
     system = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
@@ -100,10 +101,15 @@ class RunSerializer(serializers.ModelSerializer):
         self,
         obj: Runs,
     ) -> Union[str, int, dict[str, Any]]:
-        """Serializes the world record associated with the run's subcategory"""
+        """Serializes the world record associated with the run's subcategory."""
         record = (
             Runs.objects.only("id")
-            .filter(game=obj.game, subcategory=obj.subcategory, place=1)
+            .filter(
+                game=obj.game,
+                subcategory=obj.subcategory,
+                place=1,
+                obsolete=False,
+            )
             .first()
         )
         if record:
@@ -114,6 +120,23 @@ class RunSerializer(serializers.ModelSerializer):
                 return record.id
         else:
             return None
+
+    def get_lb_count(
+        self,
+        obj: Runs,
+    ) -> int:
+        """Serializes the number of players within a game and its subcategory."""
+        player_count = (
+            Runs.objects.only("id")
+            .filter(
+                game=obj.game,
+                subcategory=obj.subcategory,
+                obsolete=False,
+            )
+            .count()
+        )
+
+        return player_count
 
     def get_players(
         self,
@@ -283,6 +306,7 @@ class RunSerializer(serializers.ModelSerializer):
             "level",
             "subcategory",
             "place",
+            "lb_count",
             "player",
             "player2",
             "players",
