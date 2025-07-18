@@ -278,7 +278,7 @@ def Leaderboard(
             "w6qo5r6d",  # Shipyard
         ]
 
-        end_time = datetime(2025, 7, 31, 11, 59, 59).astimezone(
+        end_time = datetime(2025, 7, 27, 12, 0, 0).astimezone(
             zoneinfo.ZoneInfo("America/New_York")
         )
 
