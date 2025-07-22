@@ -42,7 +42,7 @@ def convert_time(
     else:
         final_time += f"{int(seconds)}s "
 
-    if milliseconds > 0:
+    if milliseconds != "000":
         final_time += f"{milliseconds}ms"
     else:
         final_time = final_time.rstrip(" ")
