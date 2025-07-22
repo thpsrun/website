@@ -1,3 +1,10 @@
+### v3.4.2
+###### July 22, 2025
+*   Fixed a visual bug where the leading zero of a speedrun's milliseconds was removed. [#75](https://github.com/thpsrun/website/issues/75)
+    *   Over 250 runs were affected, as of 22 July. All runs have been fixed to properly reflect their times.
+
+* * *
+
 ### v3.4.1
 ###### July 18, 2025
 *   Added a new API field that displays the number of players within a game's subcategory.

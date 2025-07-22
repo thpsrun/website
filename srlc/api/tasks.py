@@ -97,9 +97,16 @@ def normalize_src(
             )
 
             for variable in lb_info["variables"]["data"]:
-                chain(update_variable.s(run_info["game"], variable))()
+                chain(
+                    update_variable.s(
+                        run_info["game"],
+                        variable,
+                    )
+                )()
 
-            chain(update_category.s(lb_info["category"]["data"], run_info["game"]))()
+            chain(
+                update_category.s(lb_info["category"]["data"], run_info["game"]),
+            )()
 
             finish = 0
             for run in lb_info["runs"]:
@@ -214,7 +221,13 @@ def add_run(
 
     chain(
         invoke_single_run.s(
-            game["id"], category, run, var_name, obsolete, point_reset, download_pfp
+            game["id"],
+            category,
+            run,
+            var_name,
+            obsolete,
+            point_reset,
+            download_pfp,
         )
     )()
 
