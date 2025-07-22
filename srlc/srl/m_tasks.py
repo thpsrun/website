@@ -6,7 +6,7 @@ import requests
 
 
 def convert_time(
-    secs,
+    secs: float,
 ) -> str:
     """Converts the time given into a string.
 
@@ -19,6 +19,7 @@ def convert_time(
     hours, remainder = divmod(secs, 3600)
     minutes, seconds = divmod(remainder, 60)
     seconds, milliseconds = divmod(round(seconds, 3) * 1000, 1000)
+    milliseconds = str(int(milliseconds)).zfill(3)
 
     if minutes >= 60:
         hours += math.floor(minutes / 60)
@@ -41,8 +42,8 @@ def convert_time(
     else:
         final_time += f"{int(seconds)}s "
 
-    if milliseconds > 0:
-        final_time += f"{int(milliseconds)}ms"
+    if milliseconds != "000":
+        final_time += f"{milliseconds}ms"
     else:
         final_time = final_time.rstrip(" ")
 
