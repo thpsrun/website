@@ -278,12 +278,28 @@ def Leaderboard(
             "w6qo5r6d",  # Shipyard
         ]
 
-        end_time = datetime(2025, 7, 27, 12, 0, 0).astimezone(
-            zoneinfo.ZoneInfo("America/New_York")
+        end_time = datetime(
+            2025, 7, 27, 0, 0, 0, tzinfo=zoneinfo.ZoneInfo("America/New_York")
         )
 
         il_runs_all: list[Runs] = list(
-            all_runs.filter(
+            Runs.objects.exclude(
+                vid_status__in=["new", "rejected"],
+            )
+            .select_related(
+                "game",
+                "category",
+                "player",
+                "player__countrycode",
+                "player2",
+                "player2__countrycode",
+            )
+            .defer(
+                "variables",
+                "platform",
+                "description",
+            )
+            .filter(
                 runtype="il",
                 description__icontains="THPSTourney",
                 level_id__in=level_ids,
@@ -291,9 +307,20 @@ def Leaderboard(
             )
         )
 
+        best_runs: dict[tuple[int, int], Runs] = {}
+        for run in il_runs_all:
+            player_id = run.player.id
+            level_id = run.level.id
+            key = (player_id, level_id)
+
+            if key not in best_runs or run.points > best_runs[key].points:
+                best_runs[key] = run
+
+        il_runs_formatted = list(best_runs.values())
+
         return profile_two(
             players_all,
-            il_runs_all,
+            il_runs_formatted,
         )
     else:
         main_runs_all: list[Runs] = list(all_runs.filter(runtype="main"))
