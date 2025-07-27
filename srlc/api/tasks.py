@@ -391,7 +391,7 @@ def invoke_single_run(
         if not obsolete:
             if run["place"] == 1:
                 points = max_points
-            elif run["place"] > 1:
+            else:
                 source = wr_pull if wr_pull else SimpleNamespace(**default)
                 if defaulttime == "realtime":
                     wr_time = (
