@@ -1,3 +1,11 @@
+### v3.4.3
+###### July 26, 2025
+*   Fixed an issue where the SRC API could return a `place` of 0 for newly approved, non-obsolete speedruns when offsetting platforms was set to `True`.
+    *   For reference, this *should* only happen if your leaderboard is setup to have region and/or platforms obsolete each other. THPS3+4 was configured to NOT have them offset, so you could have runs from multiple platforms. The thps.run API is configured to always assume platforms and region (which is never used by the THPS series, in either case) are set to offset. But, apparently, the `/leaderboard/` SRC endpoint does not the offsetting settings.
+        *   In other words, I found another bug lol.
+
+* * *
+
 ### v3.4.2
 ###### July 22, 2025
 *   Fixed a visual bug where the leading zero of a speedrun's milliseconds was removed. [#75](https://github.com/thpsrun/website/issues/75)
