@@ -212,6 +212,7 @@ def add_run(
             > 1
         ):
             base_name = f"{level['name']} ({category["name"]})"
+            var_name = build_var_name(base_name, run_variables)
         else:
             base_name = f"{level['name']}"
             var_name = build_var_name(base_name, run_variables)

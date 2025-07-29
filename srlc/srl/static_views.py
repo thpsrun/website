@@ -16,6 +16,13 @@ def TourneyView(
     return render(request, "srl/tourney.html")
 
 
+def TourneyBracket(
+    request: HttpRequest,
+) -> HttpResponse:
+    """Returns tournament bracket."""
+    return redirect("https://challonge.com/thpss3")
+
+
 def Changelog(
     request: HttpRequest,
 ) -> HttpResponse:
