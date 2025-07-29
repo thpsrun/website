@@ -1,3 +1,12 @@
+### v3.4.4
+###### July 29, 2025
+*   Added direct link to bracket to the nav-bar.
+*   Fixed an issue where runs could not be imported if there are more than one IL category.
+*   Removed the THPS3+4 Qualifying Leaderboard.
+    *   Kept the code for later, but disabled functionality.
+
+* * *
+
 ### v3.4.3
 ###### July 26, 2025
 *   Fixed an issue where the SRC API could return a `place` of 0 for newly approved, non-obsolete speedruns when offsetting platforms was set to `True`.
