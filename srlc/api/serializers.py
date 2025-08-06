@@ -88,7 +88,9 @@ class RunSerializer(serializers.ModelSerializer):
     ) -> dict[dict, str]:
         """Serializes time information."""
         return {
-            "defaulttime": obj.game.defaulttime,
+            "defaulttime": (
+                obj.game.idefaulttime if obj.runtype == "il" else obj.game.defaulttime
+            ),
             "time": obj.time,
             "time_secs": obj.time_secs,
             "timenl": obj.timenl,

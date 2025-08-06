@@ -1,3 +1,9 @@
+### v3.4.5
+###### August 6, 2025
+*   Fixed an issue where ILs were given `defaulttime` instead of `idefaulttime` in the API.
+
+* * *
+
 ### v3.4.4
 ###### July 29, 2025
 *   Added direct link to bracket to the nav-bar.
