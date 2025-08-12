@@ -145,7 +145,7 @@ class RunSerializer(serializers.ModelSerializer):
         obj: Runs,
     ) -> Union[str, int, dict[str, Any]]:
         """Serializes player information, to include optional embeds."""
-        if "players" in self.context.get("embed", []):
+        if "players" in self.context.get("embed", []) and obj.player:
             player1 = PlayerSerializer(Players.objects.get(id=obj.player.id)).data
 
             if obj.player2:
@@ -437,7 +437,7 @@ class PlayerSerializer(serializers.ModelSerializer):
     ) -> str:
         """Serializes country information."""
         if obj.countrycode:
-            return obj.countrycode.name
+            return obj.countrycode.id
         else:
             return None
 

@@ -52,4 +52,3 @@ services:
 networks:
   thpsrun:
     driver: bridge
-    external: true
