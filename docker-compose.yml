@@ -3,6 +3,8 @@ volumes:
       name: thpsrun_static_files
     postgres_data:
       name: thpsrun_postgres_data
+    node_modules:
+      name: node_modules
 
 services:
   postgres:
@@ -37,6 +39,27 @@ services:
       - ./srlc:/app
       - static_files:/app/static:rw
       - ../guides:/app/docs
+    networks:
+      - thpsrun
+
+  react:
+    container_name: react
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    command: npm run dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    tty: true
+    depends_on:
+      - django
+      - postgres
+    volumes:
+      - ./frontend:/srv/app:rw
+      - node_modules:/srv/app/node_modules:rw
     networks:
       - thpsrun
 
