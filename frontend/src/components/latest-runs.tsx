@@ -1,8 +1,7 @@
-import { useTHPSNewWRs } from "@/hooks/useTHPSData"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import * as flags from "country-flag-icons/react/3x2"
 import type React from "react"
-import type { DetailedRun } from "@/types/api"
+import type { Run } from "@/types/api"
 
 type CountryCode = keyof typeof flags
 
@@ -20,7 +19,7 @@ const SlugMap = {
 
 type LatestRunsProps = {
     title: string
-    data: DetailedRun[]
+    data: Run[]
 }
 
 export const LatestRuns: React.FC<LatestRunsProps> = ({ title, data }) => {
@@ -44,7 +43,7 @@ export const LatestRuns: React.FC<LatestRunsProps> = ({ title, data }) => {
                             <TableCell className="font-medium">{SlugMap[run.game.slug as keyof typeof SlugMap] || ""}</TableCell>
                             <TableCell>{run.subcategory}</TableCell>
                             <TableCell className="flex items-center">{run.players.country && <><CountryFlag countryCode={run.players.country as CountryCode} /></>}{run.players.name || "Anonymous"}</TableCell>
-                            <TableCell>{run.times.timeigt}</TableCell>
+                            <TableCell>{run.times.timeigt != "0" ? run.times.timeigt : run.times.time}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

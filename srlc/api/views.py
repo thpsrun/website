@@ -1,7 +1,9 @@
 from celery import chain
 from django.db.models import Q
+from django.db.models.functions import TruncDate
 from django.http import HttpRequest, HttpResponse
 from rest_framework import status
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from srl.models import (
@@ -32,6 +34,17 @@ from api.serializers import (
 from api.tasks import normalize_src
 
 
+class ReadOnlyOrAuthenticated(BasePermission):
+    """
+    Custom permission to only allow read access without authentication,
+    but require authentication for write operations.
+    """
+    def has_permission(self, request, view):
+        if request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return True
+        return request.user and request.user.is_authenticated
+
+
 class API_Runs(APIView):
     """Viewset for viewing, creating, or editing speedruns.
 
@@ -49,7 +62,7 @@ class API_Runs(APIView):
             queried through the Speedrun.com API.
 
     Permissions:
-        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+        - `ReadOnlyOrAuthenticated`: GET requests are public, POST/PUT require authentication.
 
     Model: `Runs`
 
@@ -119,7 +132,7 @@ class API_Runs(APIView):
         ```
     """
 
-    ALLOWED_QUERIES = {"status"}
+    ALLOWED_QUERIES = {"status", "latest", "latest-wrs", "latest-pbs", "records"}
     ALLOWED_EMBEDS = {
         "category",
         "level",
@@ -129,6 +142,180 @@ class API_Runs(APIView):
         "players",
         "record",
     }
+    permission_classes = [ReadOnlyOrAuthenticated]
+
+    def _get_status_runs(self, embed_fields):
+        """Get runs with 'new' status for status query."""
+        new_runs = Runs.objects.filter(vid_status="new")
+        return RunSerializer(
+            new_runs, many=True, context={"embed": embed_fields}
+        ).data
+
+    def _get_latest_runs(self, embed_fields):
+        """Get latest personal bests for latest query."""
+        pbs = (
+            Runs.objects.exclude(vid_status__in=["new", "rejected"])
+            .select_related(
+                "game",
+                "player",
+                "player__countrycode",
+            )
+            .defer(
+                "variables",
+                "platform",
+                "description",
+            )
+            .filter(place__gt=1, obsolete=False, v_date__isnull=False)
+            .order_by("-v_date")
+        )[:5]
+        
+        return RunSerializer(
+            pbs, many=True, context={"embed": embed_fields}
+        ).data
+
+    def _get_latest_wrs(self, embed_fields):
+        """Get latest world records for latest-wrs query."""
+        wrs = (
+            Runs.objects.exclude(vid_status__in=["new", "rejected"])
+            .select_related(
+                "game",
+                "player",
+                "player__countrycode",
+            )
+            .defer(
+                "variables",
+                "platform",
+                "description",
+            )
+            .filter(place=1, obsolete=False, v_date__isnull=False)
+            .order_by("-v_date")
+        )[:5]
+        
+        return RunSerializer(
+            wrs, many=True, context={"embed": embed_fields}
+        ).data
+
+    def _get_latest_pbs(self, embed_fields):
+        """Get latest personal bests for latest-pbs query (same as latest-wrs currently)."""
+        wrs = (
+            Runs.objects.exclude(vid_status__in=["new", "rejected"])
+            .select_related(
+                "game",
+                "player",
+                "player__countrycode",
+            )
+            .defer(
+                "variables",
+                "platform",
+                "description",
+            )
+            .filter(place=1, obsolete=False, v_date__isnull=False)
+            .order_by("-v_date")
+        )[:5]
+        
+        return RunSerializer(
+            wrs, many=True, context={"embed": embed_fields}
+        ).data
+
+    def _get_records(self, embed_fields):
+        """Get grouped world records for main categories."""
+        subcategories = [
+            "Any%",
+            "Any% (6th Gen)",
+            "100%",
+            "Any% (No Major Glitches)",
+            "All Goals & Golds (No Major Glitches)",
+            "All Goals & Golds (All Careers)",
+            "All Goals & Golds (6th Gen)",
+            "Any% (6th Gen, Normal)",
+            "100% (Normal)",
+            "Any% (Beginner)",
+            "100% (NSR)",
+            "Story (Easy, NG+)",
+            "100% (NG)",
+            "Classic (Normal, NG+)",
+            "Story Mode (Easy, NG+)",
+            "Classic Mode (Normal)",
+            "Any% (360/PS3)",
+            "100% (360/PS3)",
+            "Any% Tour Mode (All Tours, New Game)",
+            "All Goals & Golds (All Tours, New Game)",
+        ]
+
+        exempt_games = [
+            "GBA",
+            "PSP",
+            "GBC",
+            "Category Extensions",
+            "Remix",
+            "Sk8land",
+            "HD",
+            "2x",
+        ]
+
+        exclusion_filter = Q()
+        for game in exempt_games:
+            exclusion_filter |= Q(game__name__icontains=game)
+
+        runs = (
+            Runs.objects.exclude(vid_status__in=["new", "rejected"], obsolete=True)
+            .exclude(exclusion_filter)
+            .select_related(
+                "game",
+                "player",
+                "player__countrycode",
+            )
+            .defer(
+                "variables",
+                "platform",
+                "description",
+            )
+            .filter(runtype="main", place=1, subcategory__in=subcategories)
+            .order_by("-subcategory")
+            .annotate(o_date=TruncDate("date"))
+        )
+
+        # Group runs together within the same game and subcategory for ties
+        grouped_runs = []
+        seen_records = set()
+
+        for run in runs:
+            key = (run.game.slug, run.subcategory, run.time)
+            if key not in seen_records:
+                grouped_runs.append(
+                    {
+                        "game": run.game,
+                        "subcategory": run.subcategory,
+                        "time": run.time,
+                        "players": [],
+                    }
+                )
+                seen_records.add(key)
+
+            for record in grouped_runs:
+                if (
+                    record["game"].slug == run.game.slug
+                    and record["subcategory"] == run.subcategory
+                    and record["time"] == run.time
+                ):
+                    from api.serializers import PlayerSerializer
+                    record["players"].append(
+                        {
+                            "player": PlayerSerializer(run.player).data if run.player else None,
+                            "url": run.url,
+                            "date": run.o_date
+                        }
+                    )
+
+        # Sort runs by game release date, oldest first
+        run_list = sorted(grouped_runs, key=lambda x: x["game"].release, reverse=False)
+
+        # Serialize game objects
+        for run in run_list:
+            if run["game"]:
+                run["game"] = GameSerializer(run["game"]).data
+
+        return run_list
 
     def get(
         self,
@@ -177,20 +364,28 @@ class API_Runs(APIView):
             )
 
         if id == "all":
+            response_data = {}
+            
             if "status" in query_fields:
-                new_runs = Runs.objects.filter(vid_status="new")
-                runs = RunSerializer(
-                    new_runs, many=True, context={"embed": embed_fields}
-                ).data
-
-                return Response(
-                    {
-                        "new_runs": runs,
-                    }
-                )
+                response_data["new_runs"] = self._get_status_runs(embed_fields)
+                
+            if "latest" in query_fields:
+                response_data["latest_pbs"] = self._get_latest_runs(embed_fields)
+                
+            if "latest-wrs" in query_fields:
+                response_data["latest_wrs"] = self._get_latest_wrs(embed_fields)
+                
+            if "latest-pbs" in query_fields:
+                response_data["latest_pbs"] = self._get_latest_pbs(embed_fields)
+                
+            if "records" in query_fields:
+                response_data["records"] = self._get_records(embed_fields)
+                
+            if response_data:
+                return Response(response_data)
             else:
                 return Response(
-                    {"ERROR": "'all' can only be used with a query (status)."},
+                    {"ERROR": "'all' can only be used with a query (status, latest, latest-wrs, latest-pbs, records)."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
         else:
@@ -299,7 +494,7 @@ class API_Players(APIView):
             Returns information on a player based on their username or ID.
 
     Permissions:
-        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+        - `ReadOnlyOrAuthenticated`: GET requests are public, PUT requires authentication.
 
     Model: `Players`
 
@@ -338,6 +533,7 @@ class API_Players(APIView):
     """
 
     ALLOWED_QUERIES = {"streams"}
+    permission_classes = [ReadOnlyOrAuthenticated]
 
     def get(
         self,
@@ -587,6 +783,7 @@ class API_PlayerRecords(APIView):
     """
 
     ALLOWED_EMBEDS = {"categories", "levels", "games", "platforms"}
+    permission_classes = [ReadOnlyOrAuthenticated]
 
     def get(
         self,
@@ -704,6 +901,7 @@ class API_Games(APIView):
     """
 
     ALLOWED_EMBEDS = {"categories", "levels", "platforms"}
+    permission_classes = [ReadOnlyOrAuthenticated]
 
     def get(
         self,
@@ -800,6 +998,7 @@ class API_Categories(APIView):
     """
 
     ALLOWED_EMBEDS = {"game", "variables"}
+    permission_classes = [ReadOnlyOrAuthenticated]
 
     def get(
         self,
@@ -882,6 +1081,7 @@ class API_Variables(APIView):
     """
 
     ALLOWED_EMBEDS = {"game", "values"}
+    permission_classes = [ReadOnlyOrAuthenticated]
 
     def get(
         self,
@@ -961,6 +1161,7 @@ class API_Values(APIView):
     """
 
     ALLOWED_EMBEDS = {"variable"}
+    permission_classes = [ReadOnlyOrAuthenticated]
 
     def get(
         self,
@@ -1038,6 +1239,7 @@ class API_Levels(APIView):
     """
 
     ALLOWED_EMBEDS = {"game"}
+    permission_classes = [ReadOnlyOrAuthenticated]
 
     def get(
         self,
@@ -1102,7 +1304,7 @@ class API_Streams(APIView):
             Removes a livestream entry completely.
 
     Permissions:
-        - `IsAuthenticated`: Only authenticated users with a valid API key may use this endpoint.
+        - `ReadOnlyOrAuthenticated`: GET requests are public, POST/PUT/DELETE require authentication.
 
     Model: `NowStreaming`
 
@@ -1127,6 +1329,7 @@ class API_Streams(APIView):
         ]
         ```
     """
+    permission_classes = [ReadOnlyOrAuthenticated]
 
     def get(
         self,
