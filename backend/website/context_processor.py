@@ -30,8 +30,8 @@ def global_social_media(request):
 
 
 def navbar_docs(request):
-    """If the `/srlc/docs/` directory is used, renders guides list to the navbar."""
-    base_docs_path = "/srlc/docs/"
+    """If the `/backend/docs/` directory is used, renders guides list to the navbar."""
+    base_docs_path = "/backend/docs/"
     navbar_docs = []
     game_list = Games.objects.only("name", "slug", "release").all().order_by("release")
 

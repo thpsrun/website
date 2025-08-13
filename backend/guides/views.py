@@ -10,13 +10,13 @@ from srl.models import Games, Players
 
 from .youtube_shortcode import YTEmbedProcessor
 
-DOCS_PATH = "/srlc/docs/"
+DOCS_PATH = "/backend/docs/"
 
 
 def parse_md_file(
     file_path: str,
 ) -> tuple[str, str, list]:
-    """Returns internal metadata information on .MD files located in the `/srlc/docs` directory.
+    """Returns internal metadata information on .MD files located in the `/backend/docs` directory.
 
     Returns information about .MD files, including the title of the file, any website tags, and who
     created the document. This is used to display the information of all guides within a game when
@@ -60,7 +60,7 @@ def render_guides_list(
 ) -> HttpResponse:
     """Returns a game's directory that includes .MD files.
 
-    Returns .MD files within a specific directory when they are in the `/srlc/docs` folder. This
+    Returns .MD files within a specific directory when they are in the `/backend/docs` folder. This
     includes the title of the document, the author (or discoverer), the relative URL, and the last
     modification date/time.
 

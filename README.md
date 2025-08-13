@@ -73,6 +73,6 @@ As an example of how points are reduced, how is a sample based on if a category'
 ### Post-Installation Steps
 * Create Super User
   - Super users are required to do anything in the admin portal; think of it as your root account. To create one, you need to access the `django` docker image command-line in some way.
-    - `docker run -it srlc-django /bin/bash`
-    - `cd srlc && python manage.py createsuperuser`
+    - `docker run -it backend-django /bin/bash`
+    - `cd backend && python manage.py createsuperuser`
     - Follow on-screen instructions.

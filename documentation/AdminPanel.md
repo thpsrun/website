@@ -314,7 +314,7 @@ There is no endpoint for Platforms.
 -   Click on the "Add Awards" option in the Awards interface.
 -   Give your Award a unique name and description.
 -   Optionally, you can give it an image.
-    -   Images are uploaded to the `srlc/srl/static/srl/imgs` directory.
+    -   Images are uploaded to the `backend/srl/static/srl/imgs` directory.
     -   Images must be 64x64, with a maximum file size of 3MB.
 -   Click "Save".
 
