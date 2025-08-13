@@ -1,7 +1,5 @@
 from collections import defaultdict
-from json import dumps
 from typing import Optional, Tuple
-import pprint
 
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum
@@ -11,7 +9,6 @@ from django.shortcuts import render
 
 from srl.leaderboard_view import Leaderboard
 from srl.models import Games, NowStreaming, Players, Runs
-from api.serializers import GameSerializer, PlayerSerializer, RunSerializer, StreamSerializer
 
 
 def PlayerProfile(
@@ -728,7 +725,7 @@ def GameLeaderboard(
 
 def MainPage(
     request: HttpRequest,
-) -> JsonResponse:
+) -> HttpResponse:
     """View that displays the main page for the entire website/project.
 
     This view gathers the world records, most recent speedruns/world records, and those currently
@@ -830,15 +827,11 @@ def MainPage(
                 and record["time"] == run.time
             ):
                 record["players"].append(
-                    {"player": PlayerSerializer(run.player).data if run.player else None, "url": run.url, "date": run.o_date}
+                    {"player": run.player, "url": run.url, "date": run.o_date}
                 )
 
     # Sorts runs within the run_list by the game release date, oldest first.
     run_list = sorted(grouped_runs, key=lambda x: x["game"].release, reverse=False)
-
-    for run in run_list:
-        if run["game"]:
-            run["game"] = GameSerializer(run["game"]).data
 
     # Sometimes v_date (verify_date) is null; this can happen if the runs on a leaderboard are
     # super old. Essentially grabs the newest 5 runs for WRs (place=1) and PBs (place>1).
@@ -880,16 +873,11 @@ def MainPage(
     for wr in wrs:
         wrs_data.append(wr)
 
-    pprint.pp({
+    context = {
         "streamers": streamers,
         "runs": run_list,
         "new_runs": runs_data,
         "new_wrs": wrs_data,
-    })
+    }
 
-    return JsonResponse({
-        "streamers": StreamSerializer(streamers, many=True).data,
-        "runs": run_list,
-        "new_runs": RunSerializer(runs_data, context={"embed": ["game", "players"]}, many=True).data,
-        "new_wrs": RunSerializer(wrs_data, context={"embed": ["game", "players"]}, many=True).data,
-    })
+    return render(request, "srl/main.html", context)

@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ApiResponse } from '@/types/api'
 
-const API_BASE_URL = 'http://localhost:8001'
+const API_BASE_URL = 'http://localhost:8001/api'
 
 // Fetch function
 const fetchTHPSData = async (): Promise<ApiResponse> => {
-  const response = await fetch(`${API_BASE_URL}/`)
+  const response = await fetch(`${API_BASE_URL}/runs/all?query=latest-pbs,latest-wrs,records&embed=players,game&format=json`)
   
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`)
@@ -30,7 +30,7 @@ export const useTHPSData = () => {
 export const useTHPSRuns = () => {
   const { data, ...rest } = useTHPSData()
   return {
-    data: data?.runs || [],
+    data: data?.records || [],
     ...rest
   }
 }
@@ -38,7 +38,7 @@ export const useTHPSRuns = () => {
 export const useTHPSNewRuns = () => {
   const { data, ...rest } = useTHPSData()
   return {
-    data: data?.new_runs || [],
+    data: data?.latest_pbs || [],
     ...rest
   }
 }
@@ -46,7 +46,7 @@ export const useTHPSNewRuns = () => {
 export const useTHPSNewWRs = () => {
   const { data, ...rest } = useTHPSData()
   return {
-    data: data?.new_wrs || [],
+    data: data?.latest_wrs || [],
     ...rest
   }
 }

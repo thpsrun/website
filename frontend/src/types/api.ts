@@ -1,5 +1,18 @@
 // API Response Types
 
+export interface Game {
+  id: string
+  name: string
+  slug: string
+  release: string
+  boxart: string
+  twitch: string
+  defaulttime: string
+  idefaulttime: string
+  pointsmax: number
+  ipointsmax: number
+}
+
 export interface Player {
   id: string
   name: string
@@ -19,32 +32,6 @@ export interface Player {
     il_pts: number
     total_runs: number
   }
-}
-
-export interface Game {
-  id: string
-  name: string
-  slug: string
-  release: string
-  boxart: string
-  twitch: string
-  defaulttime: string
-  idefaulttime: string
-  pointsmax: number
-  ipointsmax: number
-}
-
-export interface RunPlayer {
-  player: Player | null
-  url: string
-  date: string
-}
-
-export interface Run {
-  game: Game
-  subcategory: string
-  time: string
-  players: RunPlayer[]
 }
 
 export interface Times {
@@ -79,30 +66,68 @@ export interface Meta {
   url: string
 }
 
-export interface DetailedRun {
+export interface Run {
   id: string
   runtype: string
-  game: Game
-  category: string
-  level: string
+  game: string // Game ID as string for basic runs
+  category: string // Category ID as string
+  level: string | null // Level ID as string or null
   subcategory: string
   place: number
   lb_count: number
-  players: Player
+  players: string // Player ID/name as string or "Anonymous"
   date: string
   record: string
   times: Times
   system: System
   status: Status
   videos: Videos
-  variables: Record<string, any>
+  variables: { [key: string]: any }
   meta: Meta
   description?: string | null
 }
 
+// Detailed run with embedded game object (used in latest_wrs, latest_pbs)
+export interface DetailedRun {
+  id: string
+  runtype: string
+  game: Game // Full game object with embedded data
+  category: string // Category ID as string
+  level: string | null // Level ID as string or null
+  subcategory: string
+  place: number
+  lb_count: number
+  players: string // Player ID/name as string or "Anonymous"
+  date: string
+  record: string
+  times: Times
+  system: System
+  status: Status
+  videos: Videos
+  variables: { [key: string]: any }
+  meta: Meta
+  description?: string | null
+}
+
+export interface RecordPlayer {
+  player: Player | null
+  url: string
+  date: string
+}
+
+export interface Record {
+  game: Game // Full game object with embedded data
+  subcategory: string
+  time: string
+  players: RecordPlayer[]
+}
+
 export interface ApiResponse {
-  streamers: any[]
-  runs: Run[]
-  new_runs: DetailedRun[]
-  new_wrs: DetailedRun[]
+  latest_wrs?: DetailedRun[]
+  latest_pbs?: DetailedRun[]
+  latest?: Run[]
+  new_runs?: Run[]
+  records?: Record[]
+  streamers?: any[]
+  runs?: any[]
 }

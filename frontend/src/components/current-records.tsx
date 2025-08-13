@@ -1,5 +1,5 @@
 import { useTHPSRuns } from "@/hooks/useTHPSData"
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import * as flags from "country-flag-icons/react/3x2"
 
 type CountryCode = keyof typeof flags
