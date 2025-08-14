@@ -33,7 +33,7 @@ export const CurrentRecords = () => {
                         <TableRow key={i}>
                             <TableCell className="font-medium">{run.game.name}</TableCell>
                             <TableCell>{run.subcategory}</TableCell>
-                            <TableCell className="flex items-center">{run.players[0].player?.country && <><CountryFlag countryCode={run.players[0].player?.country as CountryCode} />{run.players[0].player?.name}</>}</TableCell>
+                            <TableCell className="flex items-center">{run.players[0].player?.country && <><CountryFlag countryCode={run.players[0].player?.country as CountryCode} />{run.players[0].player?.nickname || run.players[0].player?.name}</>}</TableCell>
                             <TableCell>{run.time}</TableCell>
                             <TableCell>{run.players[0].date}</TableCell>
                         </TableRow>

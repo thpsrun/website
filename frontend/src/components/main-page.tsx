@@ -12,7 +12,7 @@ export const MainPage = () => {
     return (
         <div className="w-full h-full flex gap-4">
             {/* Left section - stretches full height */}
-            <div className="flex-2 bg-background-transparent bg-opacity-10 backdrop-blur-sm rounded-lg flex">
+            <div className="flex-[2] bg-background-transparent bg-opacity-10 backdrop-blur-sm rounded-lg flex">
                 <CurrentRecords />
             </div>
 

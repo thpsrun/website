@@ -1,3 +1,22 @@
+### v4 - The <Something> Update
+###### ???
+
+### Major Changes
+*   Entire frontend of the website is redesigned. New UI, not basic HTML/JS, and much more!!? (Noami)
+*   Versioned the API endpoints for better future-proofing and upgrading and testing and stuff (Packle)
+
+### Added
+
+### Fixed
+
+### Changes
+
+### Misc.
+
+* * *
+
+## Older Versions (v3 and back)
+
 ### v3.4.5
 ###### August 6, 2025
 *   Fixed an issue where ILs were given `defaulttime` instead of `idefaulttime` in the API.
@@ -278,9 +297,6 @@
 *   `Subcategory` will be soon removed [https://github.com/thpsrun/website/issues/38](https://github.com/thpsrun/website/issues/38).
   
 * * *
-  
-
-## Older Versions (v2)
 
 ### v2.2.1.2
 ###### April 3, 2024
