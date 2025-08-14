@@ -39,8 +39,9 @@ class ReadOnlyOrAuthenticated(BasePermission):
     Custom permission to only allow read access without authentication,
     but require authentication for write operations.
     """
-    def has_permission(self, request, view):
-        if request.method in ['GET', 'HEAD', 'OPTIONS']:
+
+    def has_permission(self, request: HttpRequest, _):
+        if request.method in ["GET", "HEAD", "OPTIONS"]:
             return True
         return request.user and request.user.is_authenticated
 
@@ -147,9 +148,7 @@ class API_Runs(APIView):
     def _get_status_runs(self, embed_fields):
         """Get runs with 'new' status for status query."""
         new_runs = Runs.objects.filter(vid_status="new")
-        return RunSerializer(
-            new_runs, many=True, context={"embed": embed_fields}
-        ).data
+        return RunSerializer(new_runs, many=True, context={"embed": embed_fields}).data
 
     def _get_latest_runs(self, embed_fields):
         """Get latest personal bests for latest query."""
@@ -168,10 +167,8 @@ class API_Runs(APIView):
             .filter(place__gt=1, obsolete=False, v_date__isnull=False)
             .order_by("-v_date")
         )[:5]
-        
-        return RunSerializer(
-            pbs, many=True, context={"embed": embed_fields}
-        ).data
+
+        return RunSerializer(pbs, many=True, context={"embed": embed_fields}).data
 
     def _get_latest_wrs(self, embed_fields):
         """Get latest world records for latest-wrs query."""
@@ -190,10 +187,8 @@ class API_Runs(APIView):
             .filter(place=1, obsolete=False, v_date__isnull=False)
             .order_by("-v_date")
         )[:5]
-        
-        return RunSerializer(
-            wrs, many=True, context={"embed": embed_fields}
-        ).data
+
+        return RunSerializer(wrs, many=True, context={"embed": embed_fields}).data
 
     def _get_latest_pbs(self, embed_fields):
         """Get latest personal bests for latest-pbs query (same as latest-wrs currently)."""
@@ -212,10 +207,8 @@ class API_Runs(APIView):
             .filter(place=1, obsolete=False, v_date__isnull=False)
             .order_by("-v_date")
         )[:5]
-        
-        return RunSerializer(
-            wrs, many=True, context={"embed": embed_fields}
-        ).data
+
+        return RunSerializer(wrs, many=True, context={"embed": embed_fields}).data
 
     def _get_records(self, embed_fields):
         """Get grouped world records for main categories."""
@@ -299,11 +292,16 @@ class API_Runs(APIView):
                     and record["time"] == run.time
                 ):
                     from api.serializers import PlayerSerializer
+
                     record["players"].append(
                         {
-                            "player": PlayerSerializer(run.player).data if run.player else None,
+                            "player": (
+                                PlayerSerializer(run.player).data
+                                if run.player
+                                else None
+                            ),
                             "url": run.url,
-                            "date": run.o_date
+                            "date": run.o_date,
                         }
                     )
 
@@ -365,27 +363,30 @@ class API_Runs(APIView):
 
         if id == "all":
             response_data = {}
-            
+
             if "status" in query_fields:
                 response_data["new_runs"] = self._get_status_runs(embed_fields)
-                
+
             if "latest" in query_fields:
                 response_data["latest_pbs"] = self._get_latest_runs(embed_fields)
-                
+
             if "latest-wrs" in query_fields:
                 response_data["latest_wrs"] = self._get_latest_wrs(embed_fields)
-                
+
             if "latest-pbs" in query_fields:
                 response_data["latest_pbs"] = self._get_latest_pbs(embed_fields)
-                
+
             if "records" in query_fields:
                 response_data["records"] = self._get_records(embed_fields)
-                
+
             if response_data:
                 return Response(response_data)
             else:
                 return Response(
-                    {"ERROR": "'all' can only be used with a query (status, latest, latest-wrs, latest-pbs, records)."},
+                    {
+                        "ERROR": "'all' can only be used with a query (status, latest, latest-wrs,\
+                            latest-pbs, records)."
+                    },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
         else:
@@ -1304,7 +1305,7 @@ class API_Streams(APIView):
             Removes a livestream entry completely.
 
     Permissions:
-        - `ReadOnlyOrAuthenticated`: GET requests are public, POST/PUT/DELETE require authentication.
+        - `ReadOnlyOrAuthenticated`: GET requests are public, POST/PUT/DELETE require authentication
 
     Model: `NowStreaming`
 
@@ -1329,6 +1330,7 @@ class API_Streams(APIView):
         ]
         ```
     """
+
     permission_classes = [ReadOnlyOrAuthenticated]
 
     def get(

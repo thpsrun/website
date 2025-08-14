@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ApiResponse } from '@/types/api'
 
-const API_BASE_URL = 'http://localhost:8001/api'
+const API_BASE_URL = 'http://localhost:8001/api/v1'
 
 // Fetch function
 const fetchTHPSData = async (): Promise<ApiResponse> => {
