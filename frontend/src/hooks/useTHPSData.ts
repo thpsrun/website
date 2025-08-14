@@ -5,7 +5,7 @@ const API_BASE_URL = 'http://localhost:8001/api/v1'
 
 // Fetch function
 const fetchTHPSData = async (): Promise<ApiResponse> => {
-  const response = await fetch(`${API_BASE_URL}/runs/all?query=latest-pbs,latest-wrs,records&embed=players,game&format=json`)
+  const response = await fetch(`${API_BASE_URL}/website/mainpage?query=latest-pbs,latest-wrs,records&embed=players,game&format=json`)
   
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`)

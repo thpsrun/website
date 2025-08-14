@@ -72,7 +72,7 @@ def src_redirect(
 
 urlpatterns = [
     path("illiad/", admin.site.urls),
-    path("api/", include("api.urls")),
+    path("api/v1/", include("api.urls")),
     path("", include("srl.urls")),
     path("docs/", include("guides.urls")),
     # REDIRECTS
