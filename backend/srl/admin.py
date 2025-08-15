@@ -8,7 +8,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from django.urls import URLPattern, path, reverse
 
-from .models import (
+from srl.models import (
     Awards,
     Categories,
     CountryCodes,
@@ -23,7 +23,7 @@ from .models import (
     Variables,
     VariableValues,
 )
-from .views import (
+from srl.views import (
     ImportObsoleteView,
     RefreshGameRunsView,
     UpdateGameRunsView,
@@ -51,7 +51,7 @@ class SeriesAdmin(admin.ModelAdmin):
     @admin.action(description="Initialize Series Data")
     def update_series(
         self,
-        request: HttpRequest,
+        _: HttpRequest,
         queryset: QuerySet["Series"],
     ) -> HttpResponse:
         """Initializes the retrieval of all information related to the selected Series."""
@@ -99,7 +99,7 @@ class GameAdmin(admin.ModelAdmin):
     @admin.action(description="Update Game Metadata")
     def update_game(
         self,
-        request: HttpRequest,
+        _: HttpRequest,
         queryset: QuerySet["Games"],
     ) -> HttpResponse:
         """Updates the metadata for all selected games from the SRC API."""
@@ -111,7 +111,7 @@ class GameAdmin(admin.ModelAdmin):
     @admin.action(description="Update Game Runs")
     def update_game_runs(
         self,
-        request: HttpRequest,
+        _: HttpRequest,
         queryset: QuerySet["Games"],
     ) -> HttpResponse:
         """Updates the metadata for all runs of all selected games from the SRC API."""
@@ -123,7 +123,7 @@ class GameAdmin(admin.ModelAdmin):
     @admin.action(description="Reset Game Runs")
     def refresh_game_runs(
         self,
-        request: HttpRequest,
+        _: HttpRequest,
         queryset: QuerySet["Games"],
     ) -> HttpResponse:
         """Removes all runs and re-retrieves them from the SRC API to re-import them."""
@@ -168,6 +168,18 @@ class CategoriesAdmin(admin.ModelAdmin):
     list_display = ["name"]
     search_fields = ["id"]
     list_filter = ["game"]
+
+
+class VariableValuesAdmin(admin.ModelAdmin):
+    """Admin panel used with the `VariableValues` model."""
+
+    list_display = [
+        "name",
+        "var",
+        "var__game",
+    ]
+    search_fields = ["name"]
+    list_filter = ["var__game", "var__scope"]
 
 
 class RunVariableValuesInline(admin.TabularInline):
@@ -235,7 +247,7 @@ class PlayersAdmin(admin.ModelAdmin):
     @admin.action(description="Update Player Metadata")
     def update_player(
         self,
-        request: HttpRequest,
+        _: HttpRequest,
         queryset: QuerySet["Players"],
     ) -> HttpResponse:
         """Updates the metadata for all selected players from the SRC API."""
@@ -247,7 +259,7 @@ class PlayersAdmin(admin.ModelAdmin):
     @admin.action(description="Force Add Obsolete Runs")
     def import_obsolete(
         self,
-        request: HttpRequest,
+        _: HttpRequest,
         queryset: QuerySet["Players"],
     ) -> HttpResponse:
         """Retrieves and imports all non-ranked speedruns into the `Runs` model."""
@@ -281,7 +293,7 @@ admin.site.register(CountryCodes, DefaultAdmin)
 admin.site.register(Categories, CategoriesAdmin)
 admin.site.register(Levels, CategoriesAdmin)
 admin.site.register(Variables, DefaultAdmin)
-admin.site.register(VariableValues, DefaultAdmin)
+admin.site.register(VariableValues, VariableValuesAdmin)
 admin.site.register(Runs, SpeedrunAdmin)
 admin.site.register(Players, PlayersAdmin)
 admin.site.register(Platforms, DefaultAdmin)

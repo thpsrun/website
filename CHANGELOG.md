@@ -6,10 +6,15 @@
 *   Versioned the API endpoints for better future-proofing and upgrading and testing and stuff (Packle)
 
 ### Added
+*   Added `appear_on_main` field to `Categories` field that will allow for querying only categories that, well, we only want to appear on the main page.
 
 ### Fixed
 
 ### Changes
+*   Changed the API so it is separated into "general"/"standard" and "website" API requests.
+    *   React will be using a lot of the thps.run API, so separating this will help keep features separate and also allow us to do fancier things.
+
+### Removed
 
 ### Misc.
 

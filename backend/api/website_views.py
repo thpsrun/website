@@ -1,4 +1,5 @@
-from django.db.models import Q
+from typing import List
+
 from django.db.models.functions import TruncDate
 from django.http import HttpRequest, HttpResponse
 from rest_framework import status
@@ -160,47 +161,9 @@ class API_Website_Main(APIView):
 
     def _get_records(self, _):
         """Get grouped world records for main categories."""
-        subcategories = [
-            "Any%",
-            "Any% (6th Gen)",
-            "100%",
-            "Any% (No Major Glitches)",
-            "All Goals & Golds (No Major Glitches)",
-            "All Goals & Golds (All Careers)",
-            "All Goals & Golds (6th Gen)",
-            "Any% (6th Gen, Normal)",
-            "100% (Normal)",
-            "Any% (Beginner)",
-            "100% (NSR)",
-            "Story (Easy, NG+)",
-            "100% (NG)",
-            "Classic (Normal, NG+)",
-            "Story Mode (Easy, NG+)",
-            "Classic Mode (Normal)",
-            "Any% (360/PS3)",
-            "100% (360/PS3)",
-            "Any% Tour Mode (All Tours, New Game)",
-            "All Goals & Golds (All Tours, New Game)",
-        ]
 
-        exempt_games = [
-            "GBA",
-            "PSP",
-            "GBC",
-            "Category Extensions",
-            "Remix",
-            "Sk8land",
-            "HD",
-            "2x",
-        ]
-
-        exclusion_filter = Q()
-        for game in exempt_games:
-            exclusion_filter |= Q(game__name__icontains=game)
-
-        runs = (
+        runs: List[Runs] = list(
             Runs.objects.exclude(vid_status__in=["new", "rejected"], obsolete=True)
-            .exclude(exclusion_filter)
             .select_related(
                 "game",
                 "player",
@@ -211,16 +174,37 @@ class API_Website_Main(APIView):
                 "platform",
                 "description",
             )
-            .filter(runtype="main", place=1, subcategory__in=subcategories)
+            .filter(
+                runtype="main",
+                place=1,
+                category__appear_on_main=True,
+            )
             .order_by("-subcategory")
             .annotate(o_date=TruncDate("date"))
         )
 
-        # Group runs together within the same game and subcategory for ties
-        grouped_runs = []
-        seen_records = set()
+        best_runs = {}
 
         for run in runs:
+            if run.game.defaulttime == "realtime":
+                time_val = run.time_secs
+            elif run.game.defaulttime == "realtime_noloads":
+                time_val = run.timenl_secs
+            else:
+                time_val = run.timeigt_secs
+
+            key = (run.game.id, run.category.id)
+
+            if key not in best_runs or time_val < best_runs[key][0]:
+                best_runs[key] = (time_val, run)
+
+        runs_list: list[Runs] = [r[1] for r in best_runs.values()]
+
+        # Group runs together within the same game and subcategory for ties
+        grouped_runs: list[dict] = []
+        seen_records: set[tuple[str, str, float]] = set()
+
+        for run in runs_list:
             key = (run.game.slug, run.subcategory, run.time)
             if key not in seen_records:
                 grouped_runs.append(
@@ -254,7 +238,7 @@ class API_Website_Main(APIView):
                     )
 
         # Sort runs by game release date, oldest first
-        run_list = sorted(grouped_runs, key=lambda x: x["game"].release, reverse=False)
+        run_list = sorted(grouped_runs, key=lambda x: x["game"].release)
 
         # Serialize game objects
         for run in run_list:

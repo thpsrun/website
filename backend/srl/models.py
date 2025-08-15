@@ -19,8 +19,6 @@ def validate_image(image):
 
 
 # MODEL CLASSES
-
-
 class Series(models.Model):
     class Meta:
         verbose_name_plural = "Series"
@@ -181,6 +179,14 @@ class Categories(models.Model):
         blank=True,
         null=True,
     )
+    appear_on_main = models.BooleanField(
+        verbose_name="Appear on Main Page",
+        default=False,
+        help_text=(
+            "When checked, this category's shortest time will appear on the main page, "
+            "regardless of the variables (subcategories)."
+        ),
+    )
     hidden = models.BooleanField(
         verbose_name="Hide Category",
         default=False,
@@ -261,7 +267,7 @@ class Variables(models.Model):
         verbose_name="All Categories",
         default=False,
         help_text=(
-            "When checked,  this means that the variable will work across all "
+            "When checked, this means that the variable will work across all "
             'categories of the game in the "Game" field. Note: The "Linked Category" '
             "must be blank."
         ),
@@ -311,6 +317,7 @@ class Variables(models.Model):
 class VariableValues(models.Model):
     class Meta:
         verbose_name_plural = "Variable Values"
+        ordering = ["var__game", "var", "var__scope", "name"]
 
     var = models.ForeignKey(
         Variables,
@@ -339,7 +346,7 @@ class VariableValues(models.Model):
     )
 
     def __str__(self):
-        return self.name
+        return f"{self.var.game.name}: {self.var.name} - {self.name}"
 
 
 class Awards(models.Model):
