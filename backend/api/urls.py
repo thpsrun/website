@@ -11,10 +11,20 @@ from api.standard_views import (
     API_Values,
     API_Variables,
 )
-from api.website_views import API_Website_Main
+from api.website_views import (
+    API_Website_Categories,
+    API_Website_Category_Runs,
+    API_Website_Main,
+)
 
 website_urlpatterns = [
-    path("website/mainpage", API_Website_Main.as_view(), name="Main_Page"),
+    path("website/mainpage", API_Website_Main.as_view(), name="WebMainPage"),
+    path(
+        "website/categories/<str:id>",
+        API_Website_Categories.as_view(),
+        name="WebCategories",
+    ),
+    path("website/runs/<str:id>", API_Website_Category_Runs.as_view(), name="WebRuns"),
 ]
 
 standard_urlpatterns = [

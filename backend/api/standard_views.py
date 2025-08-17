@@ -1,6 +1,6 @@
 from celery import chain
 from django.db.models import Q
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, JsonResponse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -134,11 +134,11 @@ class API_Runs(APIView):
         self,
         request: HttpRequest,
         id: str,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Returns a speedrun based on its ID.
 
         Args:
-            request (Request): The request object containing the information, queries, or embeds.
+            request (HttpRequest): The request object containing the information, queries, or embeds
             id (str): The exact ID of the speedrun requesting to be returned.
                 - "all" is a valid `id`, but must be used in conjunction with a query.
 
@@ -210,7 +210,7 @@ class API_Runs(APIView):
         self,
         _,
         id: str,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Creates a new speedrun object based on its ID.
 
         After the `id` is given, the data is normalized, processed, and validated before it is
@@ -251,7 +251,7 @@ class API_Runs(APIView):
         self,
         _,
         id,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Updates (or creates) a speedrun object based on its ID.
 
         After the `id` is given, the data is normalized, processed, and validated before it is
@@ -343,11 +343,11 @@ class API_Players(APIView):
         self,
         request: HttpRequest,
         id: str,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Returns a specific player's information based on its ID.
 
         Args:
-            request (Request): The request object containing the information, queries, or embeds.
+            request (HttpRequest): The request object containing the information, queries, or embeds
             id (str): The exact ID or username of the player requesting to be returned.
                 - "all" is a valid `id`, but must be used in conjunction with a query.
 
@@ -406,7 +406,7 @@ class API_Players(APIView):
         self,
         request: HttpRequest,
         id: str,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Forces the `player` object to be updated from the Speedrun.com API.
 
         After the `id` is given, the player's data will be normalized and their player information
@@ -592,7 +592,7 @@ class API_PlayerRecords(APIView):
         self,
         request: HttpRequest,
         id: str,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Returns a player's full record history based on its ID.
 
         This endpoint returns all full-game and individual level speedruns for a specific player.
@@ -601,7 +601,7 @@ class API_PlayerRecords(APIView):
         parameter.
 
         Args:
-            request (Request): The request object containing the information, queries, or embeds.
+            request (HttpRequest): The request object containing the information, queries, or embeds
             id (str): The exact ID or username of the player requesting to be returned.
 
         Returns:
@@ -709,7 +709,7 @@ class API_Games(APIView):
         self,
         request: HttpRequest,
         id: str,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Returns a specific game's metadata based on its ID.
 
         If a game ID or slug is provided, returns that specific game's details. "All" can also be
@@ -717,7 +717,7 @@ class API_Games(APIView):
         query parameter.
 
         Args:
-            request (Request): The request object containing the information, queries, or embeds.
+            request (HttpRequest): The request object containing the information, queries, or embeds
             id (str): The exact ID of the game to be returned, or
 
         Returns:
@@ -783,6 +783,8 @@ class API_Categories(APIView):
     Allowed Embeds:
         - `game`: Embeds the game associated with the category into the response.
         - `variables`: Embeds all variables related to the category into the response.
+        - `values`: Embeds all variables related to the category and its associated values into
+        the response. NOTE: This takesp precedence over `variables`.
 
     Embed Example:
         `/categories/123456?embed=variables`
@@ -799,17 +801,17 @@ class API_Categories(APIView):
         ```
     """
 
-    ALLOWED_EMBEDS = {"game", "variables"}
+    ALLOWED_EMBEDS = {"game", "variables", "values"}
 
     def get(
         self,
         request: HttpRequest,
         id: str,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Returns a single category and its metadata based on its ID.
 
         Parameters:
-            request (Request): The request object containing the information, queries, or embeds.
+            request (HttpRequest): The request object containing the information, queries, or embeds
             id (str): The exact ID of the category to be returned.
 
         Returns:
@@ -887,11 +889,11 @@ class API_Variables(APIView):
         self,
         request: HttpRequest,
         id: str,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Returns a single variable's metadata and values based on its ID.
 
         Parameters:
-            request (Request): The request object containing the information, queries, or embeds.
+            request (HttpRequest): The request object containing the information, queries, or embeds
             id (str): The exact ID of the variable to be returned.
 
         Returns:
@@ -966,11 +968,11 @@ class API_Values(APIView):
         self,
         request: HttpRequest,
         id: str,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Returns a single value's metadata and related variable based on its ID.
 
         Parameters:
-            request (Request): The request object containing the information, queries, or embeds.
+            request (HttpRequest): The request object containing the information, queries, or embeds
             id (str): The exact ID of the value to be returned.
 
         Returns:
@@ -1043,11 +1045,11 @@ class API_Levels(APIView):
         self,
         request: HttpRequest,
         id: str,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Returns a single level based on its ID.
 
         Parameters:
-            request (Request): The request object containing the information, queries, or embeds.
+            request (HttpRequest): The request object containing the information, queries, or embeds
             id (str): The exact ID of the level to be returned.
 
         Returns:
@@ -1131,7 +1133,7 @@ class API_Streams(APIView):
     def get(
         self,
         _,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Returns a list of all available streams currently in the database."""
         return Response(
             StreamSerializer(NowStreaming.objects.all(), many=True).data,
@@ -1141,11 +1143,11 @@ class API_Streams(APIView):
     def post(
         self,
         request: HttpRequest,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Creates a new livestream object.
 
         Args:
-            request (Request): JSON information that must pass validation before being added.
+            request (HttpRequest): JSON information that must pass validation before being added.
         """
         serializer = StreamSerializerPost(data=request.data)
 
@@ -1169,11 +1171,11 @@ class API_Streams(APIView):
     def put(
         self,
         request: HttpRequest,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Updates (or creates) a livestream object.
 
         Args:
-            request (Request): JSON information that must pass validation before being added.
+            request (HttpRequest): JSON information that must pass validation before being added.
         """
         stream = NowStreaming.objects.filter(
             Q(streamer__name__iexact=request.data["streamer"])
@@ -1197,11 +1199,11 @@ class API_Streams(APIView):
     def delete(
         self,
         request: HttpRequest,
-    ) -> HttpResponse:
+    ) -> JsonResponse:
         """Removes a livestream object.
 
         Args:
-            request (Request): JSON information that must pass validation before being deleted.
+            request (HttpRequest): JSON information that must pass validation before being deleted.
         """
         stream = NowStreaming.objects.filter(
             Q(streamer__name__iexact=request.data["streamer"])

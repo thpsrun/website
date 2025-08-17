@@ -25,16 +25,16 @@ class RunSerializer(serializers.ModelSerializer):
     optional metadata from other models.
 
     SerializerMethodField:
-        game (dict): Contains information about the associated speedrun's game.
-        category (dict): Contains information about the associated speedrun's category.
-        level (dict): Contains information about the associated speedrun's level.
-        variables (dict) Contains information about the associated speedrun's variables.
-        times (dict): Contains information about the associated speedrun's times.
-        record (dict): Contains information about the world record of the speedrun's category.
-        players (dict): Contains information about the associated speedrun's variables.
-        status (dict): Contains information about the associated speedrun's status.
-        videos (dict): Contains information about the associated speedrun's videos.
-        meta (dict): Contains information about the associated speedrun's  metadata.
+        - game (dict): Contains information about the associated speedrun's game.
+        - category (dict): Contains information about the associated speedrun's category.
+        - level (dict): Contains information about the associated speedrun's level.
+        - variables (dict) Contains information about the associated speedrun's variables.
+        - times (dict): Contains information about the associated speedrun's times.
+        - record (dict): Contains information about the world record of the speedrun's category.
+        - players (dict): Contains information about the associated speedrun's variables.
+        - status (dict): Contains information about the associated speedrun's status.
+        - videos (dict): Contains information about the associated speedrun's videos.
+        - meta (dict): Contains information about the associated speedrun's  metadata.
     """
 
     game = serializers.SerializerMethodField()
@@ -344,7 +344,7 @@ class PlatformSerializer(serializers.ModelSerializer):
     optional metadata from the `Games` model.
 
     SerializerMethodField:
-        games (dict): Contains information about games that belong to that platform.
+        - games (dict): Contains information about games that belong to that platform.
     """
 
     games = serializers.SerializerMethodField()
@@ -394,9 +394,9 @@ class PlayerSerializer(serializers.ModelSerializer):
     This serializer is used to return structured information about a specific player.
 
     SerializerMethodField:
-        stats (dict): Contains information about the associated player's stats.
-        country (dict): Contains information about the associated player's country.
-        awards (dict): Contains information about the associated player's awards.
+        - stats (dict): Contains information about the associated player's stats.
+        - country (dict): Contains information about the associated player's country.
+        - awards (dict): Contains information about the associated player's awards.
     """
 
     stats = serializers.SerializerMethodField()
@@ -495,9 +495,9 @@ class PlayerStreamSerializer(serializers.ModelSerializer):
     streaming information (e.g. Twitch, YouTube, ex_stream).
 
     SerializerMethodField:
-        stats (dict): Contains information about the associated player's stats.
-        country (dict): Contains information about the associated player's country.
-        awards (dict): Contains information about the associated player's awards.
+        - stats (dict): Contains information about the associated player's stats.
+        - country (dict): Contains information about the associated player's country.
+        - awards (dict): Contains information about the associated player's awards.
     """
 
     twitch = serializers.SerializerMethodField()
@@ -542,9 +542,9 @@ class GameSerializer(serializers.ModelSerializer):
     optional metadata from other models.
 
     SerializerMethodField:
-        categories (dict): Contains information about the associated game's categories.
-        levels (dict): Contains information about the associated game's levels.
-        platforms (dict): Contains information about the associated game's variables.
+        - categories (dict): Contains information about the associated game's categories.
+        - levels (dict): Contains information about the associated game's levels.
+        - platforms (dict): Contains information about the associated game's variables.
     """
 
     categories = serializers.SerializerMethodField()
@@ -639,7 +639,7 @@ class LevelSerializer(serializers.ModelSerializer):
     optional metadata from other models.
 
     SerializerMethodField:
-        game (dict): Contains information about the associated level's game.
+        - game (dict): Contains information about the associated level's game.
     """
 
     game = serializers.SerializerMethodField()
@@ -690,8 +690,10 @@ class CategorySerializer(serializers.ModelSerializer):
     optional metadata from other models.
 
     SerializerMethodField:
-        game (dict): Contains information about the associated category's game.
-        variables (dict): Contains information about the associated category's variables.
+        - game (dict): Contains information about the associated category's game.
+        - variables (dict): Contains information about the associated category's variables.
+        - values (dict): Contains information about the associated variable's values.
+            - Note: This field assumes you will also want the variable information.
     """
 
     game = serializers.SerializerMethodField()
@@ -712,7 +714,26 @@ class CategorySerializer(serializers.ModelSerializer):
         obj: Variables,
     ) -> Union[str, int, dict[str, Any]]:
         """Serializes variable information, to include optional embeds."""
-        if "variables" in self.context.get("embed", []):
+        if "values" in self.context.get("embed", []):
+            variables = VariableSerializer(
+                Variables.objects.filter(game=obj.game, hidden=False).filter(
+                    Q(cat=obj.id) | Q(all_cats=True)
+                ),
+                many=True,
+            ).data
+
+            for var in variables:
+                values = ValueSerializer(
+                    VariableValues.objects.filter(var=var["id"]), many=True
+                ).data
+
+                for v in values:
+                    v.pop("variable", None)
+
+                var["values"] = values
+
+            return variables
+        elif "variables" in self.context.get("embed", []):
             return VariableSerializer(
                 Variables.objects.filter(cat=obj.id), many=True
             ).data
@@ -761,8 +782,8 @@ class VariableSerializer(serializers.ModelSerializer):
     optional metadata from other models.
 
     SerializerMethodField:
-        game (dict): Contains information about the associated game.
-        values (dict): Contains information about the associated category.
+        - game (dict): Contains information about the associated game.
+        - values (dict): Contains information about the associated category.
     """
 
     game = serializers.SerializerMethodField()
@@ -832,7 +853,7 @@ class ValueSerializer(serializers.ModelSerializer):
     optional metadata from other models.
 
     SerializerMethodField:
-        variable (dict): Contains information about the associated value's variable.
+        - variable (dict): Contains information about the associated value's variable.
     """
 
     variable = serializers.SerializerMethodField()
@@ -887,8 +908,8 @@ class StreamSerializer(serializers.ModelSerializer):
     optional metadata from other models.
 
     SerializerMethodField:
-        streamer (dict): Contains information about the associated stream's streamer.
-        game (dict): Contains information about the associated stream's game.
+        - streamer (dict): Contains information about the associated stream's streamer.
+        - game (dict): Contains information about the associated stream's game.
     """
 
     streamer = serializers.SerializerMethodField()
@@ -928,11 +949,11 @@ class StreamSerializerPost(serializers.ModelSerializer):
     optional metadata from other models.
 
     SerializerMethodField:
-        streamer (str): Contains information about the associated stream's streamer name.
-        game (str): Contains information about the associated stream's game name.
-        title (str):  Contains information about the associated stream's title.
-        offline_ct (int):  Contains information about the associated stream's offline counter.
-        stream_time (date):  Contains information about the associated stream's start stream time.
+        - streamer (str): Contains information about the associated stream's streamer name.
+        - game (str): Contains information about the associated stream's game name.
+        - title (str):  Contains information about the associated stream's title.
+        - offline_ct (int):  Contains information about the associated stream's offline counter.
+        - stream_time (date):  Contains information about the associated stream's start stream time.
     """
 
     streamer = serializers.CharField()
@@ -1026,7 +1047,7 @@ class PlayerSerializerPost(serializers.ModelSerializer):
     This serializer is used to POST structured information about a specific player.
 
     SerializerMethodField:
-        ex_stream (bool): Contains information on how to set `ex_stream` for the player.
+        - ex_stream (bool): Contains information on how to set `ex_stream` for the player.
     """
 
     ex_stream = serializers.BooleanField()
