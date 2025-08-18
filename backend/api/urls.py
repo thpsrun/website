@@ -1,42 +1,46 @@
-from django.urls import path
+from django.urls import path, re_path
 
-from api.standard_views import (
-    API_Categories,
-    API_Games,
-    API_Levels,
-    API_PlayerRecords,
-    API_Players,
-    API_Runs,
-    API_Streams,
-    API_Values,
-    API_Variables,
+from api.standard import (
+    Categories,
+    Games,
+    Levels,
+    PlayerRecords,
+    Players,
+    Runs,
+    Streams,
+    Values,
+    Variables,
 )
-from api.website_views import (
-    API_Website_Categories,
-    API_Website_Category_Runs,
-    API_Website_Main,
-)
+from api.website import Web_Categories, Web_Leaderboard, Web_Main
 
 website_urlpatterns = [
-    path("website/mainpage", API_Website_Main.as_view(), name="WebMainPage"),
+    path("website/mainpage", Web_Main.API_Web_Main.as_view(), name="WebMainPage"),
     path(
         "website/categories/<str:id>",
-        API_Website_Categories.as_view(),
+        Web_Categories.API_Web_Categories.as_view(),
         name="WebCategories",
     ),
-    path("website/runs/<str:id>", API_Website_Category_Runs.as_view(), name="WebRuns"),
+    re_path(
+        r"^website/leaderboard/(?P<gameid>[^/]+)/(?P<catid>[^/]+)(?:/(?P<subcats>.*))?$",
+        Web_Leaderboard.API_Web_Leaderboard.as_view(),
+        name="WebRuns",
+    ),
 ]
 
 standard_urlpatterns = [
-    path("runs/<str:id>", API_Runs.as_view(), name="Runs"),
-    path("players/<str:id>", API_Players.as_view(), name="Players"),
-    path("players/<str:id>/pbs", API_PlayerRecords.as_view(), name="Player Records"),
-    path("games/<str:id>", API_Games.as_view(), name="Games"),
-    path("categories/<str:id>", API_Categories.as_view(), name="Categories"),
-    path("variables/<str:id>", API_Variables.as_view(), name="Variables"),
-    path("values/<str:id>", API_Values.as_view(), name="Values"),
-    path("levels/<str:id>", API_Levels.as_view(), name="Levels"),
-    path("live", API_Streams.as_view(), name="Streams"),
+    path("runs/<str:id>", Runs.API_Runs.as_view(), name="Runs"),
+    path("players/<str:id>", Players.API_Players.as_view(), name="Players"),
+    path(
+        "players/<str:id>/pbs",
+        PlayerRecords.API_PlayerRecords.as_view(),
+        name="Player Records",
+    ),
+    path("games/<str:id>", Games.API_Games.as_view(), name="Games"),
+    path("categories/<str:id>", Categories.API_Categories.as_view(), name="Categories"),
+    path("variables/<str:id>", Variables.API_Variables.as_view(), name="Variables"),
+    path("values/<str:id>", Values.API_Values.as_view(), name="Values"),
+    path("levels/<str:id>", Levels.API_Levels.as_view(), name="Levels"),
+    path("live", Streams.API_Streams.as_view(), name="Streams"),
 ]
 
 urlpatterns = website_urlpatterns + standard_urlpatterns

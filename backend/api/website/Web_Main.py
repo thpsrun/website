@@ -1,35 +1,17 @@
-from typing import List
+from typing import Any, List
 
-from django.db.models import Exists, OuterRef, Prefetch
 from django.db.models.functions import TruncDate
 from django.http import HttpRequest, JsonResponse
 from rest_framework import status
-from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from srl.models import Categories, Games, Runs, RunVariableValues, Variables
+from srl.models import Runs
 
-from api.serializers import (
-    CategorySerializer,
-    GameSerializer,
-    PlayerSerializer,
-    RunSerializer,
-)
+from api.serializers.core import GameSerializer, PlayerSerializer, RunSerializer
+from api.website.permissions import ReadOnlyOrAuthenticated
 
 
-class ReadOnlyOrAuthenticated(BasePermission):
-    """
-    Custom permission to only allow read access without authentication,
-    but require authentication for write operations.
-    """
-
-    def has_permission(self, request: HttpRequest, _):
-        if request.method in ["GET", "HEAD", "OPTIONS"]:
-            return True
-        return request.user and request.user.is_authenticated
-
-
-class API_Website_Main(APIView):
+class API_Web_Main(APIView):
     """Viewset for seeing information on the main page.
 
     This viewset provides standard information about
@@ -74,7 +56,10 @@ class API_Website_Main(APIView):
     }
     permission_classes = [ReadOnlyOrAuthenticated]
 
-    def _get_latest_wrs(self, embed_fields):
+    def _get_latest_wrs(
+        self,
+        embed_fields: list[str],
+    ) -> list[dict[str, Any]]:
         """Get latest world records for latest-wrs query."""
         wrs = (
             Runs.objects.exclude(vid_status__in=["new", "rejected"])
@@ -94,7 +79,10 @@ class API_Website_Main(APIView):
 
         return RunSerializer(wrs, many=True, context={"embed": embed_fields}).data
 
-    def _get_latest_pbs(self, embed_fields):
+    def _get_latest_pbs(
+        self,
+        embed_fields: list[str],
+    ) -> list[dict[str, Any]]:
         """Get latest personal bests for latest-pbs query."""
         pbs = (
             Runs.objects.exclude(vid_status__in=["new", "rejected"])
@@ -114,7 +102,10 @@ class API_Website_Main(APIView):
 
         return RunSerializer(pbs, many=True, context={"embed": embed_fields}).data
 
-    def _get_records(self, _):
+    def _get_records(
+        self,
+        _,
+    ) -> list[dict[str, Any]]:
         """Get grouped world records for main categories."""
 
         runs: List[Runs] = list(
@@ -254,161 +245,3 @@ class API_Website_Main(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-
-class API_Website_Categories(APIView):
-    """Viewset for dynamically looking up categories related to a game.
-
-    This viewset provides standard information about all of the categories for a game, their
-    associated `Variables` and then their associated `VariableValues`.
-
-    Methods:
-        get:
-            Returns category information based on its ID.
-
-    Permissions:
-        - `ReadOnlyOrAuthenticated`: GET requests are public.
-
-    Model: `Categories`, `Variables`, `VariableValues`
-    """
-
-    permission_classes = [ReadOnlyOrAuthenticated]
-
-    def get(
-        self,
-        _: HttpRequest,
-        id: str,
-    ) -> JsonResponse:
-        """Returns a single game's categories, variables, and associated values.
-
-        Parameters:
-            id (str): The exact game ID to have its categories and variables returned.
-
-        Allowed Embeds:
-            - `variables`: Embeds all variables related to the category into the response.
-
-        Returns:
-            Response: A response object containing the JSON data of a game's categories.
-        """
-        if len(id) >= 15:
-            return Response(
-                {"ERROR": "id must be 15 characters or less."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        game = Games.objects.filter(id__iexact=id).first()
-        if not game:
-            return Response(
-                {"ERROR": "game not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        categories = Categories.objects.filter(game=game).prefetch_related(
-            Prefetch(
-                "variables_set",
-                queryset=Variables.objects.prefetch_related("variablevalues_set"),
-            )
-        )
-
-        serializer = CategorySerializer(
-            categories,
-            many=True,
-            context={"embed": ["variables", "values"]},
-        )
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class API_Website_Category_Runs(APIView):
-    """Viewset for dynamically look up runs, depending on the categories, variables, or values given
-
-    This viewset gives information about a category's runs. If not `subcat` query is given, then it
-    will show ALL runs in that category. Using `?subcat=var123-val123` with a comma-separtion will
-    allow you to more precisely select the runs wanted.
-
-    Methods:
-        get:
-            Returns all runs in category, depending on the queries given.
-
-    Permissions:
-        - `ReadOnlyOrAuthenticated`: GET requests are public.
-
-    Model: `Runs`
-    """
-
-    def get(
-        self,
-        request: HttpRequest,
-        id: str,
-    ) -> JsonResponse:
-        subcats_raw = request.GET.get("subcats", "").split(",")
-        subcats_raw = [item.strip() for item in subcats_raw if item.strip()]
-
-        subcats = []
-        for pair in subcats_raw:
-            if "-" in pair:
-                var_id, val_id = pair.split("-", 1)
-                subcats.append((var_id, val_id))
-            else:
-                subcats.append((pair, None))
-
-        runs_all = (
-            Runs.objects.exclude(
-                vid_status__in=["new", "rejected"],
-                place=0,
-            )
-            .select_related(
-                "game",
-                "category",
-                "player",
-                "player__countrycode",
-                "player2",
-                "player2__countrycode",
-            )
-            .defer(
-                "variables",
-                "platform",
-                "description",
-            )
-            .filter(category=id, obsolete=False)
-        )
-
-        if subcats:
-            for var_id, val_id in subcats:
-                runs_all = runs_all.filter(
-                    Exists(
-                        RunVariableValues.objects.filter(
-                            run=OuterRef("pk"),
-                            variable=var_id,
-                            value=val_id,
-                        )
-                    )
-                )
-
-        runs_all: List[Runs] = list(runs_all)
-
-        if runs_all:
-            run_check = runs_all[0]
-            run_type = run_check.runtype
-            if run_type == "il":
-                game_method = run_check.game.idefaulttime
-            else:
-                game_method = run_check.game.defaulttime
-
-            timing_methods = {
-                "realtime": "time_secs",
-                "realtime_noloads": "timenl_secs",
-                "ingame": "timeigt_secs",
-            }
-
-            order_field = timing_methods.get(game_method)
-            runs_all.sort(key=lambda run: getattr(run, order_field))
-
-            return Response(
-                RunSerializer(runs_all, many=True).data, status=status.HTTP_200_OK
-            )
-
-        return Response(
-            {"ERROR": "No runs could be returned."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )

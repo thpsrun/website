@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.text import slugify
 from django_resized import ResizedImageField
 
 
@@ -54,6 +55,16 @@ class Platforms(models.Model):
         max_length=30,
         verbose_name="Name",
     )
+    slug = models.SlugField(
+        max_length=30,
+        verbose_name="Slug",
+        blank=True,
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -79,7 +90,7 @@ class Games(models.Model):
         max_length=55,
         verbose_name="Name",
     )
-    slug = models.CharField(
+    slug = models.SlugField(
         max_length=20,
         verbose_name="Abbreviation/Slug",
     )
@@ -140,6 +151,11 @@ class Games(models.Model):
         ),
     )
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
@@ -165,6 +181,11 @@ class Categories(models.Model):
     name = models.CharField(
         max_length=50,
         verbose_name="Name",
+    )
+    slug = models.SlugField(
+        max_length=50,
+        verbose_name="Slug",
+        blank=True,
     )
     type = models.CharField(
         verbose_name="Type (IL/FG)",
@@ -216,6 +237,11 @@ class Levels(models.Model):
         max_length=75,
         verbose_name="Name",
     )
+    slug = models.SlugField(
+        max_length=75,
+        verbose_name="Slug",
+        blank=True,
+    )
     url = models.URLField(
         verbose_name="URL",
     )
@@ -225,6 +251,11 @@ class Levels(models.Model):
         blank=True,
         null=True,
     )
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -249,6 +280,11 @@ class Variables(models.Model):
     name = models.CharField(
         max_length=50,
         verbose_name="Name",
+    )
+    slug = models.SlugField(
+        max_length=50,
+        verbose_name="Slug",
+        blank=True,
     )
     game = models.ForeignKey(
         Games,
@@ -292,6 +328,11 @@ class Variables(models.Model):
         default=False,
     )
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
     def clean(self):
         if (self.cat is None) and (not self.all_cats):
             raise ValidationError(
@@ -329,6 +370,11 @@ class VariableValues(models.Model):
         max_length=50,
         verbose_name="Name",
     )
+    slug = models.SlugField(
+        max_length=50,
+        verbose_name="Slug",
+        blank=True,
+    )
     value = models.CharField(
         max_length=10,
         primary_key=True,
@@ -344,6 +390,11 @@ class VariableValues(models.Model):
         blank=True,
         null=True,
     )
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.var.game.name}: {self.var.name} - {self.name}"

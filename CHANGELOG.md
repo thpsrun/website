@@ -7,7 +7,8 @@
 
 ### Added
 *   Added `appear_on_main` field to `Categories` field that will allow for querying only categories that, well, we only want to appear on the main page.
-*   Added a new `website` endpoint that is more catered to interacting with React.
+*   Added `slug` field to `Variables`, `VariableValues`, `Categories`, `Levels` and `Platforms`.
+*   Added a new `/website` endpoint that is more catered to interacting with React.
 
 ### Fixed
 *   Fixed the type checking for API responses to be `JsonResponse` and not `HttpResponse`.
@@ -15,6 +16,8 @@
 ### Changes
 *   Changed the API so it is separated into "general"/"standard" and "website" API requests.
     *   React will be using a lot of the thps.run API, so separating this will help keep features separate and also allow us to do fancier things.
+*   Changed the `/player` endpoint to both return no stats on default and to require the `?embed=stats` request to add stats to the query.
+    *   When interacting with larger sets of data, especially when stats aren't required, it can cause slow down.
 
 ### Removed
 *   (Planned) Removed the `subcategory` field from the `Runs` model.

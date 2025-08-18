@@ -6,22 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('srl', '0002_alter_nowstreaming_streamer'),
+        ("srl", "0002_alter_nowstreaming_streamer"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='variablevalues',
-            options={'ordering': ['var__game', 'var', 'var__scope', 'name'], 'verbose_name_plural': 'Variable Values'},
+            name="variablevalues",
+            options={
+                "ordering": ["var__game", "var", "var__scope", "name"],
+                "verbose_name_plural": "Variable Values",
+            },
         ),
         migrations.AddField(
-            model_name='categories',
-            name='appear_on_main',
-            field=models.BooleanField(default=False, help_text="When checked, this category's shortest time will appear on the main page, regardless of the variables (subcategories).", verbose_name='Appear on Main Page'),
+            model_name="categories",
+            name="appear_on_main",
+            field=models.BooleanField(
+                default=False,
+                help_text="When checked, this category's shortest time will appear on the main page, regardless of the variables (subcategories).",
+                verbose_name="Appear on Main Page",
+            ),
         ),
         migrations.AlterField(
-            model_name='variables',
-            name='all_cats',
-            field=models.BooleanField(default=False, help_text='When checked, this means that the variable will work across all categories of the game in the "Game" field. Note: The "Linked Category" must be blank.', verbose_name='All Categories'),
+            model_name="variables",
+            name="all_cats",
+            field=models.BooleanField(
+                default=False,
+                help_text='When checked, this means that the variable will work across all categories of the game in the "Game" field. Note: The "Linked Category" must be blank.',
+                verbose_name="All Categories",
+            ),
         ),
     ]
