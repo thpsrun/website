@@ -167,7 +167,7 @@
                                         {% endif %}
                                         <br />
                                         {% if run.game.defaulttime == "realtime"%}
-                                            <a href="{{ game.url }}" target="_blank">{{ run.time }}</a>
+                                            <a href="{{ run.url }}" target="_blank">{{ run.time }}</a>
                                         {% elif run.game.defaulttime == "realtime_noloads" %}
                                             {% if run.timenl_secs == 0 %}
                                                 <a href="{{ run.url }}" target="_blank">{{ run.time }}</a>
@@ -254,7 +254,7 @@
                                             {% endif %}
                                             <br />
                                             {% if run.game.idefaulttime == "realtime" %}
-                                                <a href="{{ game.url }}" target="_blank">{{ run.time }}</a>
+                                                <a href="{{ run.url }}" target="_blank">{{ run.time }}</a>
                                             {% elif run.game.idefaulttime == "realtime_noloads" %}
                                                 {% if run.timenl_secs == 0 %}
                                                     <a href="{{ run.url }}" target="_blank">{{ run.time }}</a>
