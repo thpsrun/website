@@ -1,3 +1,9 @@
+### v3.4.6
+###### August 19, 2025
+*   Fixed an issue where runs on a player's profile and history would not properly link to the SRC submission if the `idefaulttime` or `defaulttime` was `realtime`.
+
+* * *
+
 ### v3.4.5
 ###### August 6, 2025
 *   Fixed an issue where ILs were given `defaulttime` instead of `idefaulttime` in the API.

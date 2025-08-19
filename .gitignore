@@ -147,3 +147,5 @@ npm/*
 pyproject.toml
 .pylintrc
 static/
+backend/
+frontend/
