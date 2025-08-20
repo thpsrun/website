@@ -3,21 +3,20 @@ from django.http import HttpRequest, JsonResponse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from srl.models import Categories, Games, Variables
+from srl.models import Games, Variables, Levels
 
-from api.serializers.core import CategorySerializer
+from api.serializers.core import LevelSerializer
 from api.website.permissions import ReadOnlyOrAuthenticated
 
 
-class API_Web_Categories(APIView):
-    """Viewset for dynamically looking up categories related to a game.
+class API_Web_Levels(APIView):
+    """Viewset for looking up levels related to a game.
 
-    This viewset provides standard information about all of the categories for a game, their
-    associated `Variables` and then their associated `VariableValues`.
+    This viewset provides standard information about all of the levels for a game.
 
     Methods:
         get:
-            Returns category information based on its ID or slug.
+            Returns level information based on its ID.
 
     Permissions:
         - `ReadOnlyOrAuthenticated`: GET requests are public.
@@ -35,8 +34,7 @@ class API_Web_Categories(APIView):
         """Returns a single game's categories, variables, and associated values.
 
         Parameters:
-            id (str): The exact game ID or game slug to have its categories and 
-            variables returned.
+            id (str): The exact game ID or slug to have its categories and variables returned.
 
         Allowed Embeds:
             - `variables`: Embeds all variables related to the category into the response.
@@ -57,15 +55,15 @@ class API_Web_Categories(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        categories = Categories.objects.filter(game=game).prefetch_related(
+        levels = Levels.objects.filter(game=game).prefetch_related(
             Prefetch(
                 "variables_set",
                 queryset=Variables.objects.prefetch_related("variablevalues_set"),
             )
         )
 
-        serializer = CategorySerializer(
-            categories,
+        serializer = LevelSerializer(
+            levels,
             many=True,
             context={"embed": ["variables", "values"]},
         )

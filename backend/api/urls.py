@@ -11,7 +11,7 @@ from api.standard import (
     Values,
     Variables,
 )
-from api.website import Web_Categories, Web_Leaderboard, Web_Main
+from api.website import Web_Categories, Web_Leaderboard, Web_Main, Web_Levels
 
 website_urlpatterns = [
     path("website/mainpage", Web_Main.API_Web_Main.as_view(), name="WebMainPage"),
@@ -19,6 +19,11 @@ website_urlpatterns = [
         "website/categories/<str:id>",
         Web_Categories.API_Web_Categories.as_view(),
         name="WebCategories",
+    ),
+    path(
+        "website/levels/<str:id>",
+        Web_Levels.API_Web_Levels.as_view(),
+        name="WebLevels",
     ),
     re_path(
         r"^website/leaderboard/(?P<gameid>[^/]+)/(?P<catid>[^/]+)(?:/(?P<subcats>.*))?$",

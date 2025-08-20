@@ -49,7 +49,7 @@ export interface Times {
 }
 
 export interface System {
-  platform: string
+  platform: string | { id: string; name: string }
   emulated: boolean
 }
 
@@ -90,6 +90,28 @@ export interface Run {
   meta: Meta
   description?: string | null
 }
+
+// Hierarchical category structures (speedrun.com style)
+export interface CategoryVariableValue { value: string; name: string; hidden: boolean }
+export interface CategoryVariable {
+  id: string
+  name: string
+  all_cats: boolean
+  scope: string
+  hidden: boolean
+  values: CategoryVariableValue[]
+}
+export interface GameCategory {
+  id: string
+  name: string
+  type: 'per-game' | 'per-level'
+  url: string
+  hidden: boolean
+  variables: CategoryVariable[]
+}
+
+// Leaderboard run (same as Run but ensure players is Player, system.platform may be object)
+export type LeaderboardRun = Run
 
 // Detailed run with embedded game object (used in latest_wrs, latest_pbs)
 export interface DetailedRun {

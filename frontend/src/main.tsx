@@ -20,7 +20,7 @@ const router = createBrowserRouter([
     Component: App,
     children: [
       { index: true, Component: MainPage },
-      { path: "game", Component: GameOverview }
+      { path: "game/:gameSlug", Component: GameOverview }
     ]
   },
 ]);
