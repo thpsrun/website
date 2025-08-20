@@ -13,6 +13,10 @@ export interface Game {
   ipointsmax: number
 }
 
+export interface Award {
+  name: string
+}
+
 export interface Player {
   id: string
   name: string
@@ -25,7 +29,7 @@ export interface Player {
   youtube?: string | null
   twitter?: string | null
   ex_stream: boolean
-  awards: any[]
+  awards: Award[]
   stats: {
     total_pts: number
     main_pts: number
@@ -75,7 +79,7 @@ export interface Run {
   subcategory: string
   place: number
   lb_count: number
-  players: string // Player ID/name as string or "Anonymous"
+  players: Player // Player ID/name as string or "Anonymous"
   date: string
   record: string
   times: Times
@@ -97,7 +101,7 @@ export interface DetailedRun {
   subcategory: string
   place: number
   lb_count: number
-  players: string // Player ID/name as string or "Anonymous"
+  players: Player // Full player object with embedded data
   date: string
   record: string
   times: Times

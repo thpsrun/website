@@ -1,12 +1,4 @@
 import './App.css'
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu"
 import { ThemeProvider } from '@/components/ui/theme-provider'
 import { TopBar } from '@/components/top-bar'
 import { Outlet } from 'react-router'
@@ -22,9 +14,9 @@ function App() {
         <div className="background-overlay" />
 
         {/* Main Content Container */}
-        <div className="w-full h-full max-w-7xl mx-auto p-12 flex flex-col gap-8">
+        <div className="w-full min-h-full max-w-[100rem] mx-auto p-12 flex flex-col gap-8">
           <TopBar/>
-          <div className="flex-1 min-h-0">
+          <div>
             <Outlet/>
           </div>
         </div>
