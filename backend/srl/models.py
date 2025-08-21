@@ -266,7 +266,7 @@ class Variables(models.Model):
         verbose_name_plural = "Variables"
 
     type_choices = [
-        ("global", "All Categories"),
+        ("global", "Entire Game"),
         ("full-game", "Only Full Game Runs"),
         ("all-levels", "Only IL Runs"),
         ("single-level", "Specific IL"),

@@ -1,10 +1,11 @@
-from django.db.models import Prefetch
+from django.db.models import Case, Prefetch, Q, When
 from django.http import HttpRequest, JsonResponse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from srl.models import Games, Variables, Levels
+from srl.models import Games, Levels, Variables
 
+from api.ordering import get_ordered_level_names
 from api.serializers.core import LevelSerializer
 from api.website.permissions import ReadOnlyOrAuthenticated
 
@@ -21,7 +22,7 @@ class API_Web_Levels(APIView):
     Permissions:
         - `ReadOnlyOrAuthenticated`: GET requests are public.
 
-    Model: `Categories`, `Variables`, `VariableValues`
+    Model: `Games`, `Categories`, `Variables`, `VariableValues`
     """
 
     permission_classes = [ReadOnlyOrAuthenticated]
@@ -48,18 +49,27 @@ class API_Web_Levels(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        game = Games.objects.filter(id__iexact=id).first() or Games.objects.filter(slug__iexact=id).first()
+        game = Games.objects.filter(Q(id__iexact=id) | Q(slug__iexact=id)).first()
         if not game:
             return Response(
                 {"ERROR": "game not found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        levels = Levels.objects.filter(game=game).prefetch_related(
-            Prefetch(
-                "variables_set",
-                queryset=Variables.objects.prefetch_related("variablevalues_set"),
+        get_order = get_ordered_level_names(game.slug)
+        level_order = Case(
+            *(When(name=name, then=position) for position, name in enumerate(get_order))
+        )
+
+        levels = (
+            Levels.objects.filter(game=game)
+            .prefetch_related(
+                Prefetch(
+                    "variables_set",
+                    queryset=Variables.objects.prefetch_related("variablevalues_set"),
+                )
             )
+            .order_by(level_order)
         )
 
         serializer = LevelSerializer(

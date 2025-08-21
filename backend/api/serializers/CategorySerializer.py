@@ -41,10 +41,17 @@ class CategorySerializer(serializers.ModelSerializer):
         from api.serializers.core import ValueSerializer, VariableSerializer
 
         if "values" in self.context.get("embed", []):
+            variable_lookup = Variables.objects.filter(
+                game=obj.game, hidden=False
+            ).filter(Q(cat=obj.id) | Q(cat__isnull=True))
+
+            if obj.type == "per-level":
+                variable_lookup = variable_lookup.exclude(scope="full-game")
+            else:
+                variable_lookup = variable_lookup.exclude(scope__contains="level")
+
             variables = VariableSerializer(
-                Variables.objects.filter(game=obj.game, hidden=False).filter(
-                    Q(cat=obj.id) | Q(all_cats=True)
-                ),
+                variable_lookup,
                 many=True,
             ).data
 
@@ -98,4 +105,13 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Categories
-        fields = ["id", "name", "type", "url", "hidden", "game", "variables"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "type",
+            "url",
+            "hidden",
+            "game",
+            "variables",
+        ]

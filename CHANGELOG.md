@@ -3,17 +3,23 @@
 
 ### Major Changes
 *   Entire frontend of the website is redesigned. New UI, not basic HTML/JS, and much more!!? (Noami)
-*   Versioned the API endpoints for better future-proofing and upgrading and testing and stuff (Packle)
+    *   New main page!
+    *   New game screen!
+*   Versioned the API endpoints for future-proofing and upgrading and testing and stuff. (Packle)
 
 ### Added
 *   Added `appear_on_main` field to `Categories` field that will allow for querying only categories that, well, we only want to appear on the main page.
+*   (Planned) Added `archived` field to `Variables`, `VariableValues`, `Categories`, and `Levels`.
 *   Added `slug` field to `Variables`, `VariableValues`, `Categories`, `Levels` and `Platforms`.
 *   Added a new `/website` endpoint that is more catered to interacting with React.
 
 ### Fixed
 *   Fixed the type checking for API responses to be `JsonResponse` and not `HttpResponse`.
+*   (Planned) Fixed the logic calculating a run's `points` and `place` fields.
 
 ### Changes
+*   Changed the ordering of levels and category names so they reflect better what is seen on Speedrun.com.
+    *   This is mostly hard-coded. Ordering on SRC is done on server-side, so there is no way around that besides either having a "ranking" system or just hard-coding what the order should be. (Sue me).
 *   Changed the API so it is separated into "general"/"standard" and "website" API requests.
     *   React will be using a lot of the thps.run API, so separating this will help keep features separate and also allow us to do fancier things.
 *   Changed the `/player` endpoint to both return no stats on default and to require the `?embed=stats` request to add stats to the query.
@@ -22,7 +28,6 @@
 ### Removed
 *   (Planned) Removed the `subcategory` field from the `Runs` model.
     *   This was a remnant from v2 code, before it was more understood how to link variable-value pairs to an individual run.
-*   (Planned) Removed the `place` field from the `Runs` model.
 
 ### Misc.
 
