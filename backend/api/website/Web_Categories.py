@@ -1,4 +1,4 @@
-from django.db.models import Prefetch
+from django.db.models import Case, IntegerField, Prefetch, Q, Value, When
 from django.http import HttpRequest, JsonResponse
 from rest_framework import status
 from rest_framework.response import Response
@@ -35,7 +35,7 @@ class API_Web_Categories(APIView):
         """Returns a single game's categories, variables, and associated values.
 
         Parameters:
-            id (str): The exact game ID or game slug to have its categories and 
+            id (str): The exact game ID or game slug to have its categories and
             variables returned.
 
         Allowed Embeds:
@@ -50,17 +50,33 @@ class API_Web_Categories(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        game = Games.objects.filter(id__iexact=id).first() or Games.objects.filter(slug__iexact=id).first()
+        game = Games.objects.filter(Q(id__iexact=id) | Q(slug__iexact=id)).first()
         if not game:
             return Response(
                 {"ERROR": "game not found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        categories = Categories.objects.filter(game=game).prefetch_related(
-            Prefetch(
-                "variables_set",
-                queryset=Variables.objects.prefetch_related("variablevalues_set"),
+        categories = (
+            Categories.objects.filter(game=game)
+            .annotate(
+                order=Case(
+                    When(name__istartswith="Any%", then=Value(1)),
+                    When(name__istartswith="All Goals & Golds", then=Value(2)),
+                    When(name__istartswith="Story", then=Value(3)),
+                    When(name__istartswith="Classic", then=Value(4)),
+                    When(name__istartswith="0%", then=Value(5)),
+                    When(name__istartswith="100%", then=Value(7)),
+                    default=Value(6),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("order", "name")
+            .prefetch_related(
+                Prefetch(
+                    "variables_set",
+                    queryset=Variables.objects.prefetch_related("variablevalues_set"),
+                )
             )
         )
 

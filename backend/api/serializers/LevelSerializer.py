@@ -54,4 +54,10 @@ class LevelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Levels
-        fields = ["id", "name", "url", "game"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "url",
+            "game",
+        ]

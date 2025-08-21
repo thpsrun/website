@@ -50,4 +50,10 @@ class ValueSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VariableValues
-        fields = ["value", "name", "hidden", "variable"]
+        fields = [
+            "value",
+            "name",
+            "slug",
+            "hidden",
+            "variable",
+        ]

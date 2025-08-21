@@ -76,4 +76,15 @@ class VariableSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Variables
-        fields = ["id", "name", "cat", "all_cats", "scope", "hidden", "game", "values"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "cat",
+            "all_cats",
+            "scope",
+            "level",
+            "hidden",
+            "game",
+            "values",
+        ]

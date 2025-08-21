@@ -100,7 +100,7 @@ export const GameOverview = () => {
     const perGameReady = mode === 'per-game' && selectedCategory && variableList.every(v => variableSelections[v.id])
 
     // Build per-level leaderboard: /leaderboard/<game>/<category-slug>?level=<levelSlug>
-    const perLevelCategorySlug = useMemo(() => selectedCategory ? slugify(selectedCategory.name) : '', [selectedCategory])
+    const perLevelCategorySlug = useMemo(() => selectedCategory ? selectedCategory.slug : '', [selectedCategory])
 
     const { data: runs, isLoading: runsLoading, error: runsError } = useLeaderboardRuns(
         mode === 'per-game'

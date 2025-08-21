@@ -122,9 +122,9 @@ class API_Web_Leaderboard(APIView):
                         {"ERROR": f"Invalid path: {real_game}, {real_cat}, {val_id}"},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
-                
+
         if level:
-            runs_all = runs_all.filter(level=level)
+            runs_all = runs_all.filter(Q(level=level) | Q(level__slug=level))
 
         runs_all: List[Runs] = list(runs_all)
 

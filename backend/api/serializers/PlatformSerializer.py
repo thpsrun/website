@@ -54,4 +54,9 @@ class PlatformSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Platforms
-        fields = ["id", "name", "games"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "games",
+        ]
