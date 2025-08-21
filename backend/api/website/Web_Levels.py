@@ -1,28 +1,28 @@
-from django.db.models import Case, IntegerField, Prefetch, Q, Value, When
+from django.db.models import Case, Prefetch, Q, When
 from django.http import HttpRequest, JsonResponse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from srl.models import Categories, Games, Variables
+from srl.models import Games, Levels, Variables
 
-from api.serializers.core import CategorySerializer
+from api.ordering import get_ordered_level_names
+from api.serializers.core import LevelSerializer
 from api.website.permissions import ReadOnlyOrAuthenticated
 
 
-class API_Web_Categories(APIView):
-    """Viewset for dynamically looking up categories related to a game.
+class API_Web_Levels(APIView):
+    """Viewset for looking up levels related to a game.
 
-    This viewset provides standard information about all of the categories for a game, their
-    associated `Variables` and then their associated `VariableValues`.
+    This viewset provides standard information about all of the levels for a game.
 
     Methods:
         get:
-            Returns category information based on its ID or slug.
+            Returns level information based on its ID.
 
     Permissions:
         - `ReadOnlyOrAuthenticated`: GET requests are public.
 
-    Model: `Categories`, `Variables`, `VariableValues`
+    Model: `Games`, `Categories`, `Variables`, `VariableValues`
     """
 
     permission_classes = [ReadOnlyOrAuthenticated]
@@ -35,8 +35,7 @@ class API_Web_Categories(APIView):
         """Returns a single game's categories, variables, and associated values.
 
         Parameters:
-            id (str): The exact game ID or game slug to have its categories and
-            variables returned.
+            id (str): The exact game ID or slug to have its categories and variables returned.
 
         Allowed Embeds:
             - `variables`: Embeds all variables related to the category into the response.
@@ -57,31 +56,24 @@ class API_Web_Categories(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        categories = (
-            Categories.objects.filter(game=game)
-            .annotate(
-                order=Case(
-                    When(name__istartswith="Any%", then=Value(1)),
-                    When(name__istartswith="All Goals & Golds", then=Value(2)),
-                    When(name__istartswith="Story", then=Value(3)),
-                    When(name__istartswith="Classic", then=Value(4)),
-                    When(name__istartswith="0%", then=Value(5)),
-                    When(name__istartswith="100%", then=Value(7)),
-                    default=Value(6),
-                    output_field=IntegerField(),
-                )
-            )
-            .order_by("order", "name")
+        get_order = get_ordered_level_names(game.slug)
+        level_order = Case(
+            *(When(name=name, then=position) for position, name in enumerate(get_order))
+        )
+
+        levels = (
+            Levels.objects.filter(game=game)
             .prefetch_related(
                 Prefetch(
                     "variables_set",
                     queryset=Variables.objects.prefetch_related("variablevalues_set"),
                 )
             )
+            .order_by(level_order)
         )
 
-        serializer = CategorySerializer(
-            categories,
+        serializer = LevelSerializer(
+            levels,
             many=True,
             context={"embed": ["variables", "values"]},
         )

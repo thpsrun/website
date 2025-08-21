@@ -1,13 +1,15 @@
 /* Clean slate background with local image */
 .hero-container {
   width: 100vw;
-  height: 100vh;
+  height: 100vh; /* Acts as viewport container */
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden; /* Prevent horizontal scroll due to blur scale */
+  overflow-y: auto; /* Allow vertical scrolling for tall pages */
+  -webkit-overflow-scrolling: touch; /* Smooth scroll on mobile */
 }
 
 .background-image {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
@@ -23,7 +25,7 @@
 }
 
 .background-overlay {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;

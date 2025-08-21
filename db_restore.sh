@@ -29,12 +29,12 @@ fi
 
 echo "Dropping and recreating database '${POSTGRES_DB}'..."
 
-if ! docker exec -i postgres psql -U "$POSTGRES_USER" -c "DROP DATABASE IF EXISTS $POSTGRES_DB;"; then
+if ! docker exec -i postgres psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $POSTGRES_DB;"; then
     echo "Failed to drop database. Exiting."
     exit 1
 fi
 
-if ! docker exec -i postgres psql -U "$POSTGRES_USER" -c "CREATE DATABASE $POSTGRES_DB;"; then
+if ! docker exec -i postgres psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE $POSTGRES_DB;"; then
     echo "Failed to create database. Exiting."
     exit 1
 fi

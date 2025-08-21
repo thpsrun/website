@@ -40,6 +40,7 @@ class API_Web_Leaderboard(APIView):
         subcats: str | None = None,
     ) -> JsonResponse:
         subcat_list = subcats.rstrip("/").split("/") if subcats else []
+        level = request.GET.get("level", "")
         query_fields = request.GET.get("query", "").split(",")
         query_fields = [item.strip() for item in query_fields if item.strip()]
 
@@ -121,6 +122,9 @@ class API_Web_Leaderboard(APIView):
                         {"ERROR": f"Invalid path: {real_game}, {real_cat}, {val_id}"},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
+
+        if level:
+            runs_all = runs_all.filter(Q(level=level) | Q(level__slug=level))
 
         runs_all: List[Runs] = list(runs_all)
 

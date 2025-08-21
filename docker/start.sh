@@ -9,6 +9,8 @@ fi
 
 PROCESS_TYPE=$1
 
+echo "Running start.sh"
+
 if [ "$PROCESS_TYPE" = "server" ]; then
     if [ "$DEBUG_MODE" = "True" ]; then
         echo ""

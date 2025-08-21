@@ -176,7 +176,7 @@ class RunSerializer(serializers.ModelSerializer):
         """Serializes platform information, to include optional embeds."""
         from api.serializers.core import PlatformSerializer
 
-        if "platform" in self.context.get("embed", []):
+        if "platform" in self.context.get("embed", []) and obj.platform:
             plat = PlatformSerializer(Platforms.objects.get(id=obj.platform.id)).data
         else:
             plat = obj.platform.id

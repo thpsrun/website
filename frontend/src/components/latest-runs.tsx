@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import * as flags from "country-flag-icons/react/3x2"
 import type React from "react"
-import type { Run } from "@/types/api"
+import type { DetailedRun } from "@/types/api"
 
 type CountryCode = keyof typeof flags
 
@@ -19,7 +19,7 @@ const SlugMap = {
 
 type LatestRunsProps = {
     title: string
-    data: Run[]
+    data: DetailedRun[]
 }
 
 export const LatestRuns: React.FC<LatestRunsProps> = ({ title, data }) => {

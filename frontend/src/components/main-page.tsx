@@ -6,8 +6,6 @@ export const MainPage = () => {
     const { data: latestRecords } = useTHPSNewWRs();
     const { data: latestRuns } = useTHPSNewRuns();
 
-    console.log(latestRecords, latestRuns);
-
 
     return (
         <div className="w-full h-full flex gap-4">

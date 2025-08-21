@@ -9,6 +9,7 @@ import {
   RouterProvider,
 } from "react-router";
 import { MainPage } from './components/main-page.tsx'
+import { GameOverview } from './components/game-overview.tsx'
 
 // Create a client for React Query
 const queryClient = new QueryClient()
@@ -18,7 +19,8 @@ const router = createBrowserRouter([
     path: "/",
     Component: App,
     children: [
-      { index: true, Component: MainPage }
+      { index: true, Component: MainPage },
+      { path: "game/:gameSlug", Component: GameOverview }
     ]
   },
 ]);
