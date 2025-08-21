@@ -283,8 +283,20 @@ export const GameOverview = () => {
                                     {sortedRuns.map((r, idx) => {
                                         const rank = r.place && r.place > 0 ? r.place : idx + 1;
                                         const dateOnly = r.date ? new Date(r.date).toISOString().split('T')[0] : '';
-                                        const timeDisplay = r.times.time !== '0' ? r.times.time : r.times.timeigt;
                                         const playerName = typeof r.players === 'string' ? r.players : (r.players?.name || 'Unknown');
+                                        let timeDisplay;
+                                        switch (r.times.defaulttime) {
+                                            case "ingame":
+                                                timeDisplay = r.times.timeigt !== "0" ? r.times.timeigt : r.times.time; // fallback to realtime if ingame is "0"
+                                                break;
+                                            case "realtime_noloads":
+                                                timeDisplay = r.times.timenl;
+                                                break;
+                                            case "realtime":
+                                            default:
+                                                timeDisplay = r.times.time;
+                                                break;
+                                        }
                                         return (
                                             <TableRow key={r.id} className={cn('transition hover:bg-muted/30', idx % 2 === 1 ? 'bg-muted/10' : '')}>
                                                 <TableCell className="pl-4 w-16">

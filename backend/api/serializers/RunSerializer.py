@@ -56,7 +56,7 @@ class RunSerializer(serializers.ModelSerializer):
         if any(item in self.context.get("embed", []) for item in ["games", "game"]):
             return GameSerializer(Games.objects.get(id=obj.game.id)).data
         else:
-            return obj.game.id
+            return obj.game.id if obj.game else None
 
     def get_category(
         self,
@@ -68,7 +68,7 @@ class RunSerializer(serializers.ModelSerializer):
         if "category" in self.context.get("embed", []):
             return CategorySerializer(Categories.objects.get(id=obj.category.id)).data
         else:
-            return obj.category.id
+            return obj.category.id if obj.category else None
 
     def get_level(
         self,
@@ -80,7 +80,7 @@ class RunSerializer(serializers.ModelSerializer):
         if "level" in self.context.get("embed", []):
             return LevelSerializer(Levels.objects.get(id=obj.level.id)).data
         elif obj.level:
-            return obj.level.id
+            return obj.level.id if obj.level else None
         else:
             return None
 
@@ -130,17 +130,19 @@ class RunSerializer(serializers.ModelSerializer):
         obj: Runs,
     ) -> int:
         """Serializes the number of players within a game and its subcategory."""
-        player_count = (
-            Runs.objects.only("id")
-            .filter(
-                game=obj.game,
-                subcategory=obj.subcategory,
-                obsolete=False,
+        if "lb-count" in self.context.get("embed", []):
+            player_count = (
+                Runs.objects.only("id")
+                .filter(
+                    game=obj.game,
+                    subcategory=obj.subcategory,
+                    obsolete=False,
+                )
+                .count()
             )
-            .count()
-        )
-
-        return player_count
+            return player_count
+        else:
+            return None
 
     def get_players(
         self,
@@ -179,7 +181,7 @@ class RunSerializer(serializers.ModelSerializer):
         if "platform" in self.context.get("embed", []) and obj.platform:
             plat = PlatformSerializer(Platforms.objects.get(id=obj.platform.id)).data
         else:
-            plat = obj.platform.id
+            plat = obj.platform.id if obj.platform else None
 
         return {
             "platform": plat,
