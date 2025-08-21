@@ -34,6 +34,12 @@ const CountryFlag = ({ countryCode }: { countryCode: CountryCode }) => {
     return <FlagIcon className="w-7 pl-2 inline" />
 }
 
+const calcPointsOpacity = (points: number, mode: 'per-game' | 'per-level') => {
+    const denominator = mode === 'per-game' ? 1000 : 100;
+
+    return Math.max(0.1, points / denominator);
+}
+
 export const GameOverview = () => {
     // Get the game slug from the URL parameters
     const { gameSlug } = useParams<{ gameSlug: string }>();
@@ -121,7 +127,7 @@ export const GameOverview = () => {
             <div className="relative w-full h-64 rounded-lg bg-background shadow-md shadow-black/30">
                 {/* Background image container - constrained width with transparency */}
                 <div
-                    className="absolute left-0 top-0 bottom-0 w-1/3 bg-cover bg-center bg-no-repeat opacity-80"
+                    className="absolute left-0 top-0 bottom-0 w-1/3 bg-cover bg-center bg-no-repeat opacity-80 rounded-lg"
                     style={{
                         backgroundImage: "url('/src/assets/headers/thps1_2.jpeg')",
                     }}
@@ -292,7 +298,7 @@ export const GameOverview = () => {
                                                 </TableCell>
                                                 <TableCell className="text-sm">{playerName}{(r as any).players.country && <CountryFlag countryCode={(r as any).players.country as CountryCode} />}</TableCell>
                                                 <TableCell className="text-right font-mono tabular-nums tracking-tight text-sm">{timeDisplay}</TableCell>
-                                                <TableCell className="text-right font-mono tabular-nums tracking-tight text-sm">{r.meta.points}</TableCell>
+                                                <TableCell className="text-right font-mono tabular-nums tracking-tight text-sm" style={{opacity: calcPointsOpacity(r.meta.points, mode)}}>{r.meta.points}</TableCell>
                                                 <TableCell className="text-right pr-4 text-xs">{dateOnly}</TableCell>
                                                 <TableCell className="pr-6 text-right">{r.videos.video ? <a href={r.videos.video} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center h-6 w-6 rounded hover:bg-muted/40"><Play size={14} /></a> : <span className="text-muted-foreground/50 text-xs">—</span>}</TableCell>
                                             </TableRow>
