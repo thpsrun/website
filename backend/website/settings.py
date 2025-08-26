@@ -30,7 +30,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # THIRD-PARTY
     "corsheaders",
-    "rest_framework",
     "rest_framework_api_key",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -52,6 +51,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "api.middleware.APIActivityLogMiddleware",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -84,14 +84,6 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework_api_key.permissions.HasAPIKey",
-    ],
-}
 
 WSGI_APPLICATION = "website.wsgi.application"
 

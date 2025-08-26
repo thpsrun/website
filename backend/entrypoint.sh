@@ -4,14 +4,14 @@ set -euo pipefail
 python manage.py migrate
 python manage.py collectstatic --no-input
 
-# If CMD passed starts with ./start.sh or /app/start.sh, let that manage processes.
-if [ "${1:-}" = "/app/start.sh" ] || [ "${1:-}" = "./start.sh" ]; then
-	exec "$@"
+if [ "${DEBUG_MODE:-false}" = "True" ]; then
+    echo "===============STARTING IN DEVELOPMENT MODE!===============" >&2
+    hypercorn --bind 0.0.0.0:${PORT:-8001} --reload website.wsgi:application &
+else
+    echo "===============STARTING IN PRODUCTION MODE!===============" >&2
+    hypercorn --bind 0.0.0.0:${PORT:-8001} --workers 8 website.wsgi:application &
 fi
 
-# Fallback legacy behaviour: run hypercorn + celery (no start.sh provided)
-echo "(entrypoint) Falling back to legacy hypercorn+celery startup" >&2
-hypercorn --bind 0.0.0.0:${PORT:-8001} website.wsgi:application &
 WEB_PID=$!
 celery -A website worker --loglevel=info -E &
 CELERY_PID=$!

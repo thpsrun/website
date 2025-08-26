@@ -17,6 +17,7 @@ from srl.models import (
     NowStreaming,
     Platforms,
     Players,
+    RunPlayers,
     Runs,
     RunVariableValues,
     Series,
@@ -60,7 +61,9 @@ class SeriesAdmin(admin.ModelAdmin):
             reverse("admin:update_series") + f"?series_ids={','.join(series_ids)}"
         )
 
-    def get_urls(self) -> list[URLPattern]:
+    def get_urls(
+        self,
+    ) -> list[URLPattern]:
         """Adds all above methods to custom URLs."""
         urls = super().get_urls()
         custom_urls = [
@@ -132,7 +135,9 @@ class GameAdmin(admin.ModelAdmin):
             reverse("admin:refresh_game_runs") + f"?game_ids={','.join(game_ids)}"
         )
 
-    def get_urls(self) -> list[URLPattern]:
+    def get_urls(
+        self,
+    ) -> list[URLPattern]:
         """Adds all above methods to custom URLs."""
         urls = super().get_urls()
         custom_urls = [
@@ -190,6 +195,17 @@ class RunVariableValuesInline(admin.TabularInline):
     autocomplete_fields = ["variable", "value"]
 
 
+class RunPlayersInline(admin.TabularInline):
+    """Admin panel used with the `RunPlayers` model."""
+
+    model = RunPlayers
+    extra = 1
+    autocomplete_fields = ["player"]
+    fields = ["player", "order"]
+    verbose_name = "Player"
+    verbose_name_plural = "Players"
+
+
 class SpeedrunAdmin(admin.ModelAdmin):
     """Admin panel used with the `Runs` model.
 
@@ -203,7 +219,7 @@ class SpeedrunAdmin(admin.ModelAdmin):
     list_display = ["id"]
     search_fields = ["id"]
     list_filter = ["runtype", "obsolete", "game", "platform"]
-    inlines = [RunVariableValuesInline]
+    inlines = [RunPlayersInline, RunVariableValuesInline]
 
     def formfield_for_foreignkey(
         self,
@@ -268,7 +284,9 @@ class PlayersAdmin(admin.ModelAdmin):
             reverse("admin:import_obsolete") + f"?player_ids={','.join(player_ids)}"
         )
 
-    def get_urls(self) -> list[URLPattern]:
+    def get_urls(
+        self,
+    ) -> list[URLPattern]:
         """Adds all above methods to custom URLs."""
         urls = super().get_urls()
         custom_urls = [

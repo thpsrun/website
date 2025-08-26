@@ -283,7 +283,9 @@ export const GameOverview = () => {
                                     {sortedRuns.map((r, idx) => {
                                         const rank = r.place && r.place > 0 ? r.place : idx + 1;
                                         const dateOnly = r.date ? new Date(r.date).toISOString().split('T')[0] : '';
-                                        const playerName = typeof r.players === 'string' ? r.players : (r.players?.name || 'Unknown');
+                                        const playerName = Array.isArray(r.players) && r.players.length > 0 
+                                            ? r.players.map(p => p.name || 'Anonymous').join(', ') 
+                                            : 'Unknown';
                                         let timeDisplay;
                                         switch (r.times.defaulttime) {
                                             case "ingame":
@@ -302,7 +304,12 @@ export const GameOverview = () => {
                                                 <TableCell className="pl-4 w-16">
                                                     <div className={cn('flex items-center justify-center w-8 h-8 rounded-full text-center text-xs font-semibold', getRankBackground(rank))}>{rank}</div>
                                                 </TableCell>
-                                                <TableCell className="text-sm">{playerName}{(r as any).players.country && <CountryFlag countryCode={(r as any).players.country as CountryCode} />}</TableCell>
+                                                <TableCell className="text-sm">
+                                                    {playerName}
+                                                    {Array.isArray(r.players) && r.players.length > 0 && r.players[0].country && (
+                                                        <CountryFlag countryCode={r.players[0].country as CountryCode} />
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="text-right font-mono tabular-nums tracking-tight text-sm">{timeDisplay}</TableCell>
                                                 <TableCell className="text-right font-mono tabular-nums tracking-tight text-sm">{r.meta.points}</TableCell>
                                                 <TableCell className="text-right pr-4 text-xs">{dateOnly}</TableCell>

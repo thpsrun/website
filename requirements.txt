@@ -1,5 +1,5 @@
 aiohttp==3.12.*
-asgiref==3.8.*
+asgiref==3.9.*
 celery[redis]
 certifi==2025.*
 crispy-bootstrap5==2025.*
@@ -13,7 +13,7 @@ django-environ==0.12.*
 django-ratelimit==4.1.*
 django-resized==1.0.*
 django-sekizai==4.1.*
-djangorestframework==3.16.*
+django-ninja==1.4.*
 djangorestframework-api-key==3.1.*
 hypercorn==0.17.*
 langcodes==3.5.*
@@ -23,10 +23,10 @@ pillow==11.3.*
 psycopg==3.2.*
 python-dateutil==2.9.*
 python-dotenv==1.1.*
-pytz==2025.2
-redis==5.2.*
-requests==2.32.*
-sentry-sdk>=2.30.0
+pytz==2025.*
+redis==6.4.*
+requests==2.*
+sentry-sdk==2.*
 rsa==4.9.*
 tzdata==2025.*
 uritemplate==4.1.*

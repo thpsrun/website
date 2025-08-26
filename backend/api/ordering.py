@@ -1,6 +1,8 @@
-from typing import List
+from __future__ import annotations
 
-LEVEL_PRIORITIES = {
+from typing import Dict, List
+
+LEVEL_PRIORITIES: Dict[str, List[str]] = {
     "thps1": [
         "Warehouse",
         "School",
@@ -265,6 +267,6 @@ LEVEL_PRIORITIES = {
 }
 
 
-def get_ordered_level_names(game_slug: str) -> List:
+def get_ordered_level_names(game_slug: str) -> List[str]:
     """Get the ordered list of level names for a game to export to Django."""
     return LEVEL_PRIORITIES.get(game_slug, [])

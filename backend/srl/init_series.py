@@ -12,7 +12,7 @@ from .tasks import (
 
 
 def init_series(
-    series_id,
+    series_id: str,
 ) -> None:
     """Initializes the gathering of all data for the entire Series from the Speedrun.com API"""
 
@@ -87,7 +87,7 @@ def init_series(
 
 
 async def init_series_async(
-    series_id,
+    series_id: str,
 ) -> None:
     """Asynchronously starts the data collection from the Series."""
     # Actually kicks off the initialization of the code.

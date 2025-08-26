@@ -42,8 +42,20 @@ export const LatestRuns: React.FC<LatestRunsProps> = ({ title, data }) => {
                         <TableRow key={i}>
                             <TableCell className="font-medium">{SlugMap[run.game.slug as keyof typeof SlugMap] || ""}</TableCell>
                             <TableCell>{run.subcategory}</TableCell>
-                            <TableCell className="flex items-center">{run.players.country && <><CountryFlag countryCode={run.players.country as CountryCode} /></>}{run.players.name || "Anonymous"}</TableCell>
-                            <TableCell>{run.times.timeigt != "0" ? run.times.timeigt : run.times.time}</TableCell>
+                            <TableCell className="flex items-center">
+                                {run.players.length > 0 ? (
+                                    run.players.map((player, idx) => (
+                                        <span key={idx} className="flex items-center mr-2">
+                                            {player.country && <CountryFlag countryCode={player.country as CountryCode} />}
+                                            {player.name || "Anonymous"}
+                                            {idx < run.players.length - 1 && ", "}
+                                        </span>
+                                    ))
+                                ) : (
+                                    "Anonymous"
+                                )}
+                            </TableCell>
+                            <TableCell>{run.time}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

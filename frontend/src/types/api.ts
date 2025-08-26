@@ -79,7 +79,7 @@ export interface Run {
   subcategory: string
   place: number
   lb_count: number
-  players: Player // Player ID/name as string or "Anonymous"
+  players: Player[] // Array of players for multi-player runs
   date: string
   record: string
   times: Times
@@ -116,23 +116,15 @@ export type LeaderboardRun = Run
 // Detailed run with embedded game object (used in latest_wrs, latest_pbs)
 export interface DetailedRun {
   id: string
-  runtype: string
   game: Game // Full game object with embedded data
-  category: string // Category ID as string
-  level: string | null // Level ID as string or null
+  category: { name: string } | null // Category object with name
   subcategory: string
-  place: number
-  lb_count: number
-  players: Player // Full player object with embedded data
-  date: string
-  record: string
-  times: Times
-  system: System
-  status: Status
-  videos: Videos
-  variables: { [key: string]: any }
-  meta: Meta
-  description?: string | null
+  players: Player[] // Array of players with full player objects
+  time: string
+  date: string // ISO date string
+  video: string
+  url: string
+  place?: number // Only included for latest_pbs
 }
 
 export interface RecordPlayer {

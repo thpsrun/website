@@ -33,7 +33,19 @@ export const CurrentRecords = () => {
                         <TableRow key={i}>
                             <TableCell className="font-medium">{run.game.name}</TableCell>
                             <TableCell>{run.subcategory}</TableCell>
-                            <TableCell className="flex items-center">{run.players[0].player?.country && <><CountryFlag countryCode={run.players[0].player?.country as CountryCode} />{run.players[0].player?.nickname || run.players[0].player?.name}</>}</TableCell>
+                            <TableCell className="flex items-center">
+                                {run.players.length > 0 ? (
+                                    run.players.map((recordPlayer, idx) => (
+                                        <span key={idx} className="flex items-center mr-2">
+                                            {recordPlayer.player?.country && <CountryFlag countryCode={recordPlayer.player.country as CountryCode} />}
+                                            {recordPlayer.player?.nickname || recordPlayer.player?.name || "Anonymous"}
+                                            {idx < run.players.length - 1 && ", "}
+                                        </span>
+                                    ))
+                                ) : (
+                                    "Anonymous"
+                                )}
+                            </TableCell>
                             <TableCell>{run.time}</TableCell>
                             <TableCell>{run.players[0].date}</TableCell>
                         </TableRow>
