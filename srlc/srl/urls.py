@@ -11,15 +11,13 @@ from srl.complex_views import (
     PlayerProfile,
     search_leaderboard,
 )
-from srl.static_views import FAQ, Changelog, PrivacyPolicy, TourneyBracket, TourneyView
+from srl.static_views import FAQ, Changelog, PrivacyPolicy
 
 urlpatterns = [
     path("", MainPage, name="Leaderboard"),
     path("privacy", PrivacyPolicy, name="PrivacyPolicy"),
     path("changelog", Changelog, name="Changelog"),
     path("faq", FAQ, name="FAQ"),
-    path("tournament", TourneyView, name="Tournament"),
-    path("tournament/bracket", TourneyBracket, name="Tournament Bracket"),
     path("overall", Leaderboard, name="Leaderboard"),
     # path("overall/<int:year>/", MonthlyLeaderboard, name="YearlyLeaderboard"),
     # path("overall/<int:year>/<int:month>", MonthlyLeaderboard, name="MonthlyLeaderboard"),

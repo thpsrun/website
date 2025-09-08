@@ -535,6 +535,16 @@ def update_points(
     runs = all_runs.order_by(time_columns[default_time])
     wr_time = runs[0].__getattribute__(time_columns[default_time])
 
+    # THPS4_TEMP_FIX
+    # Look, I am working on v4 and I do not want to rewrite things when they are gonna be obsoleted
+    # in v4 anyways lmao. This will check if the wr_time is 0, if it is then it will force the
+    # default_time to be realtime and redo this check. Blame THPS4 5th Gen.
+
+    if wr_time == 0:
+        default_time = "realtime"
+        runs = all_runs.order_by(time_columns[default_time])
+        wr_time = runs[0].__getattribute__(time_columns[default_time])
+
     # Logic here will iterate through the runs from the same subcategory that are not obsolete in
     # the same game. If it is WR, then it gets max_points; rank is incremented.
     # If it is not WR, then points are calculated based on the formula and the max_points of the
