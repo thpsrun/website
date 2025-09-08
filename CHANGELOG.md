@@ -1,3 +1,10 @@
+### v3.4.7
+###### September 8, 2025
+*   Fixed an issue where some categories (*cough* THPS4 5th Gen) would have players be given the max of 1000 points because it has a a different timing method.
+*   Removed hyperlinks and views for the THPS3+4 Tournament.
+
+* * *
+
 ### v3.4.6
 ###### August 19, 2025
 *   Fixed an issue where runs on a player's profile and history would not properly link to the SRC submission if the `idefaulttime` or `defaulttime` was `realtime`.
