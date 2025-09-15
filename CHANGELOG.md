@@ -1,3 +1,9 @@
+### v3.4.7.1
+###### September 8, 2025
+*   Added THPS3+4 CE leaderboards to the navbar.
+
+* * *
+
 ### v3.4.7
 ###### September 8, 2025
 *   Fixed an issue where some categories (*cough* THPS4 5th Gen) would have players be given the max of 1000 points because it has a a different timing method.
