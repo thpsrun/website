@@ -120,7 +120,7 @@ def normalize_src(
                             run_info["values"],
                             False,  # obsolete
                             True,  # point_reset
-                            True,  # download_pfp
+                            False,  # download_pfp - Disabled due to issue 93
                         )
                     )()
                     finish = 1
@@ -141,7 +141,7 @@ def normalize_src(
                         run_info["values"],
                         True,  # obsolete
                         False,  # point_reset
-                        True,  # download_pfp
+                        False,  # download_pfp - Disabled due to issue 93
                     )
                 )()
 
@@ -166,7 +166,7 @@ def add_run(
     run_variables,
     obsolete=False,
     point_reset=True,
-    download_pfp=True,
+    download_pfp=False,  # Disabled due to issue 93
 ) -> None:
     """Retrieves and normalizes Speedrun.com API data before importing it into the database.
 
@@ -241,7 +241,7 @@ def invoke_single_run(
     var_name=None,
     obsolete=False,
     point_reset=True,
-    download_pfp=True,
+    download_pfp=False,  # Disabled due to issue 93
 ) -> None:
     """Creates or updates a `Runs` object with Speedrun.com API information.
 
