@@ -1,3 +1,9 @@
+### v3.4.8
+###### September 24, 2025
+*   Fixed an issue where users without a country assigned to them would break the "Latest World Records" table.
+
+* * *
+
 ### v3.4.7.1
 ###### September 8, 2025
 *   Added THPS3+4 CE leaderboards to the navbar.
