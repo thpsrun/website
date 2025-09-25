@@ -33,7 +33,9 @@
                     {% comment %} <div class="profile-pfp">
                         <img src="{% static 'pfp/'|add:player.id|add:'.jpg' %}" onerror="this.onerror=null; this.src='{% static 'pfp/default.png' %}'" title="{{ player.name }}" class="pfp-img" />
                     </div>    {% endcomment %}
-                    <img src="{% static 'pfp/default.png' %}" title="{{ player.name }}" class="pfp-img" />
+                    <div class="profile-pfp">
+                        <img src="{% static 'pfp/default.png' %}" title="{{ player.name }}" class="pfp-img" />
+                    </div>
                     <div class="profile-data">
                         <div class="profile-username">
                         {% if player.countrycode.id != "vh" %}
