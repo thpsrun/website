@@ -30,9 +30,10 @@
         <div class="super-container">
             <div class="profile-container">
                 <div class="profile-info">
-                    <div class="profile-pfp">
+                    {% comment %} <div class="profile-pfp">
                         <img src="{% static 'pfp/'|add:player.id|add:'.jpg' %}" onerror="this.onerror=null; this.src='{% static 'pfp/default.png' %}'" title="{{ player.name }}" class="pfp-img" />
-                    </div>                    
+                    </div>    {% endcomment %}
+                    <img src="{% static 'pfp/default.png' %}" title="{{ player.name }}" class="pfp-img" />
                     <div class="profile-data">
                         <div class="profile-username">
                         {% if player.countrycode.id != "vh" %}

@@ -1,3 +1,10 @@
+### v3.4.8.1
+###### September 24, 2025
+*   Disabled auto-collection of profile pictures due to Cloudflare challenges breaking this functionality.
+*   Changed the profile picture that appears on all pages to be the generic "Tony" pic that normally appears when a profile picture cannot be found.
+
+* * *
+
 ### v3.4.8
 ###### September 24, 2025
 *   Fixed an issue where users without a country assigned to them would break the "Latest World Records" table.
