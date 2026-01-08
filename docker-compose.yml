@@ -9,7 +9,7 @@ volumes:
 services:
   postgres:
     container_name: postgres
-    image: postgres:17.5-bookworm
+    image: postgres:18.1-bookworm
     restart: unless-stopped
     shm_size: 128mb
     environment:
@@ -41,27 +41,6 @@ services:
       - ./backend:/app
       - static_files:/app/static:rw
       - ../guides:/app/docs
-    networks:
-      - thpsrun
-
-  react:
-    container_name: react
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    command: npm run dev
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    tty: true
-    depends_on:
-      - django
-      - postgres
-    volumes:
-      - ./frontend:/srv/app:rw
-      - node_modules:/srv/app/node_modules:rw
     networks:
       - thpsrun
 

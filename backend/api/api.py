@@ -1,11 +1,21 @@
-from __future__ import annotations
-
 from typing import Any, Dict
 
 from django.http import HttpRequest
 from ninja import NinjaAPI
 from ninja.errors import ValidationError
 from ninja.responses import Response
+
+from api.routers.aggregations.website import router as website_router
+from api.routers.guides.guides import router as guides_router
+from api.routers.guides.tags import router as tags_router
+from api.routers.resources.categories import router as categories_router
+from api.routers.resources.games import router as games_router
+from api.routers.resources.levels import router as levels_router
+from api.routers.resources.platforms import router as platforms_router
+from api.routers.resources.players import router as players_router
+from api.routers.resources.runs import router as runs_router
+from api.routers.resources.streams import router as streams_router
+from api.routers.resources.variables import router as variables_router
 
 from .schemas.base import ErrorResponse, ValidationErrorResponse
 
@@ -20,14 +30,32 @@ ninja_api: NinjaAPI = NinjaAPI(
     - All other HTTP reqeusts will require a valid API key in the X-API-Key header to proceed.
         - If you want an API key, contact ThePackle on the thps.run Discord.
 
-    **Embed System:**
-    Most endpoints support an `embed` query parameter to include related data:
-    - `?embed=categories,levels` - Include multiple related objects
-    - Reduces API calls and improves performance
-    - Only valid embeds are accepted per endpoint
+    QUERYING:
+    Depending on the endpoint chosen, you will be able to further refine queries to reduce the
+    amount of data sent to your application. Here is an example:
+    - `/api/v1/guides/all?query=thps4`: All guides belonging to THPS4 will be retuned.
 
-    **Error Handling:**
-    All errors return consistent JSON with error message and HTTP status code.
+    EMBEDDING:
+    Most endpoints support an `embed` query parameter that further defines and enhances related
+    data. By defualt, if an eligible embed is not used, then the unique ID of that object will
+    be given. However, by specifying an embed, you will get more in-depth information; this will
+    reduce the number of requests you have to send! Here is an example:
+
+    - `/api/v1/runs/abcd1234?embed=categories,game`: Returns information on the specific run AND
+    embeds all of the metdata related to its selected category and game.
+
+    RATE LIMITING:
+    This API uses rate limits. Unauthenticated API sessions (e.g. GET) have a limit of 200/minute.
+    The rate limit is increased depending on the role your API key is assigned to.
+
+    API KEYS:
+    By default, almost all GET endpoints are accessible publicly. An API Key is required for all
+    non-GET HTTP methods AND in designated endpoints (e.g. `/api/v1/users/tonyhawk/preferences`).
+
+    ERROR HANDLING:
+    This section details the normal responses you will receive. Specific endpoints may have more
+    response codes. Normal response codes (e.g. 2XX, 4XX, 500, etc.) are used. If more are added,
+    then they will appear in this documentation.
     """,
     docs_url="/docs",
     openapi_url="/openapi.json",
@@ -70,32 +98,37 @@ ninja_api: NinjaAPI = NinjaAPI(
                 "description": "Specific endpoints related to the Guides system of the website.",
             },
             {
+                "name": "Tags",
+                "description": "Specified endpoints related to the tags system.",
+            },
+            {
                 "name": "Website",
                 "description": "Specific endpoints related to how the frontend operates.",
             },
-            {"name": ""},
-        ]
+            {
+                "name": "Privileged",
+                "description": "These endpoints require a higher-level API key to access.",
+            },
+        ],
     },
 )
 
 
-# Global exception handlers for consistent error responses
 @ninja_api.exception_handler(ValidationError)
 def validation_exception_handler(
-    request: HttpRequest, exc: ValidationError
+    request: HttpRequest,
+    exc: ValidationError,
 ) -> Response:
-    """
-    Handle Pydantic validation errors.
+    """Handle Pydantic validation errors.
 
     This provides consistent validation error responses across all endpoints.
-    Much cleaner than DRF's validation error handling.
 
     Args:
-        request: The HTTP request that caused the error
-        exc: The validation exception from Pydantic
+        request: The HTTP request that caused the error.
+        exc: The validation exception from Pydantic.
 
     Returns:
-        Standardized validation error response
+        Response: Standardized validation error response.
     """
     return ninja_api.create_response(
         request,
@@ -103,25 +136,26 @@ def validation_exception_handler(
             error="Request validation failed",
             validation_errors=exc.errors,
             code=422,
-        ).dict(),
+        ).model_dump(),
         status=422,
     )
 
 
 @ninja_api.exception_handler(Exception)
-def global_exception_handler(request: HttpRequest, exc: Exception) -> Response:
-    """
-    Handle unexpected server errors.
+def global_exception_handler(
+    request: HttpRequest,
+    exc: Exception,
+) -> Response:
+    """Handle unexpected server errors.
 
-    Provides a consistent error response for unexpected exceptions
-    while logging the full error for debugging.
+    Provides a consistent error response for unexpected exceptions and logs them for later use.
 
     Args:
-        request: The HTTP request that caused the error
-        exc: The unexpected exception
+        request: The HTTP request that caused the error.
+        exc: The unexpected exception (e.g. server errors).
 
     Returns:
-        Generic server error response
+        Response: Object with a 500 status code denoting a server error has occurred.
     """
 
     return ninja_api.create_response(
@@ -130,7 +164,7 @@ def global_exception_handler(request: HttpRequest, exc: Exception) -> Response:
             error="An unexpected error occurred",
             details=None,
             code=500,
-        ).dict(),
+        ).model_dump(),
         status=500,
     )
 
@@ -165,23 +199,6 @@ def health_check(
     }
 
 
-from api.routers.guides import guides_router, tags_router
-from api.routers.standard import (
-    categories_router,
-    games_router,
-    levels_router,
-    platforms_router,
-    players_router,
-    runs_router,
-    streams_router,
-    variables_router,
-)
-from api.routers.website import (
-    game_categories_router,
-    game_levels_router,
-    main_page_router,
-)
-
 ninja_api.add_router("/games", games_router, tags=["Games"])
 ninja_api.add_router("/categories", categories_router, tags=["Categories"])
 ninja_api.add_router("/levels", levels_router, tags=["Levels"])
@@ -194,6 +211,4 @@ ninja_api.add_router("/streams", streams_router, tags=["Streams"])
 ninja_api.add_router("/guides", guides_router, tags=["Guides"])
 ninja_api.add_router("/tags", tags_router, tags=["Tags"])
 
-ninja_api.add_router("/website", main_page_router)
-ninja_api.add_router("/website", game_categories_router)
-ninja_api.add_router("/website", game_levels_router)
+ninja_api.add_router("/website", website_router, tags=["Website"])

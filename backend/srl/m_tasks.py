@@ -68,7 +68,12 @@ def src_api(
     Returns:
         response (dict): Dictionary/JSON object from the requested API.
     """
-    response = requests.get(url)
+    response = requests.get(
+        url,
+        headers={
+            "User-Agent": "thps.run/4.0 (https://thps.run; automation@thps.run)",
+        },
+    )
 
     while response.status_code == 420 or response.status_code == 503:
         print("[DEBUG] Rate limit exceeded, waiting 60 seconds...")
@@ -132,8 +137,8 @@ def time_conversion(
     realtime_nl = time["realtime_noloads_t"]
     ingame = time["ingame_t"]
 
-    rta = convert_time(realtime) if realtime > 0 else 0
-    noloads = convert_time(realtime_nl) if realtime_nl > 0 else 0
-    igt = convert_time(ingame) if ingame > 0 else 0
+    rta = convert_time(realtime) if realtime > 0 else "0"
+    noloads = convert_time(realtime_nl) if realtime_nl > 0 else "0"
+    igt = convert_time(ingame) if ingame > 0 else "0"
 
     return rta, noloads, igt

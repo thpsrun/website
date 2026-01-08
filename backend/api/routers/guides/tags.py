@@ -15,66 +15,67 @@ from api.schemas.guides import (
     TagUpdateSchema,
 )
 
-tags_router: Router = Router()
+router: Router = Router()
 
 
-@tags_router.get(
+@router.get(
     "/all",
     response=List[TagListSchema],
     summary="List All Tags",
-    description="Retrieve all guide tags",
+    description="""
+    Returns a list of all available tags to categorize the guides.
+    """,
 )
-def list_tags(request: HttpRequest) -> List[TagListSchema]:
-    """
-    Get all guide tags.
-
-    Returns a list of all available tags for categorizing guides.
-    """
-    tags = Tags.objects.all()  # type: ignore[misc]
-    return [TagListSchema.from_orm(tag) for tag in tags]
+def list_tags(
+    request: HttpRequest,
+) -> List[TagListSchema]:
+    tags = Tags.objects.all()
+    return [TagListSchema.model_validate(tag) for tag in tags]
 
 
-@tags_router.get(
+@router.get(
     "/{slug}",
     response=TagSchema,
     summary="Get Tag by Slug",
-    description="Retrieve a specific tag by its slug",
+    description="""
+    Get a specific tag by its slug.
+
+    Parameters:
+    - slug (str): Simplified, URL friendly name of the tag.
+    """,
 )
-def get_tag(request: HttpRequest, slug: str) -> TagSchema:
-    """
-    Get a specific tag by slug.
-
-    Path Parameters:
-    - slug: Tag slug (URL-friendly identifier)
-    """
+def get_tag(
+    request: HttpRequest,
+    slug: str,
+) -> TagSchema:
     tag: Tags = get_object_or_404(Tags, slug=slug)
-    return TagSchema.from_orm(tag)
+    return TagSchema.model_validate(tag)
 
 
-@tags_router.post(
+@router.post(
     "/",
     response=TagSchema,
     summary="Create Tag",
-    description="Create a new tag (requires contributor role or higher)",
-)
-def create_tag(request: HttpRequest, data: TagCreateSchema) -> Union[TagSchema, Tuple[int, ErrorResponse]]:
-    """
-    Create a new tag.
+    description="""
+    Creates a brand new tag.
 
-    Requires contributor authentication or higher.
+    REQUIRES CONTRIBUTOR ACCESS OR HIGHER.
 
     Request Body:
-    - name: Tag name
-    - description: Tag description
-
-    Returns the created tag.
-    """
+    - name (str): Name of the tag.
+    - description (str): Description of the tag.
+    """,
+)
+def create_tag(
+    request: HttpRequest,
+    data: TagCreateSchema,
+) -> Union[TagSchema, Tuple[int, ErrorResponse]]:
     try:
         tag: Tags = Tags.objects.create(
             name=data.name,
             description=data.description,
         )
-        return TagSchema.from_orm(tag)
+        return TagSchema.model_validate(tag)
     except Exception as e:
         return 500, ErrorResponse(
             error=f"Failed to create tag: {str(e)}",
@@ -82,17 +83,20 @@ def create_tag(request: HttpRequest, data: TagCreateSchema) -> Union[TagSchema, 
         )
 
 
-@tags_router.put(
+@router.put(
     "/{slug}",
     response=TagSchema,
     summary="Update Tag",
     description="Update an existing tag (requires contributor role or higher)",
+    tags=["Privileged"],
 )
-def update_tag(request: HttpRequest, slug: str, data: TagUpdateSchema) -> Union[TagSchema, Tuple[int, ErrorResponse]]:
+def update_tag(
+    request: HttpRequest, slug: str, data: TagUpdateSchema
+) -> Union[TagSchema, Tuple[int, ErrorResponse]]:
     """
     Update an existing tag.
 
-    Requires contributor authentication or higher.
+    REQUIRES CONTRIBUTOR ACCESS OR HIGHER.
 
     Path Parameters:
     - slug: Tag slug to update
@@ -123,13 +127,15 @@ def update_tag(request: HttpRequest, slug: str, data: TagUpdateSchema) -> Union[
         )
 
 
-@tags_router.delete(
+@router.delete(
     "/{slug}",
     response={204: None},
     summary="Delete Tag",
     description="Delete a tag (requires contributor role or higher)",
 )
-def delete_tag(request: HttpRequest, slug: str) -> Union[Tuple[int, None], Tuple[int, ErrorResponse]]:
+def delete_tag(
+    request: HttpRequest, slug: str
+) -> Union[Tuple[int, None], Tuple[int, ErrorResponse]]:
     """
     Delete a tag.
 

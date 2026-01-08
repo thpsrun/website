@@ -1,10 +1,10 @@
 aiohttp==3.12.*
 asgiref==3.9.*
-celery[redis]
+celery[redis]==5.6.1
 certifi==2025.*
 crispy-bootstrap5==2025.*
-Django==5.2.*
-#django-allauth==65.7.*
+Django==6.0.*
+#django-allauth==65.13.*
 django-bootstrap5==25.*
 django-classy-tags==4.1.*
 django-cors-headers==4.7.*
@@ -13,7 +13,7 @@ django-environ==0.12.*
 django-ratelimit==4.1.*
 django-resized==1.0.*
 django-sekizai==4.1.*
-django-ninja==1.4.*
+django-ninja==1.5.*
 djangorestframework-api-key==3.1.*
 hypercorn==0.17.*
 langcodes==3.5.*
@@ -24,7 +24,7 @@ psycopg==3.2.*
 python-dateutil==2.9.*
 python-dotenv==1.1.*
 pytz==2025.*
-redis==6.4.*
+redis<6.5,>=4.5.2
 requests==2.*
 sentry-sdk==2.*
 rsa==4.9.*

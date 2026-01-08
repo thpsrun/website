@@ -1,22 +1,3 @@
-"""
-Variables Schemas for Django Ninja API
-
-Schemas for Variables and VariableValues models. Variables represent
-subcategories or filters within speedrun categories (like difficulty
-settings, character choices, etc.).
-
-This is one of the more complex schemas due to the relationships:
-- Variables belong to games and/or specific categories
-- Variables can apply to all categories or just specific ones
-- Variables have multiple possible values (VariableValues)
-- Variables have different scopes (global, full-game, IL-specific)
-
-Key Features:
-- Complex validation logic (replicated from model.clean())
-- Nested VariableValues for the full subcategory system
-- Flexible scope system for different run types
-"""
-
 from typing import List, Optional
 
 from pydantic import Field
@@ -32,28 +13,23 @@ class VariableValueSchema(BaseEmbedSchema):
     "Easy", "Normal", "Hard" - each with their own ID and slug.
 
     Attributes:
-        value: The unique ID for this value
-        name: Human-readable name (e.g., "Hard Mode")
-        slug: URL-friendly version
-        hidden: Whether this value is hidden
-        rules: Specific rules for this value choice
+        value (str): The unique ID for this value
+        name (str): Human-readable name (e.g., "Hard Mode")
+        slug (str): URL-friendly version
+        hidden (bool): Whether this value is hidden
+        rules (Optional[str]): Specific rules for this value choice
     """
 
     value: str = Field(
-        ...,
-        max_length=10,
-        description="Speedrun.com variable value ID",
-        example="zqoee4k1",
+        ..., max_length=10, description="Speedrun.com variable value ID"
     )
-    name: str = Field(..., max_length=50, description="Value name", example="Hard Mode")
-    slug: str = Field(
-        ..., max_length=50, description="URL-friendly value slug", example="hard-mode"
-    )
+    name: str = Field(..., max_length=50, description="Value name")
+    slug: str = Field(..., max_length=50, description="URL-friendly value slug")
     hidden: bool = Field(
-        False, description="Whether this value is hidden from listings"
+        default=False, description="Whether this value is hidden from listings"
     )
     rules: Optional[str] = Field(
-        None, max_length=1000, description="Rules specific to this value choice"
+        default=None, max_length=1000, description="Rules specific to this value choice"
     )
 
 
@@ -65,36 +41,28 @@ class VariableBaseSchema(SlugMixin, BaseEmbedSchema):
     For example: difficulty settings, character choices, etc.
 
     Attributes:
-        id: Speedrun.com variable ID
-        name: Variable name (e.g., "Difficulty")
-        slug: URL-friendly version
-        scope: Where this variable applies (global, full-game, etc.)
-        all_cats: Whether variable applies to all categories
-        hidden: Whether variable is hidden
+        id (str): Speedrun.com variable ID
+        name (str): Variable name (e.g., "Difficulty")
+        slug (str): URL-friendly version
+        scope (str): Where this variable applies (global, full-game, etc.)
+        all_cats (bool): Whether variable applies to all categories
+        hidden (bool): Whether variable is hidden
     """
 
-    id: str = Field(
-        ..., max_length=10, description="Speedrun.com variable ID", example="5lygdn8q"
-    )
-    name: str = Field(
-        ..., max_length=50, description="Variable name", example="Difficulty"
-    )
-    slug: str = Field(
-        ...,
-        max_length=50,
-        description="URL-friendly variable slug",
-        example="difficulty",
-    )
+    id: str = Field(..., max_length=10, description="Speedrun.com variable ID")
+    name: str = Field(..., max_length=50, description="Variable name")
+    slug: str = Field(..., max_length=50, description="URL-friendly variable slug")
     scope: str = Field(
         ...,
         description="Where this variable applies",
-        example="full-game",
         pattern="^(global|full-game|all-levels|single-level)$",
     )
     all_cats: bool = Field(
-        False, description="Whether variable applies to all categories in the game"
+        default=False, description="Whether variable applies to all categories in the game"
     )
-    hidden: bool = Field(False, description="Whether variable is hidden from listings")
+    hidden: bool = Field(
+        default=False, description="Whether variable is hidden from listings"
+    )
 
 
 class VariableSchema(VariableBaseSchema):
@@ -103,8 +71,12 @@ class VariableSchema(VariableBaseSchema):
 
     Used when we want variable info but don't need the full
     list of possible values for each variable.
-    """
 
+    Attributes:
+        game (Optional[dict]): Game this variable belongs to - included with ?embed=game
+        category (Optional[dict]): Specific category (if not all_cats) - included with ?embed=category
+        level (Optional[dict]): Specific level (if scope=single-level) - included with ?embed=level
+    """
 
     game: Optional[dict] = Field(
         None, description="Game this variable belongs to - included with ?embed=game"
@@ -127,6 +99,9 @@ class VariableWithValuesSchema(VariableSchema):
     including all the possible choices for each variable.
 
     Takes precedence over VariableSchema when both are requested.
+
+    Attributes:
+        values (List[VariableValueSchema]): Possible values/choices for this variable
     """
 
     values: List[VariableValueSchema] = Field(
@@ -136,13 +111,22 @@ class VariableWithValuesSchema(VariableSchema):
 
 # Simplified create/update schemas
 class VariableCreateSchema(BaseEmbedSchema):
-    """Schema for creating variables."""
+    """
+    Schema for creating variables.
+
+    Attributes:
+        game_id (str): Game ID this variable belongs to
+        name (str): Variable name
+        scope (str): Where this variable applies
+        hidden (bool): Whether variable is hidden
+        category_id (Optional[str]): Specific category ID (if not all_cats)
+        level_id (Optional[str]): Specific level ID (if scope=single-level)
+    """
 
     game_id: str = Field(..., description="Game ID this variable belongs to")
     name: str = Field(..., max_length=50)
     scope: str = Field(..., pattern="^(global|full-game|all-levels|single-level)$")
-    all_cats: bool = Field(False)
-    hidden: bool = Field(False)
+    hidden: bool = Field(default=False)
     category_id: Optional[str] = Field(
         None, description="Specific category ID (if not all_cats)"
     )
@@ -152,14 +136,25 @@ class VariableCreateSchema(BaseEmbedSchema):
 
 
 class VariableUpdateSchema(BaseEmbedSchema):
-    """Schema for updating variables."""
+    """
+    Schema for updating variables.
 
-    game_id: Optional[str] = Field(None)
-    name: Optional[str] = Field(None, max_length=50)
+    Attributes:
+        game_id (Optional[str]): Updated game ID
+        name (Optional[str]): Updated variable name
+        scope (Optional[str]): Updated scope
+        all_cats (Optional[bool]): Updated all_cats flag
+        hidden (Optional[bool]): Updated hidden status
+        category_id (Optional[str]): Updated category ID
+        level_id (Optional[str]): Updated level ID
+    """
+
+    game_id: Optional[str] = Field(default=None)
+    name: Optional[str] = Field(default=None, max_length=50)
     scope: Optional[str] = Field(
         None, pattern="^(global|full-game|all-levels|single-level)$"
     )
-    all_cats: Optional[bool] = Field(None)
-    hidden: Optional[bool] = Field(None)
-    category_id: Optional[str] = Field(None)
-    level_id: Optional[str] = Field(None)
+    all_cats: Optional[bool] = Field(default=None)
+    hidden: Optional[bool] = Field(default=None)
+    category_id: Optional[str] = Field(default=None)
+    level_id: Optional[str] = Field(default=None)

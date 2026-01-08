@@ -1,6 +1,7 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from guides.models import Guides, Tags
@@ -15,14 +16,188 @@ from api.schemas.guides import (
     GuideUpdateSchema,
 )
 
-guides_router = Router()
+router = Router()
+
+# OpenAPI documentation
+GUIDES_ALL = {
+    "responses": {
+        200: {
+            "description": "Success!",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "1234",
+                            "title": "THPS4 Guide",
+                            "slug": "thps4-guide",
+                            "game": "thps4",
+                            "tags": ["tricks", "beginner", "TAS"],
+                            "short_description": "Learn the basics of THPS4!",
+                            "created_at": "2025-08-15T10:30:00Z",
+                            "updated_at": "2025-08-15T10:30:00Z",
+                        }
+                    ]
+                }
+            },
+        },
+        400: {"description": "Invalid response sent to server."},
+        404: {"description": "Guide could not be found."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "game",
+            "in": "query",
+            "example": "thps34",
+            "schema": {"pattern": "^[a-z0-9-]+$"},
+        },
+        {
+            "name": "tags",
+            "in": "query",
+            "example": "tricks",
+            "schema": {"pattern": "^[a-z0-9-]+$"},
+        },
+        {
+            "name": "embed",
+            "in": "embed",
+            "example": "game",
+            "schema": {"pattern": "^[a-z0-9-]+$"},
+        },
+    ],
+}
+
+GUIDES_GET = {
+    "responses": {
+        200: {
+            "description": "Success!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "1234",
+                        "title": "THPS4 Guide",
+                        "slug": "thps4-guide",
+                        "game": "thps4",
+                        "tags": ["tricks", "beginner", "TAS"],
+                        "short_description": "Learn the basics in THPS4!",
+                        "content": "# Basics\n\nBlah blah blah...",
+                        "created_at": "2025-08-15T10:30:00Z",
+                        "updated_at": "2025-08-15T10:30:00Z",
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid response sent to server."},
+        404: {"description": "Guide could not be found."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "embed",
+            "in": "embed",
+            "example": "game",
+            "schema": {"pattern": "^[a-z0-9-]+$"},
+        },
+    ],
+}
+
+GUIDES_POST = {
+    "responses": {
+        200: {
+            "description": "Success!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "1234",
+                        "title": "THPS4 Guide",
+                        "slug": "thps4-guide",
+                        "game": "thps4",
+                        "tags": ["tricks", "beginner", "TAS"],
+                        "short_description": "Learn the basics in THPS4!",
+                        "content": "# Basics\n\nBlah blah blah...",
+                        "created_at": "2025-08-15T10:30:00Z",
+                        "updated_at": "2025-08-15T10:30:00Z",
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid response sent to server."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "requestBody": {
+        "content": {
+            "application/json": {
+                "example": {
+                    "title": "THPS4 Guide",
+                    "slug": "thps4-guide",
+                    "game": "thps4",
+                    "tags": ["tricks", "beginner", "TAS"],
+                    "short_description": "Learn the basics in THPS4!",
+                    "content": "# Basics\n\nBlah blah blah...",
+                }
+            }
+        }
+    },
+}
+
+GUIDES_PUT = {
+    "responses": {
+        200: {
+            "description": "Success!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "1234",
+                        "title": "THPS4 Guide",
+                        "slug": "thps4-guide",
+                        "game": "thps4",
+                        "tags": ["tricks", "beginner", "TAS"],
+                        "short_description": "Learn the advanced in THPS4!",
+                        "content": "# Advanced\n\nBlah blah blah...",
+                        "created_at": "2025-08-15T10:30:00Z",
+                        "updated_at": "2025-08-15T13:30:00Z",
+                    }
+                }
+            },
+        },
+        404: {"description": "Guide does not exist."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "requestBody": {
+        "content": {
+            "application/json": {
+                "example": {
+                    "title": "THPS4 Guide",
+                    "slug": "thps4-guide",
+                    "game": "thps4",
+                    "tags": ["tricks", "beginner", "TAS"],
+                    "short_description": "Learn the advanced tricks in THPS4!",
+                    "content": "# Advanced\n\nBlah blah blah...",
+                }
+            }
+        }
+    },
+}
 
 
-@guides_router.get(
+@router.get(
     "/all",
-    response=List[GuideListSchema],
+    response=Union[List[GuideListSchema], ErrorResponse],
     summary="List All Guides",
-    description="Retrieve all guides with optional filtering by game and tag",
+    description="""
+    Gets all guides within the database, with optional querying and embeds.
+
+    Embed Parameters:
+    - `embed`: Include all related data within the query (game, tags).
+
+    Query Parameters:
+    - `game` (str): Filter guides based on the game's slug or ID.
+    - `tag` (str): Filter guides based on the tag's slug or ID.
+    """,
+    openapi_extra=GUIDES_ALL,
 )
 def list_guides(
     request: HttpRequest,
@@ -31,42 +206,29 @@ def list_guides(
     embed: Optional[str] = Query(
         None, description="Comma-separated embeds (game,tags)"
     ),
-):
-    """
-    Get all guides with optional filtering and embeds.
-
-    Query Parameters:
-    - game: Filter guides by game slug
-    - tag: Filter guides by tag slug
-    - embed: Include related data (game, tags)
-
-    Examples:
-    - /guides/all - All guides
-    - /guides/all?game=thps4 - Guides for THPS4
-    - /guides/all?tag=tricks - Guides tagged with 'tricks'
-    - /guides/all?embed=game,tags - Include game and tag data
-    """
-    # Validate embeds
+) -> List[GuideListSchema]:
     embed_list = []
     if embed:
         embed_list = [e.strip() for e in embed.split(",")]
         invalid_embeds = validate_embeds("guides", embed_list)
         if invalid_embeds:
-            return 400, ErrorResponse(
+            return ErrorResponse(
                 error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
+                details=None,
                 code=400,
             )
 
-    # Base query
     queryset = Guides.objects.all()
 
-    # Apply filters
     if game:
-        queryset = queryset.filter(game__slug=game)
+        queryset = queryset.filter(
+            Q(game__slug__iexact=game) | Q(game__id__iexact=game),
+        )
     if tag:
-        queryset = queryset.filter(tags__slug=tag)
+        queryset = queryset.filter(
+            Q(tags__slug__iexact=tag) | Q(tags__id__iexact=game),
+        )
 
-    # Apply embeds
     if "game" in embed_list:
         queryset = queryset.select_related("game")
     if "tags" in embed_list:
@@ -74,12 +236,10 @@ def list_guides(
 
     guides = list(queryset.distinct())
 
-    # Convert to schemas
     result = []
     for guide in guides:
-        guide_data = GuideListSchema.from_orm(guide)
+        guide_data = GuideListSchema.model_validate(guide)
 
-        # Handle embeds
         if "game" in embed_list:
             guide_data.game = guide.game
         if "tags" in embed_list:
@@ -90,11 +250,20 @@ def list_guides(
     return result
 
 
-@guides_router.get(
+@router.get(
     "/{slug}",
     response=GuideSchema,
     summary="Get Guide by Slug",
-    description="Retrieve a specific guide by its slug with optional embeds",
+    description="""
+    Get a specific guide by its slug.
+
+    Parameters:
+    - slug (str): Simplified, URL friendly name of the guide.
+
+    Query Parameters:
+    - embed (list): Include all related data within the query (game, tags).
+    """,
+    openapi_extra=GUIDES_GET,
 )
 def get_guide(
     request: HttpRequest,
@@ -102,21 +271,7 @@ def get_guide(
     embed: Optional[str] = Query(
         None, description="Comma-separated embeds (game,tags)"
     ),
-):
-    """
-    Get a specific guide by slug.
-
-    Path Parameters:
-    - slug: Guide slug (URL-friendly identifier)
-
-    Query Parameters:
-    - embed: Include related data (game, tags)
-
-    Examples:
-    - /guides/thps4-skitchin-guide - Get guide
-    - /guides/thps4-skitchin-guide?embed=game,tags - Include related data
-    """
-    # Validate embeds
+) -> GuideSchema:
     embed_list = []
     if embed:
         embed_list = [e.strip() for e in embed.split(",")]
@@ -127,8 +282,7 @@ def get_guide(
                 code=400,
             )
 
-    # Build query with embeds
-    queryset = Guides.objects
+    queryset = Guides.objects.all()
     if "game" in embed_list:
         queryset = queryset.select_related("game")
     if "tags" in embed_list:
@@ -136,10 +290,8 @@ def get_guide(
 
     guide = get_object_or_404(queryset, slug=slug)
 
-    # Convert to schema
-    guide_data = GuideSchema.from_orm(guide)
+    guide_data = GuideSchema.model_validate(guide)
 
-    # Handle embeds
     if "game" in embed_list:
         guide_data.game = guide.game
     if "tags" in embed_list:
@@ -148,28 +300,28 @@ def get_guide(
     return guide_data
 
 
-@guides_router.post(
+@router.post(
     "/",
     response=GuideSchema,
-    summary="Create Guide",
-    description="Create a new guide (requires contributor role or higher)",
-)
-def create_guide(request: HttpRequest, data: GuideCreateSchema):
-    """
-    Create a new guide.
+    summary="Create New Guide",
+    description="""
+    Creates a brand new guide.
 
-    Requires contributor authentication or higher.
+    REQUIRES CONTRIBUTOR ACCESS OR HIGHER.
 
     Request Body:
-    - title: Guide title
-    - game_id: Associated game ID
-    - tag_ids: List of tag IDs (optional)
-    - short_description: Brief description
-    - content: Full guide content (Markdown supported)
-
-    Returns the created guide with all data.
-    """
-    # Validate game exists
+    - title (str): Name of the guide.
+    - game_id (str): Unique game ID or slug of the game this is associated with.
+    - tag_ids [Optional] (list): List of tag IDs or their slug.
+    - short_description (str): Brief description of the guide (limit 500 characters).
+    - content (str): Full guide content (markdown supported).
+    """,
+    openapi_extra=GUIDES_POST,
+)
+def create_guide(
+    request: HttpRequest,
+    data: GuideCreateSchema,
+) -> GuideSchema:
     try:
         game = Games.objects.get(id=data.game_id)
     except Games.DoesNotExist:
@@ -178,21 +330,21 @@ def create_guide(request: HttpRequest, data: GuideCreateSchema):
             code=400,
         )
 
-    # Validate tags exist
     if data.tag_ids:
-        existing_tags = Tags.objects.filter(id__in=data.tag_ids)
+        existing_tags = Tags.objects.filter(
+            Q(id__in=data.tag_ids) | Q(slug__in=data.tag_ids),
+        )
         if len(existing_tags) != len(data.tag_ids):
             missing_ids = set(data.tag_ids) - set(
                 existing_tags.values_list("id", flat=True)
             )
             return 400, ErrorResponse(
-                error=f"Tags with IDs {list(missing_ids)} do not exist",
+                error=f"Tags with IDs/slugs {list(missing_ids)} do not exist",
                 code=400,
             )
 
     try:
         with transaction.atomic():
-            # Create guide
             guide = Guides.objects.create(
                 title=data.title,
                 game=game,
@@ -200,17 +352,14 @@ def create_guide(request: HttpRequest, data: GuideCreateSchema):
                 content=data.content,
             )
 
-            # Add tags if provided
             if data.tag_ids:
                 guide.tags.set(data.tag_ids)
 
-            # Return with embeds
-            guide_data = GuideSchema.from_orm(guide)
+            guide_data = GuideSchema.model_validate(guide)
             guide_data.game = guide.game
             guide_data.tags = list(guide.tags.all())
 
             return guide_data
-
     except Exception as e:
         return 500, ErrorResponse(
             error=f"Failed to create guide: {str(e)}",
@@ -218,33 +367,31 @@ def create_guide(request: HttpRequest, data: GuideCreateSchema):
         )
 
 
-@guides_router.put(
+@router.put(
     "/{slug}",
     response=GuideSchema,
     summary="Update Guide",
-    description="Update an existing guide (requires contributor role or higher)",
+    description="""
+    Modifies an existing guide.
+
+    REQUIRES CONTRIBUTOR ACCESS OR HIGHER.
+
+    Request Body:
+    - title (str): Name of the guide.
+    - game_id (str): Unique game ID or slug of the game this is associated with.
+    - tag_ids [Optional] (list): List of tag IDs or their slug.
+    - short_description (str): Brief description of the guide (limit 500 characters).
+    - content (str): Full guide content (markdown supported).
+    """,
+    openapi_extra=GUIDES_PUT,
 )
-def update_guide(request: HttpRequest, slug: str, data: GuideUpdateSchema):
-    """
-    Update an existing guide.
-
-    Requires contributor authentication or higher.
-
-    Path Parameters:
-    - slug: Guide slug to update
-
-    Request Body (all fields optional):
-    - title: Updated title
-    - game_id: Updated game ID
-    - tag_ids: Updated tag IDs
-    - short_description: Updated description
-    - content: Updated content
-
-    Returns the updated guide with all data.
-    """
+def update_guide(
+    request: HttpRequest,
+    slug: str,
+    data: GuideUpdateSchema,
+) -> GuideSchema:
     guide = get_object_or_404(Guides, slug=slug)
 
-    # Validate game if provided
     if data.game_id:
         try:
             Games.objects.get(id=data.game_id)
@@ -254,9 +401,8 @@ def update_guide(request: HttpRequest, slug: str, data: GuideUpdateSchema):
                 code=400,
             )
 
-    # Validate tags if provided
     if data.tag_ids is not None:
-        if data.tag_ids:  # Only validate if list is not empty
+        if data.tag_ids:
             existing_tags = Tags.objects.filter(id__in=data.tag_ids)
             if len(existing_tags) != len(data.tag_ids):
                 missing_ids = set(data.tag_ids) - set(
@@ -269,10 +415,9 @@ def update_guide(request: HttpRequest, slug: str, data: GuideUpdateSchema):
 
     try:
         with transaction.atomic():
-            # Update fields
             if data.title is not None:
                 guide.title = data.title
-                guide.slug = ""  # Reset slug to trigger regeneration
+                guide.slug = ""
             if data.game_id:
                 guide.game = Games.objects.get(id=data.game_id)
             if data.short_description is not None:
@@ -282,12 +427,10 @@ def update_guide(request: HttpRequest, slug: str, data: GuideUpdateSchema):
 
             guide.save()
 
-            # Update tags if provided
             if data.tag_ids is not None:
                 guide.tags.set(data.tag_ids)
 
-            # Return with embeds
-            guide_data = GuideSchema.from_orm(guide)
+            guide_data = GuideSchema.model_validate(guide)
             guide_data.game = guide.game
             guide_data.tags = list(guide.tags.all())
 
@@ -300,23 +443,23 @@ def update_guide(request: HttpRequest, slug: str, data: GuideUpdateSchema):
         )
 
 
-@guides_router.delete(
+@router.delete(
     "/{slug}",
     response={204: None},
     summary="Delete Guide",
-    description="Delete a guide (requires contributor role or higher)",
+    description="""
+    Deletes an existing guide.
+
+    REQUIRES CONTRIBUTOR ACCESS OR HIGHER.
+
+    Parameters:
+    - slug (str): Simplified, URL friendly name of the guide.
+    """,
 )
-def delete_guide(request: HttpRequest, slug: str):
-    """
-    Delete a guide.
-
-    Requires contributor authentication or higher.
-
-    Path Parameters:
-    - slug: Guide slug to delete
-
-    Returns 204 No Content on success.
-    """
+def delete_guide(
+    request: HttpRequest,
+    slug: str,
+):
     guide = get_object_or_404(Guides, slug=slug)
 
     try:

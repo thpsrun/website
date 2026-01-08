@@ -1,19 +1,3 @@
-"""
-Runs Schemas for Django Ninja API
-
-Schemas for the Runs model - the core entity representing individual speedruns.
-This is one of the most complex schemas due to the many relationships and
-the variable subcategory system.
-
-Key Features:
-- Game/Category/Level relationships
-- Player and Player2 (for co-op runs)
-- Variable values (subcategory selections)
-- Multiple time formats (RTA, LRT, IGT)
-- Status system (verified, new, rejected)
-- Points calculation integration
-"""
-
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -29,38 +13,33 @@ class RunBaseSchema(BaseEmbedSchema):
     Contains all core run data including times, status, and basic metadata.
 
     Attributes:
-        id: Speedrun.com run ID
-        runtype: Whether this is a full-game or individual level run
-        place: Leaderboard position
-        subcategory: Human-readable subcategory description
-        time: Formatted time string (e.g., "1:23.456")
-        time_secs: Time in seconds (for sorting/calculations)
-        video: Video URL
-        date: Submission date
-        v_date: Verification date
-        status: Verification status
-        url: Speedrun.com URL
+        id (str): Speedrun.com run ID
+        runtype (str): Whether this is a full-game or individual level run
+        place (int): Leaderboard position
+        subcategory (Optional[str]): Human-readable subcategory description
+        time (Optional[str]): Formatted time string (e.g., "1:23.456")
+        time_secs (Optional[float]): Time in seconds (for sorting/calculations)
+        video (Optional[str]): Video URL
+        date (Optional[datetime]): Submission date
+        v_date (Optional[datetime]): Verification date
+        url (str): Speedrun.com URL
     """
 
-    id: str = Field(
-        ..., max_length=10, description="Speedrun.com run ID", example="y8dwozoj"
-    )
-    runtype: str = Field(
-        ..., description="Run type", example="main", pattern="^(main|il)$"
-    )
-    place: int = Field(..., description="Leaderboard position", example=1, ge=1)
+    id: str = Field(..., max_length=10, description="Speedrun.com run ID")
+    runtype: str = Field(..., description="Run type", pattern="^(main|il)$")
+    place: int = Field(..., description="Leaderboard position", ge=1)
     subcategory: Optional[str] = Field(
-        None, max_length=100, description="Human-readable subcategory description"
+        default=None, max_length=100, description="Human-readable subcategory description"
     )
     time: Optional[str] = Field(
-        None, max_length=25, description="Formatted time string", example="1:23.456"
+        default=None, max_length=25, description="Formatted time string"
     )
     time_secs: Optional[float] = Field(
-        None, description="Time in seconds", example=83.456, ge=0
+        default=None, description="Time in seconds", ge=0
     )
-    video: Optional[str] = Field(None, description="Video URL")
-    date: Optional[datetime] = Field(None, description="Submission date")
-    v_date: Optional[datetime] = Field(None, description="Verification date")
+    video: Optional[str] = Field(default=None, description="Video URL")
+    date: Optional[datetime] = Field(default=None, description="Submission date")
+    v_date: Optional[datetime] = Field(default=None, description="Verification date")
     url: str = Field(..., description="Speedrun.com URL")
 
 
@@ -70,12 +49,12 @@ class RunSchema(RunBaseSchema):
 
     Supports embedding related objects like game, category, player, etc.
 
-    Supported Embeds:
-        - game: Game information
-        - category: Category information
-        - level: Level information (for ILs)
-        - players: All players who participated in this run
-        - variables: Variable values (subcategory selections)
+    Attributes:
+        game (Optional[dict]): Game information - included with ?embed=game
+        category (Optional[dict]): Category information - included with ?embed=category
+        level (Optional[dict]): Level information - included with ?embed=level
+        players (Optional[List[dict]]): All players who participated - included with ?embed=players
+        variables (Optional[List[dict]]): Variable selections - included with ?embed=variables
     """
 
     game: Optional[dict] = Field(
@@ -96,22 +75,40 @@ class RunSchema(RunBaseSchema):
 
 
 class RunCreateSchema(BaseEmbedSchema):
-    """Schema for creating runs."""
+    """
+    Schema for creating runs.
+
+    Attributes:
+        game_id (str): Game ID
+        category_id (Optional[str]): Category ID
+        level_id (Optional[str]): Level ID (for ILs)
+        player_ids (Optional[List[str]]): List of player IDs in order of participation
+        runtype (str): Run type (main or il)
+        place (int): Leaderboard position
+        subcategory (Optional[str]): Human-readable subcategory description
+        time (Optional[str]): Formatted time string
+        time_secs (Optional[float]): Time in seconds
+        video (Optional[str]): Video URL
+        date (Optional[datetime]): Submission date
+        v_date (Optional[datetime]): Verification date
+        url (str): Speedrun.com URL
+        variable_values (Optional[Dict[str, str]]): Variable value selections
+    """
 
     game_id: str = Field(..., description="Game ID")
-    category_id: Optional[str] = Field(None, description="Category ID")
-    level_id: Optional[str] = Field(None, description="Level ID (for ILs)")
+    category_id: Optional[str] = Field(default=None, description="Category ID")
+    level_id: Optional[str] = Field(default=None, description="Level ID (for ILs)")
     player_ids: Optional[List[str]] = Field(
         None, description="List of player IDs in order of participation"
     )
     runtype: str = Field(..., pattern="^(main|il)$")
     place: int = Field(..., ge=1)
-    subcategory: Optional[str] = Field(None, max_length=100)
-    time: Optional[str] = Field(None, max_length=25)
-    time_secs: Optional[float] = Field(None, ge=0)
-    video: Optional[str] = Field(None)
-    date: Optional[datetime] = Field(None)
-    v_date: Optional[datetime] = Field(None)
+    subcategory: Optional[str] = Field(default=None, max_length=100)
+    time: Optional[str] = Field(default=None, max_length=25)
+    time_secs: Optional[float] = Field(default=None, ge=0)
+    video: Optional[str] = Field(default=None)
+    date: Optional[datetime] = Field(default=None)
+    v_date: Optional[datetime] = Field(default=None)
     url: str = Field(...)
     # Variable values as a dict: {"variable_id": "value_id"}
     variable_values: Optional[Dict[str, str]] = Field(
@@ -120,21 +117,39 @@ class RunCreateSchema(BaseEmbedSchema):
 
 
 class RunUpdateSchema(BaseEmbedSchema):
-    """Schema for updating runs."""
+    """
+    Schema for updating runs.
 
-    game_id: Optional[str] = Field(None)
-    category_id: Optional[str] = Field(None)
-    level_id: Optional[str] = Field(None)
+    Attributes:
+        game_id (Optional[str]): Updated game ID
+        category_id (Optional[str]): Updated category ID
+        level_id (Optional[str]): Updated level ID
+        player_ids (Optional[List[str]]): Updated list of player IDs
+        runtype (Optional[str]): Updated run type
+        place (Optional[int]): Updated leaderboard position
+        subcategory (Optional[str]): Updated subcategory description
+        time (Optional[str]): Updated formatted time string
+        time_secs (Optional[float]): Updated time in seconds
+        video (Optional[str]): Updated video URL
+        date (Optional[datetime]): Updated submission date
+        v_date (Optional[datetime]): Updated verification date
+        url (Optional[str]): Updated Speedrun.com URL
+        variable_values (Optional[Dict[str, str]]): Updated variable selections
+    """
+
+    game_id: Optional[str] = Field(default=None)
+    category_id: Optional[str] = Field(default=None)
+    level_id: Optional[str] = Field(default=None)
     player_ids: Optional[List[str]] = Field(
         None, description="List of player IDs in order of participation"
     )
-    runtype: Optional[str] = Field(None, pattern="^(main|il)$")
-    place: Optional[int] = Field(None, ge=1)
-    subcategory: Optional[str] = Field(None, max_length=100)
-    time: Optional[str] = Field(None, max_length=25)
-    time_secs: Optional[float] = Field(None, ge=0)
-    video: Optional[str] = Field(None)
-    date: Optional[datetime] = Field(None)
-    v_date: Optional[datetime] = Field(None)
-    url: Optional[str] = Field(None)
-    variable_values: Optional[Dict[str, str]] = Field(None)
+    runtype: Optional[str] = Field(default=None, pattern="^(main|il)$")
+    place: Optional[int] = Field(default=None, ge=1)
+    subcategory: Optional[str] = Field(default=None, max_length=100)
+    time: Optional[str] = Field(default=None, max_length=25)
+    time_secs: Optional[float] = Field(default=None, ge=0)
+    video: Optional[str] = Field(default=None)
+    date: Optional[datetime] = Field(default=None)
+    v_date: Optional[datetime] = Field(default=None)
+    url: Optional[str] = Field(default=None)
+    variable_values: Optional[Dict[str, str]] = Field(default=None)

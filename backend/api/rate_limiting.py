@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import hashlib
 import time
 from functools import wraps
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict
 
 from django.core.cache import cache
 from django.http import HttpRequest, JsonResponse
@@ -11,11 +9,13 @@ from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.exceptions import Ratelimited
 
-from .models import RoleAPIKey
+from backend.api.models import RoleAPIKey
 
 
 # Approach 1: Django-ratelimit Integration
-def api_ratelimit(rate: str = "100/m", key: str = "ip", block: bool = True) -> Callable[[Callable], Callable]:
+def api_ratelimit(
+    rate: str = "100/m", key: str = "ip", block: bool = True
+) -> Callable[[Callable], Callable]:
     """
     Django-ratelimit decorator adapted for Django Ninja.
 
@@ -32,7 +32,6 @@ def api_ratelimit(rate: str = "100/m", key: str = "ip", block: bool = True) -> C
     """
 
     def decorator(func):
-        # Apply django-ratelimit decorator
         @ratelimit(key=key, rate=rate, block=block)
         @wraps(func)
         def wrapper(request: HttpRequest, *args, **kwargs):

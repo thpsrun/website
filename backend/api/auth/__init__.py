@@ -1,13 +1,11 @@
-from .api_key import api_key_required
-from .api_key import read_only_auth as legacy_read_only_auth
-
-# Import auth functions from permissions module
+from api.auth.api_key import api_key_required
+from api.auth.api_key import read_only_auth as legacy_read_only_auth
 from api.permissions import (
-    public_auth,
-    read_only_auth,
+    admin_auth,
     contributor_auth,
     moderator_auth,
-    admin_auth,
+    public_auth,
+    read_only_auth,
 )
 
 __all__ = [

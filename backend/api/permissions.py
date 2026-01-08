@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 from typing import Any, Dict, Optional
 
 from django.http import HttpRequest
 from django.utils import timezone
 from ninja.security import APIKeyHeader
 
-from .models import RoleAPIKey
+from api.models import RoleAPIKey
 
 
 class HasRoleAPIKey:
@@ -24,7 +22,9 @@ class HasRoleAPIKey:
             return False
 
         try:
-            api_key_obj: Optional[RoleAPIKey] = RoleAPIKey.objects.get_from_key(api_key_header)
+            api_key_obj: Optional[RoleAPIKey] = RoleAPIKey.objects.get_from_key(
+                api_key_header
+            )
             return api_key_obj is not None
         except RoleAPIKey.DoesNotExist:
             return False
@@ -40,7 +40,10 @@ class RoleBasedAPIKeyAuth(APIKeyHeader):
 
     param_name = "X-API-Key"
 
-    def __init__(self, required_role: str = "read_only") -> None:
+    def __init__(
+        self,
+        required_role: str = "read_only",
+    ) -> None:
         """
         Initialize with required role.
 
@@ -50,7 +53,11 @@ class RoleBasedAPIKeyAuth(APIKeyHeader):
         self.required_role: str = required_role
         super().__init__()
 
-    def authenticate(self, request: HttpRequest, key: str) -> Optional[Dict[str, Any]]:
+    def authenticate(
+        self,
+        request: HttpRequest,
+        key: str,
+    ) -> Optional[Dict[str, Any]]:
         """
         Validate API key and check role permissions.
 
@@ -128,7 +135,9 @@ class PublicOrRoleAuth:
 
 
 # Pre-configured auth instances for common use cases
-public_auth: PublicOrRoleAuth = PublicOrRoleAuth("read_only")  # GET public, others need read_only+
+public_auth: PublicOrRoleAuth = PublicOrRoleAuth(
+    "read_only"
+)  # GET public, others need read_only+
 read_only_auth: RoleBasedAPIKeyAuth = RoleBasedAPIKeyAuth("read_only")
 contributor_auth: RoleBasedAPIKeyAuth = RoleBasedAPIKeyAuth("contributor")
 moderator_auth: RoleBasedAPIKeyAuth = RoleBasedAPIKeyAuth("moderator")

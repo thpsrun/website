@@ -1,7 +1,10 @@
 from django.core.exceptions import ValidationError
+from django.db.models.fields.files import ImageFieldFile
 
 
-def validate_image(image):
+def validate_image(
+    image: ImageFieldFile,
+) -> None:
     file_size = image.file.size
     file_width = image.file.image._size[0]
     file_height = image.file.image._size[1]

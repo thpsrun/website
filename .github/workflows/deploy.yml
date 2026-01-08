@@ -1,43 +1,87 @@
-name: thps.run CI/CD Pipeline
+name: Backend CI/CD Pipeline
 
 on:
   push:
     branches:
       - main
       - dev
+  pull_request:
+    branches:
+      - main
+      - dev
 
 jobs:
-  deploy-dev-flake8:
-    if: github.ref == 'refs/heads/dev'
+  lint-backend:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          ref: dev
+        uses: actions/checkout@v6
 
-      - name: "Setup Python Environment"
-        uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-      
+          cache: 'pip'
+
       - name: Install Flake8
-        run: |
-          python -m pip install --upgrade flake8
+        run: python -m pip install --upgrade flake8
 
-      - name: "Run Flake8 for Linting"
+      - name: Run Flake8
+        run: |
+          flake8 --extend-ignore=E126,E127,E128,E203,E221,W503,W504 \
+                 --extend-exclude=*/migrations/*.py \
+                 --max-line-length=100 \
+                 $(git ls-files | grep py$)
+
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Django Tests
+        working-directory: ./backend
+        run: |
+          python manage.py migrate --noinput
+          python manage.py test
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install pip-audit
+        run: python -m pip install pip-audit
+
+      - name: Run pip-audit
+        run: pip-audit -r requirements.txt --desc
         continue-on-error: true
-        run: |
-          flake8 --extend-ignore=E126,E127,E128,E203,E221,W503,W504 --extend-exclude=*/migrations/*.py --max-line-length=100 `git ls-files | grep py$`
 
-  deploy-dev-test:
-    if: github.ref == 'refs/heads/dev'
+  deploy-dev:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    needs: [lint-backend, test-backend, security-scan]
     runs-on: ubuntu-latest
 
     steps:
       - name: Tailscale
-        uses: tailscale/github-action@v3
+        uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.DEV_TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.DEV_TS_OAUTH_SECRET }}
@@ -48,9 +92,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: dev
-  
-      - name: SSH - Deploy - Restart Docker
-        uses: appleboy/ssh-action@v1.0.3
+
+      - name: SSH - Deploy to Dev
+        uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.DEV_SERVER_IP }}
           username: ${{ secrets.DEV_SERVER_USER }}
@@ -60,26 +104,47 @@ jobs:
             cd ~/deploy
             git pull origin dev
 
+            echo "Running database migrations..."
+            docker compose -f docker-compose.PROD.yml run --rm django python manage.py migrate --noinput
+
+            echo "Collecting static files..."
+            docker compose -f docker-compose.PROD.yml run --rm django python manage.py collectstatic --noinput
+
             echo "Restarting Docker containers..."
             docker compose down
             docker compose -f docker-compose.PROD.yml up -d --build
 
-      - name: Cleanup Docker
+            echo "Cleaning up Docker..."
+            docker system prune -f
+
+      - name: Health Check
         run: |
-          echo "Cleaning up Docker system..."
-          docker system prune -f
+          echo "Waiting for services to start..."
+          sleep 30
 
-      #- name: Run Docker Tests
-        #run: |
-          #docker exec -it django python3 manage.py test
+          echo "Checking API health..."
+          curl -f https://localhost/api/v1/ || echo "!!!!!!! API health check failed !!!!!!!"
 
-  deploy-main:
-    if: github.ref == 'refs/heads/main'
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "Dev deployment successful"
+
+      - name: Notify Failure
+        if: failure()
+        run: |
+          echo "Dev deployment failed - check logs"
+
+  deploy-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [lint-backend, test-backend, security-scan]
     runs-on: ubuntu-latest
+    environment:
+      name: production
 
     steps:
       - name: Tailscale
-        uses: tailscale/github-action@v3
+        uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
@@ -90,9 +155,39 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
-  
-      - name: SSH - Deploy - Restart Docker
-        uses: appleboy/ssh-action@v1.0.3
+
+      - name: Create Deployment Tag
+        run: |
+          TAG="deploy-$(date +'%Y%m%d-%H%M%S')"
+          echo "DEPLOY_TAG=$TAG" >> $GITHUB_ENV
+          echo "Deployment tag: $TAG"
+
+      - name: SSH - Backup Database
+        uses: appleboy/ssh-action@v1.2.4
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            cd ~/website
+
+            mkdir -p ~/backups
+            BACKUP_FILE="pre-deploy-$(date +'%Y%m%d-%H%M%S').sql.gz"
+
+            echo "Creating pre-deployment backup: $BACKUP_FILE"
+            docker exec postgres pg_dump -U $POSTGRES_USER $POSTGRES_DB | gzip > ~/backups/$BACKUP_FILE
+
+            if [ -f ~/backups/$BACKUP_FILE ]; then
+              SIZE=$(du -h ~/backups/$BACKUP_FILE | cut -f1)
+              echo "Backup created: $BACKUP_FILE ($SIZE)"
+            else
+              echo "Backup failed!"
+              exit 1
+            fi
+
+      - name: SSH - Deploy to Production
+        uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
@@ -102,11 +197,46 @@ jobs:
             cd ~/website
             git pull origin main
 
+            echo "Running database migrations..."
+            docker compose -f docker-compose.PROD.yml run --rm django python manage.py migrate --noinput
+
+            echo "Collecting static files..."
+            docker compose -f docker-compose.PROD.yml run --rm django python manage.py collectstatic --noinput
+
             echo "Restarting Docker containers..."
             docker compose down
             docker compose -f docker-compose.PROD.yml up -d --build
 
-      - name: Cleanup Docker
+            echo "Cleaning up Docker..."
+            docker system prune -f
+
+            echo "Deployment completed successfully!"
+
+      - name: Health Check
         run: |
-          echo "Cleaning up Docker system..."
-          docker system prune -f
+          echo "Waiting for services to start..."
+          sleep 30
+
+          echo "Checking API health..."
+          curl -f https://localhost/api/v1/ || echo "!!!!!!!API health check failed - check logs!!!!!!!"
+
+          echo "Checking admin panel..."
+          curl -f https://localhost/illiad/login/ || echo "!!!!!!! Admin panel health check failed - check logs!!!!!!!"
+
+      - name: Tag Successful Deployment
+        if: success()
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a ${{ env.DEPLOY_TAG }} -m "Deployed to Production"
+          git push origin ${{ env.DEPLOY_TAG }}
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "Production deployment successful: ${{ env.DEPLOY_TAG }}"
+
+      - name: Notify Failure
+        if: failure()
+        run: |
+          echo "Production deployment failed!"

@@ -27,8 +27,6 @@ Example API Usage:
     GET /api/v1/games/all?embed=categories -> All games with categories
 """
 
-from __future__ import annotations
-
 from datetime import date
 from typing import List, Optional
 
@@ -57,56 +55,32 @@ class GameBaseSchema(SlugMixin, BaseEmbedSchema):
         ipointsmax: Maximum points for world record IL runs
     """
 
-    id: str = Field(
-        ..., max_length=10, description="Speedrun.com game ID", example="n2680o1p"
-    )
-    name: str = Field(
-        ...,
-        max_length=55,
-        description="Full game name",
-        example="Tony Hawk's Underground",
-    )
-    slug: str = Field(
-        ...,
-        max_length=20,
-        description="URL-friendly game abbreviation",
-        example="thug1",
-    )
+    id: str = Field(..., max_length=10, description="Speedrun.com game ID")
+    name: str = Field(..., max_length=55, description="Full game name")
+    slug: str = Field(..., max_length=20, description="URL-friendly game abbreviation")
     twitch: Optional[str] = Field(
-        None,
-        max_length=55,
-        description="Game name as it appears on Twitch",
-        example="Tony Hawk's Underground",
+        default=None, max_length=55, description="Game name as it appears on Twitch"
     )
-    release: date = Field(..., description="Game release date", example="2003-10-28")
-    boxart: str = Field(
-        ...,
-        description="URL to game box art/cover image",
-        example="https://www.speedrun.com/static/game/n2680o1p/cover?v=16c7cc8",
-    )
+    release: date = Field(..., description="Game release date")
+    boxart: str = Field(..., description="URL to game box art/cover image")
     defaulttime: str = Field(
         ...,
         description="Default timing method for full-game runs",
-        example="ingame",
-        # Enum validation - only these values are allowed
         pattern="^(realtime|realtime_noloads|ingame)$",
     )
     idefaulttime: str = Field(
         ...,
         description="Default timing method for individual level runs",
-        example="ingame",
         pattern="^(realtime|realtime_noloads|ingame)$",
     )
     pointsmax: int = Field(
         1000,
         description="Maximum points awarded for world record full-game runs",
-        example=1000,
-        ge=1,  # Must be >= 1
+        ge=1,
     )
     ipointsmax: int = Field(
         100,
         description="Maximum points awarded for world record IL runs",
-        example=100,
         ge=1,
     )
 
@@ -125,10 +99,10 @@ class GameSchema(GameBaseSchema):
     This is much cleaner than DRF's approach of conditionally including/excluding
     fields in the to_representation() method.
 
-    Supported Embeds:
-        - categories: List of categories (Any%, 100%, etc.) for this game
-        - levels: List of individual levels available in this game
-        - platforms: List of supported platforms (PC, PS2, Xbox, etc.)
+    Attributes:
+        categories (Optional[List[dict]]): Game categories - included with ?embed=categories
+        levels (Optional[List[dict]]): Individual levels - included with ?embed=levels
+        platforms (Optional[List[dict]]): Supported platforms - included with ?embed=platforms
 
     Example Responses:
         Basic game (no embeds):
@@ -179,6 +153,10 @@ class GameListSchema(BaseEmbedSchema):
 
     This provides consistent pagination across all list endpoints,
     which is an improvement over DRF's inconsistent pagination handling.
+
+    Attributes:
+        count (int): Total number of games
+        results (List[GameSchema]): Games for this page
     """
 
     count: int = Field(..., description="Total number of games")
@@ -194,15 +172,28 @@ class GameCreateSchema(BaseEmbedSchema):
 
     Note: In the current system, games are imported from Speedrun.com
     rather than created manually, so this might not be needed.
+
+    Attributes:
+        name (str): Game name
+        slug (str): URL-friendly game abbreviation
+        twitch (Optional[str]): Game name as it appears on Twitch
+        release (date): Game release date
+        boxart (str): URL to game box art/cover image
+        defaulttime (str): Default timing method for full-game runs
+        idefaulttime (str): Default timing method for individual level runs
+        pointsmax (int): Maximum points for world record full-game runs
+        ipointsmax (int): Maximum points for world record IL runs
     """
 
     name: str = Field(..., max_length=55)
     slug: str = Field(..., max_length=20)
-    twitch: Optional[str] = Field(None, max_length=55)
+    twitch: Optional[str] = Field(default=None, max_length=55)
     release: date = Field(...)
     boxart: str = Field(...)
     defaulttime: str = Field("realtime", pattern="^(realtime|realtime_noloads|ingame)$")
-    idefaulttime: str = Field("realtime", pattern="^(realtime|realtime_noloads|ingame)$")
+    idefaulttime: str = Field(
+        "realtime", pattern="^(realtime|realtime_noloads|ingame)$"
+    )
     pointsmax: int = Field(1000, ge=1)
     ipointsmax: int = Field(100, ge=1)
 
@@ -213,21 +204,32 @@ class GameUpdateSchema(BaseEmbedSchema):
 
     This would be used for PUT/PATCH /games/{id} endpoints.
     All fields are optional for partial updates.
+
+    Attributes:
+        name (Optional[str]): Updated game name
+        slug (Optional[str]): Updated URL-friendly game abbreviation
+        twitch (Optional[str]): Updated Twitch name
+        release (Optional[date]): Updated release date
+        boxart (Optional[str]): Updated box art URL
+        defaulttime (Optional[str]): Updated default timing method for full-game runs
+        idefaulttime (Optional[str]): Updated default timing method for IL runs
+        pointsmax (Optional[int]): Updated max points for full-game runs
+        ipointsmax (Optional[int]): Updated max points for IL runs
     """
 
-    name: Optional[str] = Field(None, max_length=55)
-    slug: Optional[str] = Field(None, max_length=20)
-    twitch: Optional[str] = Field(None, max_length=55)
-    release: Optional[date] = Field(None)
-    boxart: Optional[str] = Field(None)
+    name: Optional[str] = Field(default=None, max_length=55)
+    slug: Optional[str] = Field(default=None, max_length=20)
+    twitch: Optional[str] = Field(default=None, max_length=55)
+    release: Optional[date] = Field(default=None)
+    boxart: Optional[str] = Field(default=None)
     defaulttime: Optional[str] = Field(
         None, pattern="^(realtime|realtime_noloads|ingame)$"
     )
     idefaulttime: Optional[str] = Field(
         None, pattern="^(realtime|realtime_noloads|ingame)$"
     )
-    pointsmax: Optional[int] = Field(None, ge=1)
-    ipointsmax: Optional[int] = Field(None, ge=1)
+    pointsmax: Optional[int] = Field(default=None, ge=1)
+    ipointsmax: Optional[int] = Field(default=None, ge=1)
 
 
 # Forward reference resolution for circular imports

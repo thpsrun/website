@@ -25,27 +25,19 @@ class LevelBaseSchema(SlugMixin, BaseEmbedSchema):
     Contains core level data without any embedded relationships.
 
     Attributes:
-        id: Speedrun.com level ID
-        name: Level name (e.g., "Warehouse", "School")
-        slug: URL-friendly version
-        url: Link to level on Speedrun.com
-        rules: Level-specific rules text
+        id (str): Speedrun.com level ID
+        name (str): Level name (e.g., "Warehouse", "School")
+        slug (str): URL-friendly version
+        url (str): Link to level on Speedrun.com
+        rules (Optional[str]): Level-specific rules text
     """
 
-    id: str = Field(
-        ..., max_length=10, description="Speedrun.com level ID", example="592pxj8d"
-    )
-    name: str = Field(..., max_length=75, description="Level name", example="Warehouse")
-    slug: str = Field(
-        ..., max_length=75, description="URL-friendly level slug", example="warehouse"
-    )
-    url: str = Field(
-        ...,
-        description="Speedrun.com URL for this level",
-        example="https://www.speedrun.com/thps1/level/Warehouse",
-    )
+    id: str = Field(..., max_length=10, description="Speedrun.com level ID")
+    name: str = Field(..., max_length=75, description="Level name")
+    slug: str = Field(..., max_length=75, description="URL-friendly level slug")
+    url: str = Field(..., description="Speedrun.com URL for this level")
     rules: Optional[str] = Field(
-        None, max_length=1000, description="Level-specific rules and requirements"
+        default=None, max_length=1000, description="Level-specific rules and requirements"
     )
 
 
@@ -56,17 +48,16 @@ class LevelSchema(LevelBaseSchema):
     Extends the base schema to include optional embedded game data
     and variables when requested via embed parameters.
 
-    Supported Embeds:
-        - game: Include the game this level belongs to
-        - variables: Include level-specific variables/subcategories
-        - values: Include variables and their possible values
+    Attributes:
+        game (Optional[dict]): Game this level belongs to - included with ?embed=game
+        variables (Optional[List[dict]]): Level-specific variables - included with ?embed=variables
+        values (Optional[List[dict]]): Variables with values - included with ?embed=values
 
     Example Usage:
         GET /levels/592pxj8d -> Basic level data
         GET /levels/592pxj8d?embed=game -> Level with game data
         GET /levels/592pxj8d?embed=variables -> Level with subcategories
     """
-
 
     game: Optional[dict] = Field(
         None, description="Game this level belongs to - included with ?embed=game"
@@ -88,12 +79,18 @@ class LevelCreateSchema(BaseEmbedSchema):
 
     Used for POST /levels endpoints.
     Game ID is required to link the level to a game.
+
+    Attributes:
+        game_id (str): ID of the game this level belongs to
+        name (str): Level name
+        url (str): Speedrun.com URL
+        rules (Optional[str]): Level-specific rules
     """
 
     game_id: str = Field(..., description="ID of the game this level belongs to")
-    name: str = Field(..., max_length=75)
-    url: str = Field(...)
-    rules: Optional[str] = Field(None, max_length=1000)
+    name: str = Field(..., description="Level name")
+    url: str = Field(..., description="Speedrun.com URL")
+    rules: Optional[str] = Field(default=None, description="Level-specific rules")
     # Note: slug auto-generated from name
 
 
@@ -103,9 +100,15 @@ class LevelUpdateSchema(BaseEmbedSchema):
 
     Used for PUT/PATCH /levels/{id} endpoints.
     All fields optional for partial updates.
+
+    Attributes:
+        game_id (Optional[str]): Updated game ID
+        name (Optional[str]): Updated level name
+        url (Optional[str]): Updated URL
+        rules (Optional[str]): Updated rules
     """
 
-    game_id: Optional[str] = Field(None)
-    name: Optional[str] = Field(None, max_length=75)
-    url: Optional[str] = Field(None)
-    rules: Optional[str] = Field(None, max_length=1000)
+    game_id: Optional[str] = Field(default=None, description="Updated game ID")
+    name: Optional[str] = Field(default=None, description="Updated level name")
+    url: Optional[str] = Field(default=None, description="Updated URL")
+    rules: Optional[str] = Field(default=None, description="Updated rules")

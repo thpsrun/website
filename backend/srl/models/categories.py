@@ -46,10 +46,10 @@ class Categories(models.Model):
         null=True,
         default=None,
         help_text=(
-            "When not set, the category's associated game's timing method(s) are used. ",
-            "When used, the timing method for the ENTIRE category will take take precedence ",
-            "over what is set for the category's associated game. ALL requests will use this to ",
-            "determine what timing method is used for the category.",
+            "When not set, the category's associated game's timing method(s) are used. "
+            "When used, the timing method for the ENTIRE category will take take precedence "
+            "over what is set for the category's associated game. ALL requests will use this to "
+            "determine what timing method is used for the category."
         ),
     )
     url = models.URLField(

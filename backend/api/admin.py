@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
-from typing import Any, Optional, Tuple
+from datetime import timedelta
+from typing import Any, Tuple
 
 from django.contrib import admin, messages
 from django.contrib.admin import SimpleListFilter
@@ -13,24 +13,26 @@ from django.utils.html import format_html
 from django.utils.safestring import SafeString
 from rest_framework_api_key.models import APIKey
 
-from .models import RoleAPIKey
+from api.models import RoleAPIKey
 
-# Import enhanced LogEntry admin
-from .admin_utils import APIActivityLogEntryAdmin
-
-# Hide the original DRF API Key model from admin
+# Hide the original DRF API Key model.
 admin.site.unregister(APIKey)
 
 
 class RoleFilter(SimpleListFilter):
     """Filter API keys by role."""
-    title: str = 'Role'
-    parameter_name: str = 'role'
 
-    def lookups(self, request: HttpRequest, model_admin: admin.ModelAdmin) -> list[Tuple[str, str]]:
+    title: str = "Role"
+    parameter_name: str = "role"
+
+    def lookups(
+        self, request: HttpRequest, model_admin: admin.ModelAdmin
+    ) -> list[Tuple[str, str]]:
         return RoleAPIKey.ROLE_CHOICES
 
-    def queryset(self, request: HttpRequest, queryset: QuerySet[RoleAPIKey]) -> QuerySet[RoleAPIKey]:
+    def queryset(
+        self, request: HttpRequest, queryset: QuerySet[RoleAPIKey]
+    ) -> QuerySet[RoleAPIKey]:
         if self.value():
             return queryset.filter(role=self.value())
         return queryset
@@ -38,29 +40,34 @@ class RoleFilter(SimpleListFilter):
 
 class LastUsedFilter(SimpleListFilter):
     """Filter API keys by last used time."""
-    title: str = 'Last Used'
-    parameter_name: str = 'last_used'
 
-    def lookups(self, request: HttpRequest, model_admin: admin.ModelAdmin) -> Tuple[Tuple[str, str], ...]:
+    title: str = "Last Used"
+    parameter_name: str = "last_used"
+
+    def lookups(
+        self, request: HttpRequest, model_admin: admin.ModelAdmin
+    ) -> Tuple[Tuple[str, str], ...]:
         return (
-            ('today', 'Today'),
-            ('week', 'This Week'), 
-            ('month', 'This Month'),
-            ('never', 'Never Used'),
-            ('old', 'Over 30 Days'),
+            ("today", "Today"),
+            ("week", "This Week"),
+            ("month", "This Month"),
+            ("never", "Never Used"),
+            ("old", "Over 30 Days"),
         )
 
-    def queryset(self, request: HttpRequest, queryset: QuerySet[RoleAPIKey]) -> QuerySet[RoleAPIKey]:
+    def queryset(
+        self, request: HttpRequest, queryset: QuerySet[RoleAPIKey]
+    ) -> QuerySet[RoleAPIKey]:
         now = timezone.now()
-        if self.value() == 'today':
+        if self.value() == "today":
             return queryset.filter(last_used__date=now.date())
-        elif self.value() == 'week':
+        elif self.value() == "week":
             return queryset.filter(last_used__gte=now - timedelta(days=7))
-        elif self.value() == 'month':
+        elif self.value() == "month":
             return queryset.filter(last_used__gte=now - timedelta(days=30))
-        elif self.value() == 'never':
+        elif self.value() == "never":
             return queryset.filter(last_used__isnull=True)
-        elif self.value() == 'old':
+        elif self.value() == "old":
             return queryset.filter(last_used__lt=now - timedelta(days=30))
         return queryset
 
@@ -69,140 +76,168 @@ class LastUsedFilter(SimpleListFilter):
 class RoleAPIKeyAdmin(admin.ModelAdmin):
     """
     Django admin interface for managing RoleAPIKey instances.
-    
+
     Features:
     - Create API keys with visual key display
     - Filter by role and usage
     - Bulk actions for key management
     - Security-focused display (no raw keys shown)
     """
-    
+
     list_display: list[str] = [
-        'name', 
-        'role_badge',
-        'created_by', 
-        'last_used_display',
-        'created',
-        'is_revoked',
-        'expires_soon'
+        "name",
+        "role_badge",
+        "created_by",
+        "last_used_display",
+        "created",
+        "is_revoked",
+        "expires_soon",
     ]
-    
+
     list_filter: list[Any] = [
         RoleFilter,
         LastUsedFilter,
-        'revoked',
-        'created',
+        "revoked",
+        "created",
     ]
-    
-    search_fields: list[str] = ['name', 'created_by', 'description']
-    
+
+    search_fields: list[str] = ["name", "created_by", "description"]
+
     readonly_fields: list[str] = [
-        'id',
-        'prefix', 
-        'hashed_key',
-        'created',
-        'last_used',
-        'api_key_preview'
+        "id",
+        "prefix",
+        "hashed_key",
+        "created",
+        "last_used",
+        "api_key_preview",
     ]
-    
+
     fieldsets = (
-        ('Basic Information', {
-            'fields': ('name', 'role', 'description', 'created_by')
-        }),
-        ('Key Information', {
-            'fields': ('api_key_preview', 'prefix', 'hashed_key'),
-            'classes': ('collapse',)
-        }),
-        ('Status & Timestamps', {
-            'fields': ('revoked', 'expiry_date', 'created', 'last_used'),
-            'classes': ('collapse',)
-        }),
+        (
+            "Basic Information",
+            {"fields": ("name", "role", "description", "created_by")},
+        ),
+        (
+            "Key Information",
+            {
+                "fields": ("api_key_preview", "prefix", "hashed_key"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Status & Timestamps",
+            {
+                "fields": ("revoked", "expiry_date", "created", "last_used"),
+                "classes": ("collapse",),
+            },
+        ),
     )
-    
-    actions: list[str] = ['revoke_keys', 'extend_expiry']
-    
+
+    actions: list[str] = ["revoke_keys", "extend_expiry"]
+
     def role_badge(self, obj: RoleAPIKey) -> SafeString:
         """Display role as a colored badge."""
         colors: dict[str, str] = {
-            'admin': '#dc3545',      # Red
-            'moderator': '#fd7e14',  # Orange  
-            'contributor': '#20c997', # Teal
-            'read_only': '#6c757d'   # Gray
+            "admin": "#dc3545",  # Red
+            "moderator": "#fd7e14",  # Orange
+            "contributor": "#20c997",  # Teal
+            "read_only": "#6c757d",  # Gray
         }
-        color: str = colors.get(obj.role, '#6c757d')
-        
+        color: str = colors.get(obj.role, "#6c757d")
+
         return format_html(
             '<span style="background-color: {}; color: white; padding: 3px 8px; '
             'border-radius: 4px; font-size: 11px; font-weight: bold;">{}</span>',
             color,
-            obj.get_role_display()
+            obj.get_role_display(),
         )
-    role_badge.short_description = 'Role'
-    role_badge.admin_order_field = 'role'
-    
+
+    role_badge.short_description = "Role"
+    role_badge.admin_order_field = "role"
+
     def last_used_display(self, obj: RoleAPIKey) -> SafeString:
         """Display last used time with relative formatting."""
         if not obj.last_used:
             return format_html('<em style="color: #6c757d;">Never</em>')
-        
+
         now = timezone.now()
         diff = now - obj.last_used
-        
+
         if diff.days == 0:
             if diff.seconds < 3600:  # Less than 1 hour
-                return format_html('<span style="color: #28a745;">{}m ago</span>', 
-                                 diff.seconds // 60)
+                return format_html(
+                    '<span style="color: #28a745;">{}m ago</span>', diff.seconds // 60
+                )
             else:  # Less than 1 day
-                return format_html('<span style="color: #28a745;">{}h ago</span>', 
-                                 diff.seconds // 3600)
+                return format_html(
+                    '<span style="color: #28a745;">{}h ago</span>', diff.seconds // 3600
+                )
         elif diff.days < 7:
-            return format_html('<span style="color: #ffc107;">{}d ago</span>', diff.days)
+            return format_html(
+                '<span style="color: #ffc107;">{}d ago</span>', diff.days
+            )
         elif diff.days < 30:
-            return format_html('<span style="color: #fd7e14;">{}d ago</span>', diff.days)
+            return format_html(
+                '<span style="color: #fd7e14;">{}d ago</span>', diff.days
+            )
         else:
-            return format_html('<span style="color: #dc3545;">{}d ago</span>', diff.days)
-    
-    last_used_display.short_description = 'Last Used'
-    last_used_display.admin_order_field = 'last_used'
-    
+            return format_html(
+                '<span style="color: #dc3545;">{}d ago</span>', diff.days
+            )
+
+    last_used_display.short_description = "Last Used"
+    last_used_display.admin_order_field = "last_used"
+
     def expires_soon(self, obj: RoleAPIKey) -> SafeString | str:
         """Show if key expires soon."""
         if not obj.expiry_date:
-            return '-'
-        
+            return "-"
+
         now = timezone.now()
         if obj.expiry_date <= now:
             return format_html('<span style="color: #dc3545;">❌ Expired</span>')
-        
+
         days_until_expiry: int = (obj.expiry_date - now).days
         if days_until_expiry <= 7:
-            return format_html('<span style="color: #dc3545;">⚠️ {}d</span>', days_until_expiry)
+            return format_html(
+                '<span style="color: #dc3545;">⚠️ {}d</span>', days_until_expiry
+            )
         elif days_until_expiry <= 30:
-            return format_html('<span style="color: #ffc107;">⚠️ {}d</span>', days_until_expiry)
-        
-        return format_html('<span style="color: #28a745;">✅ {}d</span>', days_until_expiry)
-    
-    expires_soon.short_description = 'Expires'
-    expires_soon.admin_order_field = 'expiry_date'
-    
+            return format_html(
+                '<span style="color: #ffc107;">⚠️ {}d</span>', days_until_expiry
+            )
+
+        return format_html(
+            '<span style="color: #28a745;">✅ {}d</span>', days_until_expiry
+        )
+
+    expires_soon.short_description = "Expires"
+    expires_soon.admin_order_field = "expiry_date"
+
     def is_revoked(self, obj: RoleAPIKey) -> SafeString:
         """Show revocation status with icon."""
         if obj.revoked:
             return format_html('<span style="color: #dc3545;">❌ Yes</span>')
         return format_html('<span style="color: #28a745;">✅ Active</span>')
-    
-    is_revoked.short_description = 'Revoked'
-    is_revoked.admin_order_field = 'revoked'
-    
+
+    is_revoked.short_description = "Revoked"
+    is_revoked.admin_order_field = "revoked"
+
     def api_key_preview(self, obj: RoleAPIKey) -> str:
         """Show masked API key for security."""
         if obj.prefix:
             return f"{obj.prefix}.{'*' * 20}..."
         return "Key will be generated on save"
-    
-    api_key_preview.short_description = 'API Key (Masked)'
-    
-    def save_model(self, request: HttpRequest, obj: RoleAPIKey, form: ModelForm[RoleAPIKey], change: bool) -> None:
+
+    api_key_preview.short_description = "API Key (Masked)"
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: RoleAPIKey,
+        form: ModelForm[RoleAPIKey],
+        change: bool,
+    ) -> None:
         """Override save to show the generated key to admin user."""
         if not change:  # Creating new key
             # Generate the key
@@ -212,40 +247,39 @@ class RoleAPIKeyAdmin(admin.ModelAdmin):
                 description=obj.description,
                 created_by=obj.created_by or request.user.username,
             )
-            
+
             # Show success message with the actual key
             messages.success(
                 request,
                 format_html(
-                    '<strong>API Key Created Successfully!</strong><br><br>'
-                    '<strong>Name:</strong> {}<br>'
-                    '<strong>Role:</strong> {}<br>'
+                    "<strong>API Key Created Successfully!</strong><br><br>"
+                    "<strong>Name:</strong> {}<br>"
+                    "<strong>Role:</strong> {}<br>"
                     '<strong>Key:</strong> <code style="background: #f8f9fa; padding: 4px 8px; '
                     'font-family: monospace; color: #e83e8c;">{}</code><br><br>'
-                    '<strong>⚠️ IMPORTANT:</strong> Save this key now! You won\'t be able to see it again.<br>'
-                    'Use it in API requests with the <code>X-API-Key</code> header.',
+                    "<strong>⚠️ IMPORTANT:</strong> Save this key now! You won't be able to see it again.<br>"
+                    "Use it in API requests with the <code>X-API-Key</code> header.",
                     api_key.name,
                     api_key.get_role_display(),
-                    key
-                )
+                    key,
+                ),
             )
-            
+
             # Don't save the form object, use the generated one
             return
         else:
             # Updating existing key
             super().save_model(request, obj, form, change)
-    
+
     def revoke_keys(self, request, queryset):
         """Bulk action to revoke selected API keys."""
         count = queryset.update(revoked=True)
         self.message_user(
-            request,
-            f'Successfully revoked {count} API key(s).',
-            messages.SUCCESS
+            request, f"Successfully revoked {count} API key(s).", messages.SUCCESS
         )
+
     revoke_keys.short_description = "Revoke selected API keys"
-    
+
     def extend_expiry(self, request, queryset):
         """Bulk action to extend expiry by 90 days."""
         now = timezone.now()
@@ -253,25 +287,30 @@ class RoleAPIKeyAdmin(admin.ModelAdmin):
         count = queryset.update(expiry_date=new_expiry)
         self.message_user(
             request,
-            f'Extended expiry for {count} API key(s) to {new_expiry.date()}.',
-            messages.SUCCESS
+            f"Extended expiry for {count} API key(s) to {new_expiry.date()}.",
+            messages.SUCCESS,
         )
+
     extend_expiry.short_description = "Extend expiry by 90 days"
-    
+
     def get_form(self, request, obj=None, **kwargs):
         """Customize the form for creating/editing API keys."""
         form = super().get_form(request, obj, **kwargs)
-        
+
         # For new keys, set default created_by to current user
-        if not obj and 'created_by' in form.base_fields:
-            form.base_fields['created_by'].initial = request.user.username
-            
+        if not obj and "created_by" in form.base_fields:
+            form.base_fields["created_by"].initial = request.user.username
+
         return form
-    
+
     def has_change_permission(self, request, obj=None):
         """Limit who can change API keys."""
-        return request.user.is_superuser or request.user.has_perm('api.change_roleapikey')
-    
+        return request.user.is_superuser or request.user.has_perm(
+            "api.change_roleapikey"
+        )
+
     def has_delete_permission(self, request, obj=None):
         """Limit who can delete API keys."""
-        return request.user.is_superuser or request.user.has_perm('api.delete_roleapikey')
+        return request.user.is_superuser or request.user.has_perm(
+            "api.delete_roleapikey"
+        )

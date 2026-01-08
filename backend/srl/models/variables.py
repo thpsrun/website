@@ -45,9 +45,9 @@ class Variables(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         help_text=(
-            'If not set, the variable  is seen as a "global" variable for the scope you choose ',
-            'below. For example: a "global" variable set for "Only IL Runs" will make it a GLOBAL ',
-            "variable for IL speedruns.",
+            'If not set, the variable  is seen as a "global" variable for the scope you choose '
+            'below. For example: a "global" variable set for "Only IL Runs" will make it a GLOBAL '
+            "variable for IL speedruns."
         ),
     )
     scope = models.CharField(

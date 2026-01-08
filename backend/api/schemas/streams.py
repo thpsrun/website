@@ -1,18 +1,5 @@
-"""
-Streams Schemas for Django Ninja API
-
-Schemas for streaming/live data endpoints. These handle real-time information
-about streamers playing speedrun games, current activity, and live statistics.
-
-Key Features:
-- Live streaming data integration
-- Player streaming status
-- Current activity tracking
-- Real-time statistics
-"""
-
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import Field
 
@@ -26,41 +13,62 @@ class StreamSchema(BaseEmbedSchema):
     Represents a player currently streaming speedrun content.
 
     Attributes:
-        player: Player information
-        game: Game being played
-        title: Stream title
-        url: Stream URL
-        platform: Streaming platform (Twitch, YouTube, etc.)
-        viewers: Current viewer count
-        started_at: When stream started
-        last_updated: When data was last refreshed
+        player (dict): Player information from the Players model
+        game (Optional[dict]): Game being played
+        title (str): Stream title
+        offline_ct (int): Amount of minutes since last seen online
+        stream_time (Optional[datetime]): When the stream started
     """
 
-    player: dict = Field(..., description="Player information")
-    game: Optional[dict] = Field(None, description="Game being played")
-    title: str = Field(..., description="Stream title")
-    url: str = Field(..., description="Stream URL")
-    platform: str = Field(..., description="Streaming platform")
-    viewers: Optional[int] = Field(None, description="Current viewer count", ge=0)
-    started_at: Optional[datetime] = Field(None, description="Stream start time")
-    last_updated: datetime = Field(..., description="Last data refresh")
+    player: dict = Field(..., description="Player information from the Players model")
+    game: Optional[dict] = Field(default=None, description="Game being played")
+    title: str = Field(..., description="Stream title", max_length=100)
+    offline_ct: int = Field(
+        ..., description="Amount of minutes since last seen online", ge=0
+    )
+    stream_time: Optional[datetime] = Field(default=None, description="Stream start time")
 
 
-class LiveStatsSchema(BaseEmbedSchema):
+class StreamCreateSchema(BaseEmbedSchema):
     """
-    Schema for live statistics.
+    Schema for creating streams.
 
-    Provides real-time statistics about speedrunning activity.
+    Used for POST /streams endpoints to create a new stream entry.
 
     Attributes:
-        total_streamers: Total number of active streamers
-        total_viewers: Total viewers across all streams
-        top_games: Most popular games being streamed
-        recent_activity: Recent runs/PBs/WRs
+        player_id (str): Player ID who is streaming
+        game_id (Optional[str]): Game ID being played
+        title (str): Stream title
+        offline_ct (int): Offline counter (minutes since last seen)
+        stream_time (Optional[datetime]): Stream start time
     """
 
-    total_streamers: int = Field(..., description="Total active streamers", ge=0)
-    total_viewers: int = Field(..., description="Total viewers", ge=0)
-    top_games: List[dict] = Field(..., description="Most popular streamed games")
-    recent_activity: List[dict] = Field(..., description="Recent speedrun activity")
-    last_updated: datetime = Field(..., description="Last data refresh")
+    player_id: str = Field(..., description="Player ID who is streaming")
+    game_id: Optional[str] = Field(default=None, description="Game ID being played")
+    title: str = Field(..., description="Stream title")
+    offline_ct: int = Field(default=0, description="Offline counter (minutes)", ge=0)
+    stream_time: Optional[datetime] = Field(
+        default=None, description="Stream start time"
+    )
+
+
+class StreamUpdateSchema(BaseEmbedSchema):
+    """
+    Schema for updating streams.
+
+    Used for PUT/PATCH /streams/{player_id} endpoints.
+    All fields optional for partial updates.
+
+    Attributes:
+        game_id (Optional[str]): Game ID being played
+        title (Optional[str]): Stream title
+        offline_ct (Optional[int]): Offline counter (minutes since last seen)
+        stream_time (Optional[datetime]): Stream start time
+    """
+
+    game_id: Optional[str] = Field(default=None, description="Game ID being played")
+    title: Optional[str] = Field(default=None, description="Stream title")
+    offline_ct: Optional[int] = Field(
+        None, description="Offline counter (minutes)", ge=0
+    )
+    stream_time: Optional[datetime] = Field(default=None, description="Stream start time")

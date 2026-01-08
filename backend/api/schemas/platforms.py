@@ -1,18 +1,3 @@
-"""
-Platform Schemas for Django Ninja API
-
-Schemas for the Platforms model. Platforms represent gaming systems
-that games can be played on (PC, PlayStation, Xbox, etc.).
-
-This is a simple model with no complex relationships, making it
-a good starting point for the Django Ninja conversion.
-
-Key Features:
-- Auto-generated slugs from platform names
-- Simple validation and typing
-- Used as embedded data in Games schema
-"""
-
 from typing import Optional
 
 from pydantic import Field
@@ -28,9 +13,9 @@ class PlatformSchema(SlugMixin, BaseEmbedSchema):
     can be played on. This is a straightforward schema with no embeds.
 
     Attributes:
-        id: Speedrun.com platform ID
-        name: Platform name (e.g., "PlayStation 2")
-        slug: URL-friendly version (e.g., "playstation-2")
+        id (str): Speedrun.com platform ID
+        name (str): Platform name (e.g., "PlayStation 2")
+        slug (str): URL-friendly version (e.g., "playstation-2")
 
     Example Response:
         {
@@ -40,18 +25,9 @@ class PlatformSchema(SlugMixin, BaseEmbedSchema):
         }
     """
 
-    id: str = Field(
-        ..., max_length=10, description="Speedrun.com platform ID", example="8gej2n93"
-    )
-    name: str = Field(
-        ..., max_length=30, description="Platform name", example="PlayStation 2"
-    )
-    slug: str = Field(
-        ...,
-        max_length=30,
-        description="URL-friendly platform slug",
-        example="playstation-2",
-    )
+    id: str = Field(..., max_length=10, description="Speedrun.com platform ID")
+    name: str = Field(..., max_length=30, description="Platform name")
+    slug: str = Field(..., max_length=30, description="URL-friendly platform slug")
 
 
 class PlatformCreateSchema(BaseEmbedSchema):
@@ -60,9 +36,12 @@ class PlatformCreateSchema(BaseEmbedSchema):
 
     Used for POST /platforms endpoints.
     The slug will be auto-generated from the name.
+
+    Attributes:
+        name (str): Platform name
     """
 
-    name: str = Field(..., max_length=30)
+    name: str = Field(..., description="Platform name")
     # Note: slug is auto-generated in the model's save() method
 
 
@@ -72,6 +51,9 @@ class PlatformUpdateSchema(BaseEmbedSchema):
 
     Used for PUT/PATCH /platforms/{id} endpoints.
     All fields optional for partial updates.
+
+    Attributes:
+        name (Optional[str]): Updated platform name
     """
 
-    name: Optional[str] = Field(None, max_length=30)
+    name: Optional[str] = Field(default=None, description="Updated platform name")
