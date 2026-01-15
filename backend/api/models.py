@@ -45,8 +45,7 @@ class RoleAPIKey(AbstractAPIKey):
         return dict(self.ROLE_CHOICES).get(self.role, self.role)
 
     def has_role(self, required_role: str) -> bool:
-        """
-        Check if this API key has sufficient role permissions.
+        """Check if this API key has sufficient role permissions.
 
         Args:
             required_role: Minimum required role

@@ -1,0 +1,322 @@
+GAMES_GET = {
+    "responses": {
+        200: {
+            "description": "Success!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "n2680o1p",
+                        "name": "Tony Hawk's Pro Skater 4",
+                        "slug": "thps4",
+                        "release": "2002-10-23",
+                        "boxart": "https://example.com/boxart.jpg",
+                        "twitch": "Tony Hawk's Pro Skater 4",
+                        "defaulttime": "realtime",
+                        "idefaulttime": "realtime",
+                        "pointsmax": 1000,
+                        "ipointsmax": 100,
+                    }
+                }
+            },
+        },
+        404: {"description": "Game does not exist."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "id",
+            "in": "path",
+            "required": True,
+            "example": "thps4",
+            "schema": {"type": "string", "maxLength": 15},
+            "description": "Game ID or slug to retrieve",
+        },
+        {
+            "name": "embed",
+            "in": "query",
+            "example": "categories,levels",
+            "schema": {"type": "string"},
+            "description": "Comma-separated embeds: categories, levels, platforms",
+        },
+    ],
+}
+
+GAMES_POST = {
+    "responses": {
+        201: {
+            "description": "Game created successfully!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "n2680o1p",
+                        "name": "Tony Hawk's Pro Skater 4",
+                        "slug": "thps4",
+                        "release": "2002-10-23",
+                        "boxart": "https://example.com/boxart.jpg",
+                        "twitch": "Tony Hawk's Pro Skater 4",
+                        "defaulttime": "realtime",
+                        "idefaulttime": "realtime",
+                        "pointsmax": 1000,
+                        "ipointsmax": 100,
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid request data or game with slug already exists."},
+        401: {"description": "API key required for this operation."},
+        403: {"description": "Insufficient permissions."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "required": ["name", "slug"],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "example": "Tony Hawk's Pro Skater 4",
+                            "description": "GAME NAME",
+                        },
+                        "slug": {
+                            "type": "string",
+                            "example": "thps4",
+                            "description": "GAME URL SLUG",
+                        },
+                        "release": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2002-10-23",
+                            "description": "GAME RELEASE DATE",
+                        },
+                        "boxart": {
+                            "type": "string",
+                            "format": "uri",
+                            "example": "https://example.com/boxart.jpg",
+                            "description": "GAME BOXART URL",
+                        },
+                        "twitch": {
+                            "type": "string",
+                            "example": "Tony Hawk's Pro Skater 4",
+                            "description": "TWITCH GAME NAME",
+                        },
+                        "defaulttime": {
+                            "type": "string",
+                            "enum": ["realtime", "realtime_noloads", "ingame"],
+                            "example": "realtime",
+                            "description": "DEFAULT TIMING METHOD",
+                        },
+                        "idefaulttime": {
+                            "type": "string",
+                            "enum": ["realtime", "realtime_noloads", "ingame"],
+                            "example": "realtime",
+                            "description": "DEFAULT IL TIMING METHOD",
+                        },
+                    },
+                },
+                "example": {
+                    "name": "Tony Hawk's Pro Skater 4",
+                    "slug": "thps4",
+                    "release": "2002-10-23",
+                    "boxart": "https://example.com/boxart.jpg",
+                    "twitch": "Tony Hawk's Pro Skater 4",
+                    "defaulttime": "realtime",
+                    "idefaulttime": "realtime",
+                },
+            }
+        },
+    },
+}
+
+GAMES_PUT = {
+    "responses": {
+        200: {
+            "description": "Game updated successfully!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "n2680o1p",
+                        "name": "Tony Hawk's Pro Skater 4",
+                        "slug": "thps4",
+                        "release": "2002-10-23",
+                        "boxart": "https://example.com/boxart.jpg",
+                        "twitch": "Tony Hawk's Pro Skater 4",
+                        "defaulttime": "realtime",
+                        "idefaulttime": "realtime",
+                        "pointsmax": 1000,
+                        "ipointsmax": 100,
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid request data."},
+        401: {"description": "API key required for this operation."},
+        403: {"description": "Insufficient permissions."},
+        404: {"description": "Game does not exist."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "id",
+            "in": "path",
+            "required": True,
+            "example": "thps4",
+            "schema": {"type": "string", "maxLength": 15},
+            "description": "Game ID or slug to update",
+        },
+    ],
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "example": "Tony Hawk's Pro Skater 4",
+                            "description": "UPDATED GAME NAME",
+                        },
+                        "slug": {
+                            "type": "string",
+                            "example": "thps4",
+                            "description": "UPDATED GAME SLUG",
+                        },
+                        "release": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2002-10-23",
+                            "description": "UPDATED RELEASE DATE",
+                        },
+                        "boxart": {
+                            "type": "string",
+                            "format": "uri",
+                            "example": "https://example.com/boxart.jpg",
+                            "description": "UPDATED BOXART URL",
+                        },
+                        "twitch": {
+                            "type": "string",
+                            "example": "Tony Hawk's Pro Skater 4",
+                            "description": "UPDATED TWITCH NAME",
+                        },
+                        "defaulttime": {
+                            "type": "string",
+                            "enum": ["realtime", "realtime_noloads", "ingame"],
+                            "example": "realtime",
+                            "description": "UPDATED DEFAULT TIMING",
+                        },
+                        "idefaulttime": {
+                            "type": "string",
+                            "enum": ["realtime", "realtime_noloads", "ingame"],
+                            "example": "realtime",
+                            "description": "UPDATED IL DEFAULT TIMING",
+                        },
+                    },
+                },
+                "example": {
+                    "name": "Tony Hawk's Pro Skater 4 Updated",
+                    "boxart": "https://example.com/new-boxart.jpg",
+                },
+            }
+        },
+    },
+}
+
+GAMES_DELETE = {
+    "responses": {
+        200: {
+            "description": "Game deleted successfully!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Game 'Tony Hawk's Pro Skater 4' deleted successfully"
+                    }
+                }
+            },
+        },
+        401: {"description": "API key required for this operation."},
+        403: {"description": "Insufficient permissions (admin required)."},
+        404: {"description": "Game does not exist."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "id",
+            "in": "path",
+            "required": True,
+            "example": "thps4",
+            "schema": {"type": "string", "maxLength": 15},
+            "description": "Game ID or slug to delete",
+        },
+    ],
+}
+
+GAMES_ALL = {
+    "responses": {
+        200: {
+            "description": "Success!",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "n2680o1p",
+                            "name": "Tony Hawk's Pro Skater 4",
+                            "slug": "thps4",
+                            "release": "2002-10-23",
+                            "boxart": "https://example.com/boxart.jpg",
+                            "twitch": "Tony Hawk's Pro Skater 4",
+                            "defaulttime": "realtime",
+                            "idefaulttime": "realtime",
+                            "pointsmax": 1000,
+                            "ipointsmax": 100,
+                        },
+                        {
+                            "id": "k6qw5o9p",
+                            "name": "Tony Hawk's Pro Skater 3",
+                            "slug": "thps3",
+                            "release": "2001-10-28",
+                            "boxart": "https://example.com/thps3-boxart.jpg",
+                            "twitch": "Tony Hawk's Pro Skater 3",
+                            "defaulttime": "realtime",
+                            "idefaulttime": "realtime",
+                            "pointsmax": 1000,
+                            "ipointsmax": 100,
+                        },
+                    ]
+                }
+            },
+        },
+        400: {"description": "Invalid response sent to server."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "embed",
+            "in": "query",
+            "example": "categories,levels",
+            "schema": {"type": "string"},
+            "description": "Comma-separated embeds: categories, levels, platforms",
+        },
+        {
+            "name": "limit",
+            "in": "query",
+            "example": 50,
+            "schema": {"type": "integer", "minimum": 1, "maximum": 100},
+            "description": "Results per page (default 50, max 100)",
+        },
+        {
+            "name": "offset",
+            "in": "query",
+            "example": 0,
+            "schema": {"type": "integer", "minimum": 0},
+            "description": "Results to skip (default 0)",
+        },
+    ],
+}

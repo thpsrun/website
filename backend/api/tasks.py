@@ -1,3 +1,5 @@
+import logging
+from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any
 
@@ -18,6 +20,8 @@ from srl.models import (
     VariableValues,
 )
 from srl.tasks import update_category, update_game, update_player, update_variable
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -46,19 +50,37 @@ def normalize_src(
     """
 
     if not series_id_list:
-        series_id = Series.objects.all().first().id
+        series = Series.objects.first()
+        if not series:
+            logger.error("No series found in database for run normalization")
+            return "invalid"
 
-        series_info = src_api(
-            f"https://speedrun.com/api/v1/series/{series_id}/games?max=50"
-        )
         series_id_list = []
+        offset = 0
+        max_per_page = 200
 
-        for game in series_info:
-            series_id_list.append(game["id"])
+        while True:
+            series_info = src_api(
+                f"https://speedrun.com/api/v1/series/{series.id}/games?max={max_per_page}&offset={offset}"
+            )
+
+            if not series_info or series_info == HTTPStatus.NOT_FOUND.value:
+                logger.warning(
+                    f"Failed to fetch games for series {series.id} at offset {offset}"
+                )
+                break
+
+            for game in series_info:
+                series_id_list.append(game["id"])
+
+            if len(series_info) < max_per_page:
+                break
+
+            offset += max_per_page
 
     run_info = src_api(f"https://speedrun.com/api/v1/runs/{id}?embed=players")
 
-    if run_info == 404:
+    if run_info == HTTPStatus.NOT_FOUND.value:
         if Runs.objects.filter(id=id).exists():
             default = {"vid_status": "rejected"}
             with transaction.atomic():
@@ -67,12 +89,12 @@ def normalize_src(
 
     try:
         if run_info["game"] in series_id_list:
-            if not Games.objects.only("id").filter(id=run_info["game"]).exists():
+            if not Games.objects.filter(id=run_info["game"]).exists():
                 chain(update_game.s(run_info["game"]))()
 
             for player in run_info["players"]["data"]:
                 if player["rel"] != "guest":
-                    if not Players.objects.only("id").filter(id=player["id"]).exists():
+                    if not Players.objects.filter(id=player["id"]).exists():
                         chain(update_player.s(player["id"]))()
 
             base_url = "https://speedrun.com/api/v1/leaderboards"
@@ -207,18 +229,19 @@ def add_run(
             return base_name
 
     if category["type"] == "per-level":
-        if (
-            len(Categories.objects.only("id").filter(game=game["id"], type="per-level"))
-            > 1
-        ):
-            base_name = f"{level['name']} ({category["name"]})"
-            var_name = build_var_name(base_name, run_variables)
+        level_cat_count = Categories.objects.filter(
+            game=game["id"],
+            type="per-level"
+        ).count()
+
+        if level_cat_count > 1:
+            base_name = f"{level['name']} ({category['name']})"
         else:
-            base_name = f"{level['name']}"
-            var_name = build_var_name(base_name, run_variables)
+            base_name = level['name']
     else:
         base_name = category["name"]
-        var_name = build_var_name(base_name, run_variables)
+
+    var_name = build_var_name(base_name, run_variables)
 
     chain(
         invoke_single_run.s(
@@ -296,13 +319,19 @@ def invoke_single_run(
         secs = run["run"]["times"]["primary_t"]
 
         try:
-            run_video = (
-                run.get("run").get("videos").get("links")[-1].get("uri")
-                if run.get("run").get("videos") is not None
-                or run.get("run").get("videos").get("text") != "N/A"
-                else None
-            )
-        except Exception:
+            run_data = run.get("run", {})
+            videos = run_data.get("videos")
+
+            if videos and videos.get("text") != "N/A":
+                links = videos.get("links", [])
+                if links:
+                    run_video = links[-1].get("uri")
+                else:
+                    run_video = None
+            else:
+                run_video = None
+        except (KeyError, IndexError, TypeError) as e:
+            logger.warning(f"Failed to extract video URL from run data: {e}")
             run_video = None
 
         try:
@@ -421,21 +450,21 @@ def invoke_single_run(
         )
 
         if player1:
+            chain(update_player.s(player1, download_pfp))()
             try:
-                chain(update_player.s(player1, download_pfp)())
-
                 player1 = Players.objects.only("id").get(id=player1)
             except Players.DoesNotExist:
+                logger.warning(f"Player {player1} not found after update")
                 player1 = None
 
         default["player"] = player1
 
         if player2:
+            chain(update_player.s(player2, download_pfp))()
             try:
-                chain(update_player.s(player2, download_pfp))()
-
                 player2 = Players.objects.only("id").get(id=player2)
             except Players.DoesNotExist:
+                logger.warning(f"Player {player2} not found after update")
                 player2 = None
 
             default["player2"] = player2

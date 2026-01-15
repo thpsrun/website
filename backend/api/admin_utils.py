@@ -1,24 +1,19 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Optional
 
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry
 from django.http import HttpRequest
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html
 from django.utils.safestring import SafeString, mark_safe
 
 
 class APIActivityLogEntryAdmin(admin.ModelAdmin):
-    """
-    Enhanced admin view for LogEntry to better display API activities.
+    """Enhanced admin view for LogEntry to better display API activities."""
 
-    This replaces the default LogEntry admin to show API activities more clearly
-    in the Django admin Recent Actions.
-    """
-
-    list_display: list[str] = [
+    list_display = [
         "action_time",
         "user_display",
         "content_type",
@@ -27,14 +22,14 @@ class APIActivityLogEntryAdmin(admin.ModelAdmin):
         "change_message_display",
     ]
 
-    list_filter: list[str] = [
+    list_filter = [
         "action_flag",
         "action_time",
         "content_type",
         "user__username",
     ]
 
-    search_fields: list[str] = [
+    search_fields = [
         "object_repr",
         "change_message",
         "user__username",
@@ -42,7 +37,7 @@ class APIActivityLogEntryAdmin(admin.ModelAdmin):
         "user__last_name",
     ]
 
-    readonly_fields: list[str] = [
+    readonly_fields = [
         "action_time",
         "user",
         "content_type",
@@ -52,27 +47,40 @@ class APIActivityLogEntryAdmin(admin.ModelAdmin):
         "change_message",
     ]
 
-    date_hierarchy: str = "action_time"
+    date_hierarchy = "action_time"
 
-    ordering: list[str] = ["-action_time"]
+    ordering = ["-action_time"]
 
-    def has_add_permission(self, request: HttpRequest) -> bool:
+    def has_add_permission(
+        self,
+        request: HttpRequest,
+    ) -> bool:
         return False
 
     def has_change_permission(
-        self, request: HttpRequest, obj: Optional[LogEntry] = None
+        self,
+        request: HttpRequest,
+        obj: Optional[LogEntry] = None,
     ) -> bool:
         return False
 
     def has_delete_permission(
-        self, request: HttpRequest, obj: Optional[LogEntry] = None
+        self,
+        request: HttpRequest,
+        obj: Optional[LogEntry] = None,
     ) -> bool:
-        return request.user.is_superuser
+        return getattr(request.user, "is_superuser", False)
 
-    def user_display(self, obj: LogEntry) -> SafeString | str:
+    @admin.display(
+        description="User/API Key",
+        ordering="user__username",
+    )
+    def user_display(
+        self,
+        obj: LogEntry,
+    ) -> SafeString | str:
         if obj.user:
             if obj.user.username.startswith("api_key_"):
-                # This is an API key user
                 key_name: str = obj.user.last_name or obj.user.username.replace(
                     "api_key_", ""
                 )
@@ -82,7 +90,6 @@ class APIActivityLogEntryAdmin(admin.ModelAdmin):
                     key_name,
                 )
             else:
-                # Regular user
                 return format_html(
                     '<span title="User: {}">' "<strong>👤 {}</strong>" "</span>",
                     obj.user.username,
@@ -90,12 +97,16 @@ class APIActivityLogEntryAdmin(admin.ModelAdmin):
                 )
         return "-"
 
-    user_display.short_description = "User/API Key"
-    user_display.admin_order_field = "user__username"
-
-    def action_flag_display(self, obj: LogEntry) -> SafeString:
+    @admin.display(
+        description="Action",
+        ordering="action_flag",
+    )
+    def action_flag_display(
+        self,
+        obj: LogEntry,
+    ) -> SafeString:
         """Display action with colored icons."""
-        flag_display: dict[int, Tuple[str, str, str]] = {
+        flag_display: dict[int, tuple[str, str, str]] = {
             1: ("➕", "Added", "#28a745"),
             2: ("✏️", "Changed", "#ffc107"),
             3: ("❌", "Deleted", "#dc3545"),
@@ -109,10 +120,14 @@ class APIActivityLogEntryAdmin(admin.ModelAdmin):
             '<span style="color: {};" title="{}">{} {}</span>', color, text, icon, text
         )
 
-    action_flag_display.short_description = "Action"
-    action_flag_display.admin_order_field = "action_flag"
-
-    def object_link(self, obj: LogEntry) -> SafeString | str:
+    @admin.display(
+        description="Object",
+        ordering="object_repr",
+    )
+    def object_link(
+        self,
+        obj: LogEntry,
+    ) -> SafeString | str:
         """Create a link to the actual object if possible."""
         if obj.content_type and obj.object_id:
             try:
@@ -129,10 +144,10 @@ class APIActivityLogEntryAdmin(admin.ModelAdmin):
                             admin_url,
                             obj.object_repr,
                         )
-                    except model_class.DoesNotExist:
+                    except NoReverseMatch:
                         return format_html(
-                            '<span style="color: #6c757d; text-decoration:\
-                                line-through;">{}</span>',
+                            '<span style="color: #6c757d; '
+                            'text-decoration: line-through;">{}</span>',
                             obj.object_repr,
                         )
             except Exception:
@@ -140,10 +155,14 @@ class APIActivityLogEntryAdmin(admin.ModelAdmin):
 
         return obj.object_repr or "-"
 
-    object_link.short_description = "Object"
-    object_link.admin_order_field = "object_repr"
-
-    def change_message_display(self, obj: LogEntry) -> SafeString | str:
+    @admin.display(
+        description="Details",
+        ordering="change_message",
+    )
+    def change_message_display(
+        self,
+        obj: LogEntry,
+    ) -> SafeString | str:
         """Display change message with better formatting."""
         if not obj.change_message:
             return "-"
@@ -165,9 +184,5 @@ class APIActivityLogEntryAdmin(admin.ModelAdmin):
 
         return mark_safe(message)
 
-    change_message_display.short_description = "Details"
-    change_message_display.admin_order_field = "change_message"
 
-
-# Register the enhanced LogEntry admin
 admin.site.register(LogEntry, APIActivityLogEntryAdmin)

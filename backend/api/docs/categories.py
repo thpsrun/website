@@ -1,0 +1,340 @@
+CATEGORIES_GET = {
+    "responses": {
+        200: {
+            "description": "Success!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "rklge08d",
+                        "name": "Any%",
+                        "slug": "any",
+                        "type": "per-game",
+                        "url": "https://speedrun.com/thps4/full_game#Any",
+                        "rules": "Rulez.",
+                        "appear_on_main": True,
+                        "hidden": False,
+                        "game": {
+                            "id": "n2680o1p",
+                            "name": "Tony Hawk's Pro Skater 4",
+                            "slug": "thps4",
+                            "release": "2002-10-23",
+                            "boxart": "https://example.com/boxart.jpg",
+                            "twitch": "Tony Hawk's Pro Skater 4",
+                            "defaulttime": "realtime",
+                            "idefaulttime": "realtime",
+                            "pointsmax": 1000,
+                            "ipointsmax": 100,
+                        },
+                        "variables": [
+                            {
+                                "id": "fdsw34df",
+                                "name": "Platform",
+                                "slug": "platform",
+                                "scope": "full-game",
+                                "all_cats": True,
+                                "hidden": False,
+                                "values": [
+                                    {
+                                        "value": "pcdfsf",
+                                        "name": "PC",
+                                        "slug": "pc",
+                                        "hidden": False,
+                                        "rules": "",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid response sent to server."},
+        404: {"description": "Category could not be found."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "id",
+            "in": "path",
+            "required": True,
+            "example": "rklge08d",
+            "schema": {"type": "string", "maxLength": 15},
+            "description": "Category ID",
+        },
+        {
+            "name": "embed",
+            "in": "query",
+            "example": "game,variables,values",
+            "schema": {"type": "string"},
+            "description": "Comma-separated embeds: game, variables, values",
+        },
+    ],
+}
+
+CATEGORIES_POST = {
+    "responses": {
+        201: {
+            "description": "Category created successfully!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "rklge08d",
+                        "name": "Any%",
+                        "slug": "any",
+                        "type": "per-game",
+                        "url": "https://speedrun.com/thps4/full_game#Any",
+                        "rules": "Rulez.",
+                        "appear_on_main": True,
+                        "hidden": False,
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid request data or game does not exist."},
+        401: {"description": "API key required for this operation."},
+        403: {"description": "Insufficient permissions."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "required": ["name", "game_id"],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "example": "Any%",
+                            "description": "NAME OF CATEGORY",
+                        },
+                        "game_id": {
+                            "type": "string",
+                            "example": "n2680o1p",
+                            "description": "GAME ID THIS CATEGORY BELONGS TO",
+                        },
+                        "type": {
+                            "type": "string",
+                            "enum": ["per-game", "per-level"],
+                            "example": "per-game",
+                            "description": "CATEGORY TYPE",
+                        },
+                        "rules": {
+                            "type": "string",
+                            "example": "Rulez.",
+                            "description": "CATEGORY RULES",
+                        },
+                        "appear_on_main": {
+                            "type": "boolean",
+                            "example": True,
+                            "description": "WHETHER CATEGORY APPEARS ON MAIN PAGE",
+                        },
+                        "hidden": {
+                            "type": "boolean",
+                            "example": False,
+                            "description": "WHETHER CATEGORY IS HIDDEN",
+                        },
+                    },
+                },
+                "example": {
+                    "name": "Any%",
+                    "game_id": "n2680o1p",
+                    "type": "per-game",
+                    "rules": "Rulez.",
+                    "appear_on_main": True,
+                    "hidden": False,
+                },
+            }
+        },
+    },
+}
+
+CATEGORIES_PUT = {
+    "responses": {
+        200: {
+            "description": "Category updated successfully!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "rklge08d",
+                        "name": "Any%",
+                        "slug": "any",
+                        "type": "per-game",
+                        "url": "https://speedrun.com/thps4/full_game#Any",
+                        "rules": "Complete the game as fast as possible.",
+                        "appear_on_main": True,
+                        "hidden": False,
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid request data or game does not exist."},
+        401: {"description": "API key required for this operation."},
+        403: {"description": "Insufficient permissions."},
+        404: {"description": "Category does not exist."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "id",
+            "in": "path",
+            "required": True,
+            "example": "rklge08d",
+            "schema": {"type": "string", "maxLength": 15},
+            "description": "Category ID to update",
+        },
+    ],
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "example": "Any%",
+                            "description": "UPDATED CATEGORY NAME",
+                        },
+                        "game_id": {
+                            "type": "string",
+                            "example": "n2680o1p",
+                            "description": "UPDATED GAME ID",
+                        },
+                        "type": {
+                            "type": "string",
+                            "enum": ["per-game", "per-level"],
+                            "example": "per-game",
+                            "description": "UPDATED CATEGORY TYPE",
+                        },
+                        "rules": {
+                            "type": "string",
+                            "example": "Complete the game as fast as possible.",
+                            "description": "UPDATED CATEGORY RULES",
+                        },
+                        "appear_on_main": {
+                            "type": "boolean",
+                            "example": True,
+                            "description": "UPDATED MAIN PAGE APPEARANCE",
+                        },
+                        "hidden": {
+                            "type": "boolean",
+                            "example": False,
+                            "description": "UPDATED HIDDEN STATUS",
+                        },
+                    },
+                },
+                "example": {
+                    "name": "Any%",
+                    "rules": "Complete the game as fast as possible with new rules.",
+                    "appear_on_main": True,
+                },
+            }
+        },
+    },
+}
+
+CATEGORIES_DELETE = {
+    "responses": {
+        200: {
+            "description": "Category deleted successfully!",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Category 'Any%' deleted successfully"}
+                }
+            },
+        },
+        401: {"description": "API key required for this operation."},
+        403: {"description": "Insufficient permissions."},
+        404: {"description": "Category does not exist."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "id",
+            "in": "path",
+            "required": True,
+            "example": "rklge08d",
+            "schema": {"type": "string", "maxLength": 15},
+            "description": "Category ID to delete",
+        },
+    ],
+}
+
+CATEGORIES_ALL = {
+    "responses": {
+        200: {
+            "description": "Success!",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "rklge08d",
+                            "name": "Any%",
+                            "slug": "any",
+                            "type": "per-game",
+                            "url": "https://speedrun.com/thps4/full_game#Any",
+                            "rules": "Rulez.",
+                            "appear_on_main": True,
+                            "hidden": False,
+                        },
+                        {
+                            "id": "xd1m508k",
+                            "name": "100%",
+                            "slug": "100",
+                            "type": "per-game",
+                            "url": "https://speedrun.com/thps4/full_game#100",
+                            "rules": "Rulez.",
+                            "appear_on_main": True,
+                            "hidden": False,
+                        },
+                    ]
+                }
+            },
+        },
+        400: {"description": "Invalid response sent to server."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "game_id",
+            "in": "query",
+            "example": "thps4",
+            "schema": {"type": "string"},
+            "description": "Filter by game ID",
+        },
+        {
+            "name": "type",
+            "in": "query",
+            "example": "per-game",
+            "schema": {"type": "string", "pattern": "^(per-game|per-level)$"},
+            "description": "Filter by category type",
+        },
+        {
+            "name": "embed",
+            "in": "query",
+            "example": "game,variables",
+            "schema": {"type": "string"},
+            "description": "Comma-separated embeds",
+        },
+        {
+            "name": "limit",
+            "in": "query",
+            "example": 50,
+            "schema": {"type": "integer", "minimum": 1, "maximum": 100},
+            "description": "Results per page (default 50, max 100)",
+        },
+        {
+            "name": "offset",
+            "in": "query",
+            "example": 0,
+            "schema": {"type": "integer", "minimum": 0},
+            "description": "Results to skip (default 0)",
+        },
+    ],
+}

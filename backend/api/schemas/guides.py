@@ -1,63 +1,36 @@
-"""
-Guides API Schemas for Django Ninja
-
-This module contains Pydantic schemas for the guides and tags models.
-These schemas handle:
-- User-submitted guides with tricks, glitches, and category information
-- Tag system for categorizing guides
-- Associated game information
-- Markdown content support
-
-Schema Types:
-- TagSchema: Tag information (name, slug, description)
-- GuideSchema: Complete guide information with optional embeds
-- GuideCreateSchema: Input schema for creating guides
-- GuideUpdateSchema: Input schema for updating guides
-"""
-
-from datetime import date, datetime
+from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from api.schemas.base import BaseEmbedSchema, SlugMixin, TimestampMixin
 from api.schemas.games import GameSchema
 
 
 class TagSchema(SlugMixin, BaseEmbedSchema):
-    """
-    Schema for guide tags (e.g., 'Tricks', 'Glitches', 'Beginner').
-
-    Used to categorize guides and help users find related content.
+    """Base schema for `Tag` data without embeds.
 
     Attributes:
-        name (str): Tag name (e.g., 'Tricks', 'Glitches')
-        slug (str): URL-friendly version of name
-        description (str): Description of what this tag represents
+        name (str): Tag name (e.g., "Tricks", "Glitches").
+        slug (str): URL-friendly version of name.
+        description (str): Description of what this tag represents.
     """
 
     description: str = Field(..., description="Description of the tag")
 
-    class Config:  # type: ignore
-        from_attributes = True
-
 
 class GuideSchema(SlugMixin, TimestampMixin, BaseEmbedSchema):
-    """
-    Schema for user-submitted guides.
-
-    Provides information on tricks, glitches, speedrun categories, etc.
-    Supports optional embeds for related data (game, tags).
+    """Base schema for `Guide` data without embeds.
 
     Attributes:
-        title (str): Guide title
-        slug (str): URL-friendly version of title
-        short_description (str): Brief description of guide content
-        content (str): Full guide content (Markdown supported)
-        created_at (datetime): When guide was created
-        updated_at (datetime): When guide was last updated
-        game (Optional[GameSchema]): Associated game information - included with ?embed=game
-        tags (Optional[List[TagSchema]]): List of tags associated with this guide.
+        title (str): Guide title.
+        slug (str): URL-friendly version of title.
+        short_description (str): Brief description of guide content.
+        content (str): Full guide content (Markdown supported).
+        created_at (Optional[datetime]): When guide was created.
+        updated_at (Optional[datetime]): When guide was last updated.
+        game (Optional[GameSchema]): Associated game - included with ?embed=game.
+        tags (Optional[List[TagSchema]]): Associated tags - included with ?embed=tags.
     """
 
     title: str = Field(..., description="Guide title")
@@ -67,33 +40,22 @@ class GuideSchema(SlugMixin, TimestampMixin, BaseEmbedSchema):
     content: str = Field(..., description="Full guide content (supports Markdown)")
 
     game: Optional[GameSchema] = Field(
-        None, description="Associated game - included with ?embed=game"
+        default=None, description="Associated game"
     )
     tags: Optional[List[TagSchema]] = Field(
-        None, description="Guide tags - included with ?embed=tags"
+        default=None, description="Guide tags"
     )
 
-    class Config:  # type: ignore
-        from_attributes = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-            date: lambda v: v.isoformat(),
-        }
 
-
-class GuideCreateSchema(BaseModel):
-    """
-    Schema for creating new guides.
-
-    Input validation for guide creation.
-    Slug is auto-generated from title.
+class GuideCreateSchema(BaseEmbedSchema):
+    """Schema for creating new guides.
 
     Attributes:
-        title (str): Guide title
-        game_id (str): ID of associated game
-        tag_ids (Optional[List[int]]): List of tag IDs to associate with guide
-        short_description (str): Brief description
-        content (str): Full guide content
+        title (str): Guide title.
+        game_id (str): Associated game ID.
+        tag_ids (Optional[List[int]]): List of tag IDs to associate with guide.
+        short_description (str): Brief description.
+        content (str): Full guide content.
     """
 
     title: str = Field(..., min_length=1, max_length=200, description="Guide title")
@@ -112,22 +74,26 @@ class GuideCreateSchema(BaseModel):
     )
 
 
-class GuideUpdateSchema(BaseModel):
-    """
-    Schema for updating existing guides.
-
-    All fields are optional for partial updates.
+class GuideUpdateSchema(BaseEmbedSchema):
+    """Schema for updating existing guides.
 
     Attributes:
-        title (Optional[str]): Updated guide title
-        game_id (Optional[str]): Updated associated game ID
-        tag_ids (Optional[List[int]]): Updated list of tag IDs
-        short_description (Optional[str]): Updated brief description
-        content (Optional[str]): Updated full content
+        title (Optional[str]): Updated guide title.
+        slug (Optional[str]): Updated URL-friendly slug.
+        game_id (Optional[str]): Updated associated game ID.
+        tag_ids (Optional[List[int]]): Updated list of tag IDs.
+        short_description (Optional[str]): Updated brief description.
+        content (Optional[str]): Updated full content.
     """
 
     title: Optional[str] = Field(
-        None, min_length=1, max_length=200, description="Updated guide title"
+        default=None, min_length=1, max_length=200, description="Updated guide title"
+    )
+    slug: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=200,
+        description="Updated URL-friendly slug",
     )
     game_id: Optional[str] = Field(
         default=None, description="Updated associated game ID"
@@ -136,23 +102,22 @@ class GuideUpdateSchema(BaseModel):
         default=None, description="Updated list of tag IDs"
     )
     short_description: Optional[str] = Field(
-        None, min_length=1, max_length=500, description="Updated brief description"
+        default=None,
+        min_length=1,
+        max_length=500,
+        description="Updated brief description",
     )
     content: Optional[str] = Field(
-        None, min_length=1, description="Updated guide content"
+        default=None, min_length=1, description="Updated guide content"
     )
 
 
-class TagCreateSchema(BaseModel):
-    """
-    Schema for creating new tags.
-
-    Input validation for tag creation.
-    Slug is auto-generated from name.
+class TagCreateSchema(BaseEmbedSchema):
+    """Schema for creating new tags.
 
     Attributes:
-        name (str): Tag name
-        description (str): Tag description
+        name (str): Tag name.
+        description (str): Tag description.
     """
 
     name: str = Field(..., min_length=1, max_length=100, description="Tag name")
@@ -161,68 +126,67 @@ class TagCreateSchema(BaseModel):
     )
 
 
-class TagUpdateSchema(BaseModel):
-    """
-    Schema for updating existing tags.
-
-    All fields are optional for partial updates.
+class TagUpdateSchema(BaseEmbedSchema):
+    """Schema for updating existing tags.
 
     Attributes:
-        name (Optional[str]): Updated tag name
-        description (Optional[str]): Updated tag description
+        name (Optional[str]): Updated tag name.
+        slug (Optional[str]): Updated URL-friendly slug.
+        description (Optional[str]): Updated tag description.
     """
 
     name: Optional[str] = Field(
-        None, min_length=1, max_length=100, description="Updated tag name"
+        default=None, min_length=1, max_length=100, description="Updated tag name"
+    )
+    slug: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=200,
+        description="Updated URL-friendly slug",
     )
     description: Optional[str] = Field(
-        None, min_length=1, max_length=500, description="Updated tag description"
+        default=None,
+        min_length=1,
+        max_length=500,
+        description="Updated tag description",
     )
 
 
-# Guide list response schemas
-class GuideListSchema(BaseModel):
-    """
-    Simplified guide schema for list views.
-
-    Contains essential information without full content
-    to improve performance for list endpoints.
+class GuideListSchema(BaseEmbedSchema):
+    """Simplified guide schema for list views.
 
     Attributes:
-        title (str): Guide title
-        slug (str): URL-friendly slug
-        short_description (str): Brief description
-        created_at (datetime): Creation timestamp
-        updated_at (datetime): Last update timestamp
-        game (Optional[GameSchema]): Associated game
-        tags (Optional[List[TagSchema]]): Associated tags
+        title (str): Guide title.
+        slug (str): URL-friendly slug.
+        short_description (str): Brief description.
+        created_at (Optional[datetime]): When guide was created.
+        updated_at (Optional[datetime]): When guide was last updated.
+        game (Optional[GameSchema]): Associated game.
+        tags (Optional[List[TagSchema]]): Associated tags.
     """
 
-    title: str
-    slug: str
-    short_description: str
-    created_at: datetime
-    updated_at: datetime
-    game: Optional[GameSchema] = None
-    tags: Optional[List[TagSchema]] = None
+    title: str = Field(..., description="Guide title")
+    slug: str = Field(..., description="URL-friendly slug")
+    short_description: str = Field(..., description="Brief description")
+    created_at: Optional[datetime] = Field(
+        default=None, description="Creation timestamp"
+    )
+    updated_at: Optional[datetime] = Field(
+        default=None, description="Last update timestamp"
+    )
+    game: Optional[GameSchema] = Field(default=None, description="Associated game")
+    tags: Optional[List[TagSchema]] = Field(default=None, description="Associated tags")
 
-    class Config:
-        from_attributes = True
 
-
-class TagListSchema(BaseModel):
-    """
-    Simplified tag schema for list views.
+class TagListSchema(BaseEmbedSchema):
+    """Simplified tag schema for list views.
 
     Attributes:
-        name (str): Tag name
-        slug (str): URL-friendly slug
-        description (str): Tag description
+        name (str): Tag name.
+        slug (str): URL-friendly slug.
+        description (str): Tag description.
     """
 
-    name: str
-    slug: str
-    description: str
-
-    class Config:
-        from_attributes = True
+    name: str = Field(..., description="Tag name")
+    slug: str = Field(..., description="URL-friendly slug")
+    description: str = Field(..., description="Tag description")

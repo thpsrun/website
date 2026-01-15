@@ -5,317 +5,12 @@ from django.http import HttpRequest
 from ninja import Query, Router
 from srl.models import Games, NowStreaming, Players
 
-from api.auth.api_key import api_admin_check, api_moderator_check, read_only_auth
+from api.docs.streams import STREAMS_DELETE, STREAMS_LIVE, STREAMS_POST, STREAMS_PUT
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.schemas.base import ErrorResponse
 from api.schemas.streams import StreamCreateSchema, StreamSchema, StreamUpdateSchema
 
 router = Router()
-
-# START OPENAPI DOCUMENTATION #
-STREAMS_LIVE = {
-    "responses": {
-        200: {
-            "description": "Success!",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {
-                            "player": {"id": "player1", "name": "SpeedRunner123"},
-                            "game": {"id": "thps4", "name": "Tony Hawk's Pro Skater 4"},
-                            "title": "WRWRWRWRWRWRWR",
-                            "url": "https://twitch.tv/speedrunner123",
-                            "started_at": "2025-08-15T08:30:00Z",
-                        },
-                        {
-                            "player": {"id": "player2", "name": "THPS Man"},
-                            "game": {"id": "thps2", "name": "Tony Hawk's Pro Skater 2"},
-                            "title": "Practice",
-                            "url": "https://twitch.tv/thpsman",
-                            "started_at": "2025-08-15T09:45:00Z",
-                        },
-                    ]
-                }
-            },
-        },
-        400: {"description": "Invalid response sent to server."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "game_id",
-            "in": "query",
-            "example": "thps4",
-            "schema": {"type": "string"},
-            "description": "Filter by game",
-        },
-        {
-            "name": "limit",
-            "in": "query",
-            "example": 20,
-            "schema": {"type": "integer", "minimum": 1, "maximum": 50},
-            "description": "Max results (default 20, max 50)",
-        },
-    ],
-}
-
-STREAMS_GAME = {
-    "responses": {
-        200: {
-            "description": "Success!",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {
-                            "player": {"id": "player1", "name": "SpeedRunner123"},
-                            "game": {"id": "thps4", "name": "Tony Hawk's Pro Skater 4"},
-                            "title": "WRWRWRWRWRWRWRWRWR",
-                            "url": "https://twitch.tv/speedrunner123",
-                            "started_at": "2025-08-15T08:30:00Z",
-                        }
-                    ]
-                }
-            },
-        },
-        400: {"description": "Invalid response sent to server."},
-        404: {"description": "Game not found."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "game_id",
-            "in": "path",
-            "required": True,
-            "example": "thps4",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Game ID or slug",
-        },
-        {
-            "name": "limit",
-            "in": "query",
-            "example": 10,
-            "schema": {"type": "integer", "minimum": 1, "maximum": 25},
-            "description": "Max results (default 10, max 25)",
-        },
-    ],
-}
-
-STREAMS_PLAYER = {
-    "responses": {
-        200: {
-            "description": "Success!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "player": {
-                            "id": "v8lponvj",
-                            "name": "ThePackle",
-                            "twitch": "https://twitch.tv/thepackle",
-                            "youtube": "https://youtube.com/thepackle",
-                        },
-                        "is_live": True,
-                        "current_stream": {
-                            "player": {"id": "v8lponvj", "name": "ThePackle"},
-                            "game": {"id": "thps4", "name": "Tony Hawk's Pro Skater 4"},
-                            "title": "Any% WR",
-                            "url": "https://twitch.tv/thepackle",
-                            "started_at": "2025-08-15T08:30:00Z",
-                        },
-                        "ex_stream": False,
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid response sent to server."},
-        404: {"description": "Player not found."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "player_id",
-            "in": "path",
-            "required": True,
-            "example": "v8lponvj",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Player ID",
-        },
-    ],
-}
-
-STREAMS_POST = {
-    "responses": {
-        201: {
-            "description": "Stream created successfully!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "player": {"id": "v8lponvj", "name": "ThePackle"},
-                        "game": {"id": "n2680o1p", "name": "Tony Hawk's Pro Skater 4"},
-                        "title": "Going for Any% WR",
-                        "offline_ct": 0,
-                        "stream_time": "2025-08-15T08:30:00Z",
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid request data or player/game does not exist."},
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "requestBody": {
-        "required": True,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "required": ["player_id", "title"],
-                    "properties": {
-                        "player_id": {
-                            "type": "string",
-                            "example": "v8lponvj",
-                            "description": "PLAYER ID WHO IS STREAMING",
-                        },
-                        "game_id": {
-                            "type": "string",
-                            "example": "n2680o1p",
-                            "description": "GAME ID BEING PLAYED (OPTIONAL)",
-                        },
-                        "title": {
-                            "type": "string",
-                            "example": "Going for Any% WR",
-                            "description": "STREAM TITLE",
-                        },
-                        "offline_ct": {
-                            "type": "integer",
-                            "example": 0,
-                            "description": "OFFLINE COUNTER (DEFAULT 0)",
-                        },
-                        "stream_time": {
-                            "type": "string",
-                            "format": "date-time",
-                            "example": "2025-08-15T08:30:00Z",
-                            "description": "STREAM START TIME (OPTIONAL)",
-                        },
-                    },
-                },
-                "example": {
-                    "player_id": "v8lponvj",
-                    "game_id": "n2680o1p",
-                    "title": "Going for Any% WR",
-                    "offline_ct": 0,
-                    "stream_time": "2025-08-15T08:30:00Z",
-                },
-            }
-        },
-    },
-}
-
-STREAMS_PUT = {
-    "responses": {
-        200: {
-            "description": "Stream updated successfully!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "player": {"id": "v8lponvj", "name": "ThePackle"},
-                        "game": {"id": "n2680o1p", "name": "Tony Hawk's Pro Skater 4"},
-                        "title": "100% Speedrun Practice",
-                        "offline_ct": 1,
-                        "stream_time": "2025-08-15T08:30:00Z",
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid request data or game does not exist."},
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        404: {"description": "Stream does not exist for this player."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "player_id",
-            "in": "path",
-            "required": True,
-            "example": "v8lponvj",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Player ID to update stream for",
-        },
-    ],
-    "requestBody": {
-        "required": True,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "game_id": {
-                            "type": "string",
-                            "example": "n2680o1p",
-                            "description": "UPDATED GAME ID",
-                        },
-                        "title": {
-                            "type": "string",
-                            "example": "100% Speedrun Practice",
-                            "description": "UPDATED STREAM TITLE",
-                        },
-                        "offline_ct": {
-                            "type": "integer",
-                            "example": 1,
-                            "description": "UPDATED OFFLINE COUNTER",
-                        },
-                        "stream_time": {
-                            "type": "string",
-                            "format": "date-time",
-                            "example": "2025-08-15T08:30:00Z",
-                            "description": "UPDATED STREAM START TIME",
-                        },
-                    },
-                },
-                "example": {
-                    "title": "100% Speedrun Practice",
-                    "offline_ct": 1,
-                },
-            }
-        },
-    },
-}
-
-STREAMS_DELETE = {
-    "responses": {
-        200: {
-            "description": "Stream deleted successfully!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "message": "Stream for player 'ThePackle' deleted successfully"
-                    }
-                }
-            },
-        },
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        404: {"description": "Stream does not exist for this player."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "player_id",
-            "in": "path",
-            "required": True,
-            "example": "v8lponvj",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Player ID to delete stream for",
-        },
-    ],
-}
-# END OPENAPI DOCUMENTATION #
 
 
 def get_mock_streaming_data() -> List[Dict[str, Any]]:
@@ -362,7 +57,7 @@ def get_mock_streaming_data() -> List[Dict[str, Any]]:
     description="""
     Get list of currently live streamers playing speedrun games.
 
-    **Query Parameters:**
+    **Supported Parameters:**
     - `game_id`: Filter by specific game being streamed
     - `platform`: Filter by streaming platform (twitch, youtube, etc.)
     - `min_viewers`: Minimum viewer count
@@ -376,7 +71,7 @@ def get_mock_streaming_data() -> List[Dict[str, Any]]:
     **Note:** This endpoint provides mock data for demonstration.
     In production, integrate with actual streaming platform APIs.
     """,
-    auth=read_only_auth,
+    auth=public_auth,
     openapi_extra=STREAMS_LIVE,
 )
 def get_live_streams(
@@ -392,9 +87,8 @@ def get_live_streams(
         description="Max results",
     ),
 ) -> Union[List[StreamSchema], ErrorResponse]:
-    """Get currently live streamers with filtering."""
     try:
-        # Gets streaming data for testing purposes; TODO: DELETE BEFORE PROD.
+        # TODO: DELETE BEFORE PROD.
         streams_data = get_mock_streaming_data()
 
         filtered_streams = []
@@ -430,8 +124,15 @@ def get_live_streams(
     Creates a new stream record for a player.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Request Body:**
+    - `player_id` (str): Player ID who is streaming.
+    - `game_id` (Optional[str]): Game ID being played.
+    - `title` (str): Stream title.
+    - `offline_ct` (int): Offline counter (minutes since last seen).
+    - `stream_time` (Optional[datetime]): Stream start time (ISO format).
     """,
-    auth=api_moderator_check,
+    auth=moderator_auth,
     openapi_extra=STREAMS_POST,
 )
 def create_stream(
@@ -474,25 +175,7 @@ def create_stream(
             stream_time=stream_data.stream_time or datetime.now(),
         )
 
-        response_data = {
-            "player": {
-                "id": player.id,
-                "name": player.nickname if player.nickname else player.name,
-            },
-            "game": (
-                {
-                    "id": game.id,
-                    "name": game.name,
-                }
-                if game
-                else None
-            ),
-            "title": stream.title,
-            "offline_ct": stream.offline_ct,
-            "stream_time": stream.stream_time,
-        }
-
-        return StreamSchema(**response_data)
+        return StreamSchema.model_validate(stream)
 
     except Exception as e:
         return ErrorResponse(
@@ -510,8 +193,17 @@ def create_stream(
     Updates the stream for a specific player.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Supported Parameters:**
+    - `player_id` (str): Unique ID of the player whose stream is being updated.
+
+    **Request Body:**
+    - `game_id` (Optional[str]): Updated game ID being played.
+    - `title` (Optional[str]): Updated stream title.
+    - `offline_ct` (Optional[int]): Updated offline counter (minutes since last seen).
+    - `stream_time` (Optional[datetime]): Updated stream start time (ISO format).
     """,
-    auth=api_moderator_check,
+    auth=moderator_auth,
     openapi_extra=STREAMS_PUT,
 )
 def update_stream(
@@ -557,25 +249,7 @@ def update_stream(
 
         stream.save()
 
-        response_data = {
-            "player": {
-                "id": player.id,
-                "name": player.nickname if player.nickname else player.name,
-            },
-            "game": (
-                {
-                    "id": stream.game.id,
-                    "name": stream.game.name,
-                }
-                if stream.game
-                else None
-            ),
-            "title": stream.title,
-            "offline_ct": stream.offline_ct,
-            "stream_time": stream.stream_time,
-        }
-
-        return StreamSchema(**response_data)
+        return StreamSchema.model_validate(stream)
 
     except Exception as e:
         return ErrorResponse(
@@ -593,8 +267,11 @@ def update_stream(
     Deletes the stream for a specific player.
 
     **REQUIRES ADMIN ACCESS.**
+
+    **Supported Parameters:**
+    - `player_id` (str): Unique ID of the player whose stream is being deleted.
     """,
-    auth=api_admin_check,
+    auth=admin_auth,
     openapi_extra=STREAMS_DELETE,
 )
 def delete_stream(

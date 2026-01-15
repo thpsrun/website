@@ -5,345 +5,19 @@ from django.http import HttpRequest
 from ninja import Query, Router
 from srl.models import Games
 
-from api.auth.api_key import api_admin_check, api_moderator_check, read_only_auth
+from api.docs.games import GAMES_ALL, GAMES_DELETE, GAMES_GET, GAMES_POST, GAMES_PUT
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.schemas.base import ErrorResponse, validate_embeds
 from api.schemas.games import GameCreateSchema, GameSchema, GameUpdateSchema
 
 router = Router()
-
-# START OPENAPI DOCUMENTATION #
-GAMES_GET = {
-    "responses": {
-        200: {
-            "description": "Success!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "n2680o1p",
-                        "name": "Tony Hawk's Pro Skater 4",
-                        "slug": "thps4",
-                        "release": "2002-10-23",
-                        "boxart": "https://example.com/boxart.jpg",
-                        "twitch": "Tony Hawk's Pro Skater 4",
-                        "defaulttime": "realtime",
-                        "idefaulttime": "realtime",
-                        "pointsmax": 1000,
-                        "ipointsmax": 100,
-                    }
-                }
-            },
-        },
-        404: {"description": "Game does not exist."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "thps4",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Game ID or slug to retrieve",
-        },
-        {
-            "name": "embed",
-            "in": "query",
-            "example": "categories,levels",
-            "schema": {"type": "string"},
-            "description": "Comma-separated embeds: categories, levels, platforms",
-        },
-    ],
-}
-
-GAMES_POST = {
-    "responses": {
-        201: {
-            "description": "Game created successfully!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "n2680o1p",
-                        "name": "Tony Hawk's Pro Skater 4",
-                        "slug": "thps4",
-                        "release": "2002-10-23",
-                        "boxart": "https://example.com/boxart.jpg",
-                        "twitch": "Tony Hawk's Pro Skater 4",
-                        "defaulttime": "realtime",
-                        "idefaulttime": "realtime",
-                        "pointsmax": 1000,
-                        "ipointsmax": 100,
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid request data or game with slug already exists."},
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "requestBody": {
-        "required": True,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "required": ["name", "slug"],
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "example": "Tony Hawk's Pro Skater 4",
-                            "description": "GAME NAME",
-                        },
-                        "slug": {
-                            "type": "string",
-                            "example": "thps4",
-                            "description": "GAME URL SLUG",
-                        },
-                        "release": {
-                            "type": "string",
-                            "format": "date",
-                            "example": "2002-10-23",
-                            "description": "GAME RELEASE DATE",
-                        },
-                        "boxart": {
-                            "type": "string",
-                            "format": "uri",
-                            "example": "https://example.com/boxart.jpg",
-                            "description": "GAME BOXART URL",
-                        },
-                        "twitch": {
-                            "type": "string",
-                            "example": "Tony Hawk's Pro Skater 4",
-                            "description": "TWITCH GAME NAME",
-                        },
-                        "defaulttime": {
-                            "type": "string",
-                            "enum": ["realtime", "realtime_noloads", "ingame"],
-                            "example": "realtime",
-                            "description": "DEFAULT TIMING METHOD",
-                        },
-                        "idefaulttime": {
-                            "type": "string",
-                            "enum": ["realtime", "realtime_noloads", "ingame"],
-                            "example": "realtime",
-                            "description": "DEFAULT IL TIMING METHOD",
-                        },
-                    },
-                },
-                "example": {
-                    "name": "Tony Hawk's Pro Skater 4",
-                    "slug": "thps4",
-                    "release": "2002-10-23",
-                    "boxart": "https://example.com/boxart.jpg",
-                    "twitch": "Tony Hawk's Pro Skater 4",
-                    "defaulttime": "realtime",
-                    "idefaulttime": "realtime",
-                },
-            }
-        },
-    },
-}
-
-GAMES_PUT = {
-    "responses": {
-        200: {
-            "description": "Game updated successfully!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "n2680o1p",
-                        "name": "Tony Hawk's Pro Skater 4",
-                        "slug": "thps4",
-                        "release": "2002-10-23",
-                        "boxart": "https://example.com/boxart.jpg",
-                        "twitch": "Tony Hawk's Pro Skater 4",
-                        "defaulttime": "realtime",
-                        "idefaulttime": "realtime",
-                        "pointsmax": 1000,
-                        "ipointsmax": 100,
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid request data."},
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        404: {"description": "Game does not exist."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "thps4",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Game ID or slug to update",
-        },
-    ],
-    "requestBody": {
-        "required": True,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "example": "Tony Hawk's Pro Skater 4",
-                            "description": "UPDATED GAME NAME",
-                        },
-                        "slug": {
-                            "type": "string",
-                            "example": "thps4",
-                            "description": "UPDATED GAME SLUG",
-                        },
-                        "release": {
-                            "type": "string",
-                            "format": "date",
-                            "example": "2002-10-23",
-                            "description": "UPDATED RELEASE DATE",
-                        },
-                        "boxart": {
-                            "type": "string",
-                            "format": "uri",
-                            "example": "https://example.com/boxart.jpg",
-                            "description": "UPDATED BOXART URL",
-                        },
-                        "twitch": {
-                            "type": "string",
-                            "example": "Tony Hawk's Pro Skater 4",
-                            "description": "UPDATED TWITCH NAME",
-                        },
-                        "defaulttime": {
-                            "type": "string",
-                            "enum": ["realtime", "realtime_noloads", "ingame"],
-                            "example": "realtime",
-                            "description": "UPDATED DEFAULT TIMING",
-                        },
-                        "idefaulttime": {
-                            "type": "string",
-                            "enum": ["realtime", "realtime_noloads", "ingame"],
-                            "example": "realtime",
-                            "description": "UPDATED IL DEFAULT TIMING",
-                        },
-                    },
-                },
-                "example": {
-                    "name": "Tony Hawk's Pro Skater 4 Updated",
-                    "boxart": "https://example.com/new-boxart.jpg",
-                },
-            }
-        },
-    },
-}
-
-GAMES_DELETE = {
-    "responses": {
-        200: {
-            "description": "Game deleted successfully!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "message": "Game 'Tony Hawk's Pro Skater 4' deleted successfully"
-                    }
-                }
-            },
-        },
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions (admin required)."},
-        404: {"description": "Game does not exist."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "thps4",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Game ID or slug to delete",
-        },
-    ],
-}
-
-GAMES_ALL = {
-    "responses": {
-        200: {
-            "description": "Success!",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {
-                            "id": "n2680o1p",
-                            "name": "Tony Hawk's Pro Skater 4",
-                            "slug": "thps4",
-                            "release": "2002-10-23",
-                            "boxart": "https://example.com/boxart.jpg",
-                            "twitch": "Tony Hawk's Pro Skater 4",
-                            "defaulttime": "realtime",
-                            "idefaulttime": "realtime",
-                            "pointsmax": 1000,
-                            "ipointsmax": 100,
-                        },
-                        {
-                            "id": "k6qw5o9p",
-                            "name": "Tony Hawk's Pro Skater 3",
-                            "slug": "thps3",
-                            "release": "2001-10-28",
-                            "boxart": "https://example.com/thps3-boxart.jpg",
-                            "twitch": "Tony Hawk's Pro Skater 3",
-                            "defaulttime": "realtime",
-                            "idefaulttime": "realtime",
-                            "pointsmax": 1000,
-                            "ipointsmax": 100,
-                        },
-                    ]
-                }
-            },
-        },
-        400: {"description": "Invalid response sent to server."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "embed",
-            "in": "query",
-            "example": "categories,levels",
-            "schema": {"type": "string"},
-            "description": "Comma-separated embeds: categories, levels, platforms",
-        },
-        {
-            "name": "limit",
-            "in": "query",
-            "example": 50,
-            "schema": {"type": "integer", "minimum": 1, "maximum": 100},
-            "description": "Results per page (default 50, max 100)",
-        },
-        {
-            "name": "offset",
-            "in": "query",
-            "example": 0,
-            "schema": {"type": "integer", "minimum": 0},
-            "description": "Results to skip (default 0)",
-        },
-    ],
-}
-# END OPENAPI DOCUMENTATION #
 
 
 def game_embeds(
     queryset,
     embeds: str | None,
 ):
-    """Add prefetches to a queryset based on embed parameter.
-    Valid embeds: categories, levels, platforms.
-    """
+    """Add prefetches to a queryset based on embed parameter."""
     if not embeds:
         return queryset
 
@@ -376,7 +50,7 @@ def game_embeds(
     - `/games/n2680o1p` - Get game by ID
     - `/games/thps4?embed=categories,levels` - Get game with categories and levels
     """,
-    auth=read_only_auth,
+    auth=public_auth,
     openapi_extra=GAMES_GET,
 )
 def get_game(
@@ -394,6 +68,9 @@ def get_game(
             code=400,
         )
 
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
     embed_fields = []
     if embed:
         embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
@@ -433,22 +110,22 @@ def get_game(
     description="""
     Retrieves all games within the `Games` object, including optional embedding and pagination.
 
-    **Supported Embeds:**
-    - `categories`: Include metadata related to the game's categories
-    - `levels`: Include metadata related to the game's levels
-    - `platforms`: Include metadata related to the game's available platforms
-
     **Supported Parameters:**
-    - `embed`: Comma-separated list of resources to embed
-    - `limit`: Results per page (default 50, max 100)
-    - `offset`: Results to skip (default 0)
+    - `limit` (Optional[int]): Results per page (default 50, max 100).
+    - `offset` (Optional[int]): Results to skip (default 0).
+    - `embed` (Optional[list]): Comma-separated list of resources to embed,
 
+    **Supported Embeds:**
+    - `categories`: Include metadata related to the game's categories.
+    - `levels`: Include metadata related to the game's levels.
+    - `platforms`: Include metadata related to the game's available platforms.
+    
     **Examples:**
-    - `/games/all` - Get all games
-    - `/games/all?limit=20` - Get first 20 games
-    - `/games/all?embed=categories,platforms` - Get games with categories and platforms
+    - `/games/all` - Get all games.
+    - `/games/all?limit=20` - Get first 20 games.
+    - `/games/all?embed=categories,platforms` - Get games with categories and platforms.
     """,
-    auth=read_only_auth,
+    auth=public_auth,
     openapi_extra=GAMES_ALL,
 )
 def get_all_games(
@@ -469,6 +146,9 @@ def get_all_games(
         description="Offset from 0",
     ),
 ) -> Union[List[GameSchema], ErrorResponse]:
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
     embed_fields = []
     if embed:
         embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
@@ -485,6 +165,8 @@ def get_all_games(
         queryset = game_embeds(queryset, embed)
         games = queryset[offset : offset + limit]
 
+        # Simple model validate on the game date received before putting it into
+        # an array that is then sent back to the client.
         game_schemas = []
         for game in games:
             game_data = GameSchema.model_validate(game)
@@ -507,8 +189,19 @@ def get_all_games(
     Creates a brand new game.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Request Body:**
+    - `name` (str): Game name.
+    - `slug` (str): URL-friendly game abbreviation.
+    - `twitch` (Optional[str]): Game name as it appears on Twitch.
+    - `release` (date): Game release date (ISO format).
+    - `boxart` (str): URL to game box art/cover image.
+    - `defaulttime` (str): Default timing method for full-game runs.
+    - `idefaulttime` (str): Default timing method for individual level runs.
+    - `pointsmax` (int): Maximum points for world record full-game runs.
+    - `ipointsmax` (int): Maximum points for world record individual level runs.
     """,
-    auth=api_moderator_check,
+    auth=moderator_auth,
     openapi_extra=GAMES_POST,
 )
 def create_game(
@@ -521,7 +214,7 @@ def create_game(
         ).first()
         if game_check:
             return ErrorResponse(
-                error="Game already exists",
+                error="Game Already Exists",
                 details={
                     "exception": "Either the name of the game or its slug already exists."
                 },
@@ -533,7 +226,7 @@ def create_game(
         return GameSchema.model_validate(game)
     except Exception as e:
         return ErrorResponse(
-            error="Failed to create game",
+            error="Game Creation Failed",
             details={"exception": str(e)},
             code=500,
         )
@@ -547,8 +240,19 @@ def create_game(
     Updates the game based on its unique ID or slug.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Request Body:**
+    - `name` (Optional[str]): Game name.
+    - `slug` (Optional[str]): URL-friendly game abbreviation.
+    - `twitch` (Optional[str]): Game name as it appears on Twitch.
+    - `release` (Optiional[date]): Game release date (ISO format).
+    - `boxart` (Optional[str]): URL to game box art/cover image.
+    - `defaulttime` (Optional[str]): Default timing method for full-game runs.
+    - `idefaulttime` (Optional[str]): Default timing method for individual level runs.
+    - `pointsmax` (Optional[int]): Maximum points for world record full-game runs.
+    - `ipointsmax` (Optional[int]): Maximum points for world record individual level runs.
     """,
-    auth=api_moderator_check,
+    auth=moderator_auth,
     openapi_extra=GAMES_PUT,
 )
 def update_game(
@@ -586,8 +290,11 @@ def update_game(
     Deletes the selected game.
 
     **REQUIRES ADMIN ACCESS.**
+
+    **Supported Parameters:**
+    - id (str): Unique ID or slug of the specified game
     """,
-    auth=api_admin_check,
+    auth=admin_auth,
     openapi_extra=GAMES_DELETE,
 )
 def delete_game(
@@ -595,7 +302,7 @@ def delete_game(
     id: str,
 ) -> Union[dict, ErrorResponse]:
     try:
-        game = Games.objects.filter(Q(id__iexact=id) | Q(slug_iexact=id)).first()
+        game = Games.objects.filter(Q(id__iexact=id) | Q(slug__iexact=id)).first()
         if not game:
             return ErrorResponse(
                 error="Game does not exist",

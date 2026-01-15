@@ -5,7 +5,14 @@ from django.http import HttpRequest
 from ninja import Query, Router
 from srl.models import Platforms
 
-from api.auth.api_key import api_admin_check, api_moderator_check, read_only_auth
+from api.docs.platforms import (
+    PLATFORMS_ALL,
+    PLATFORMS_DELETE,
+    PLATFORMS_GET,
+    PLATFORMS_POST,
+    PLATFORMS_PUT,
+)
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.schemas.base import ErrorResponse
 from api.schemas.platforms import (
     PlatformCreateSchema,
@@ -15,182 +22,6 @@ from api.schemas.platforms import (
 
 router = Router()
 
-# START OPENAPI DOCUMENTATION #
-PLATFORMS_GET = {
-    "responses": {
-        200: {
-            "description": "Success!",
-            "content": {
-                "application/json": {
-                    "example": {"id": "8gej2n3z", "name": "PC", "slug": "pc"}
-                }
-            },
-        },
-        400: {"description": "Invalid response sent to server."},
-        404: {"description": "Platform could not be found."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "8gej2n3z",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Platform ID",
-        },
-    ],
-}
-
-PLATFORMS_POST = {
-    "responses": {
-        201: {
-            "description": "Platform created successfully!",
-            "content": {
-                "application/json": {
-                    "example": {"id": "8gej2n3z", "name": "PC", "slug": "pc"}
-                }
-            },
-        },
-        400: {"description": "Invalid request data."},
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "requestBody": {
-        "required": True,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "required": ["name"],
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "example": "PC",
-                            "description": "PLATFORM NAME",
-                        }
-                    },
-                },
-                "example": {"name": "PC"},
-            }
-        },
-    },
-}
-
-PLATFORMS_PUT = {
-    "responses": {
-        200: {
-            "description": "Platform updated successfully!",
-            "content": {
-                "application/json": {
-                    "example": {"id": "8gej2n3z", "name": "PC", "slug": "pc"}
-                }
-            },
-        },
-        400: {"description": "Invalid request data."},
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        404: {"description": "Platform does not exist."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "8gej2n3z",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Platform ID to update",
-        },
-    ],
-    "requestBody": {
-        "required": True,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "example": "PC",
-                            "description": "UPDATED PLATFORM NAME",
-                        }
-                    },
-                },
-                "example": {"name": "PC Updated"},
-            }
-        },
-    },
-}
-
-PLATFORMS_DELETE = {
-    "responses": {
-        200: {
-            "description": "Platform deleted successfully!",
-            "content": {
-                "application/json": {
-                    "example": {"message": "Platform 'PC' deleted successfully"}
-                }
-            },
-        },
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        404: {"description": "Platform does not exist."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "8gej2n3z",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Platform ID to delete",
-        },
-    ],
-}
-
-PLATFORMS_ALL = {
-    "responses": {
-        200: {
-            "description": "Success!",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {"id": "8gej2n3z", "name": "PC", "slug": "pc"},
-                        {"id": "nzelreqy", "name": "PlayStation 2", "slug": "ps2"},
-                    ]
-                }
-            },
-        },
-        400: {"description": "Invalid response sent to server."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "limit",
-            "in": "query",
-            "example": 50,
-            "schema": {"type": "integer", "minimum": 1, "maximum": 100},
-            "description": "Results per page (default 50, max 100)",
-        },
-        {
-            "name": "offset",
-            "in": "query",
-            "example": 0,
-            "schema": {"type": "integer", "minimum": 0},
-            "description": "Results to skip (default 0)",
-        },
-    ],
-}
-# END OPENAPI DOCUMENTATION #
-
 
 @router.get(
     "/{id}",
@@ -199,11 +30,14 @@ PLATFORMS_ALL = {
     description="""
     Retrieve a single platform by its ID or its slug.
 
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the platform being queried.
+
     **Examples:**
     - `/platforms/8gej2n3z` - Get platform by ID
     - `/platforms/pc` - Get platform by slug
     """,
-    auth=read_only_auth,
+    auth=public_auth,
     openapi_extra=PLATFORMS_GET,
 )
 def get_platform(
@@ -246,15 +80,15 @@ def get_platform(
     Retrieve all platforms within the `Platforms` object, ordered by name.
 
     **Supported Parameters:**
-    - `limit`: Results per page (default 50, max 100)
-    - `offset`: Results to skip (default 0)
+    - `limit` (Optional[int]): Results per page (default 50, max 100)
+    - `offset`(Optional[int]): Results to skip (default 0)
 
     **Examples:**
     - `/platforms/all` - Get all platforms
     - `/platforms/all?limit=20` - Get first 20 platforms
     - `/platforms/all?limit=10&offset=10` - Get platforms 11-20
     """,
-    auth=read_only_auth,
+    auth=public_auth,
     openapi_extra=PLATFORMS_ALL,
 )
 def get_all_platforms(
@@ -290,8 +124,13 @@ def get_all_platforms(
     Creates a brand new platform.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Request Body:**
+    - `id` (str): Unique ID (usually based on SRC) of the platform being created.
+    - `name` (str): Platform name (e.g., "PlayStation 2") being created.
+    - `slug` (str): URL-friendly version (e.g., "playstation-2").
     """,
-    auth=api_moderator_check,
+    auth=moderator_auth,
     openapi_extra=PLATFORMS_POST,
 )
 def create_platform(
@@ -318,8 +157,15 @@ def create_platform(
     Updates the platform based on its unique ID.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Supported Parameters:**
+    - `id (str): Unique ID (usually based on SRC) of the platform.
+
+    **Request Body:**
+    - `name` (Optional[str]): Platform name (e.g., "PlayStation 2") being created.
+    - `slug` (Optional[str]): URL-friendly version (e.g., "playstation-2").
     """,
-    auth=api_moderator_check,
+    auth=moderator_auth,
     openapi_extra=PLATFORMS_PUT,
 )
 def update_platform(
@@ -359,8 +205,11 @@ def update_platform(
     Deletes the selected platform based on its ID.
 
     **REQUIRES ADMIN ACCESS.**
+
+    **Supported Parameters:**
+    - `id (str): Unique ID (usually based on SRC) of the platform being deleted.
     """,
-    auth=api_admin_check,
+    auth=admin_auth,
     openapi_extra=PLATFORMS_DELETE,
 )
 def delete_platform(

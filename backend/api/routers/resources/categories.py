@@ -5,7 +5,14 @@ from django.http import HttpRequest
 from ninja import Query, Router
 from srl.models import Categories, Games, Variables, VariableValues
 
-from api.auth.api_key import api_admin_check, api_moderator_check, read_only_auth
+from api.docs.categories import (
+    CATEGORIES_ALL,
+    CATEGORIES_DELETE,
+    CATEGORIES_GET,
+    CATEGORIES_POST,
+    CATEGORIES_PUT,
+)
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.schemas.base import ErrorResponse, validate_embeds
 from api.schemas.categories import (
     CategoryCreateSchema,
@@ -14,349 +21,6 @@ from api.schemas.categories import (
 )
 
 router = Router()
-
-# START OPENAPI DOCUMENTATION #
-CATEGORIES_GET = {
-    "responses": {
-        200: {
-            "description": "Success!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "rklge08d",
-                        "name": "Any%",
-                        "slug": "any",
-                        "type": "per-game",
-                        "url": "https://speedrun.com/thps4/full_game#Any",
-                        "rules": "Rulez.",
-                        "appear_on_main": True,
-                        "hidden": False,
-                        "game": {
-                            "id": "n2680o1p",
-                            "name": "Tony Hawk's Pro Skater 4",
-                            "slug": "thps4",
-                            "release": "2002-10-23",
-                            "boxart": "https://example.com/boxart.jpg",
-                            "twitch": "Tony Hawk's Pro Skater 4",
-                            "defaulttime": "realtime",
-                            "idefaulttime": "realtime",
-                            "pointsmax": 1000,
-                            "ipointsmax": 100,
-                        },
-                        "variables": [
-                            {
-                                "id": "fdsw34df",
-                                "name": "Platform",
-                                "slug": "platform",
-                                "scope": "full-game",
-                                "all_cats": True,
-                                "hidden": False,
-                                "values": [
-                                    {
-                                        "value": "pcdfsf",
-                                        "name": "PC",
-                                        "slug": "pc",
-                                        "hidden": False,
-                                        "rules": "",
-                                    }
-                                ],
-                            }
-                        ],
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid response sent to server."},
-        404: {"description": "Category could not be found."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "rklge08d",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Category ID",
-        },
-        {
-            "name": "embed",
-            "in": "query",
-            "example": "game,variables,values",
-            "schema": {"type": "string"},
-            "description": "Comma-separated embeds: game, variables, values",
-        },
-    ],
-}
-
-CATEGORIES_POST = {
-    "responses": {
-        201: {
-            "description": "Category created successfully!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "rklge08d",
-                        "name": "Any%",
-                        "slug": "any",
-                        "type": "per-game",
-                        "url": "https://speedrun.com/thps4/full_game#Any",
-                        "rules": "Rulez.",
-                        "appear_on_main": True,
-                        "hidden": False,
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid request data or game does not exist."},
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "requestBody": {
-        "required": True,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "required": ["name", "game_id"],
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "example": "Any%",
-                            "description": "NAME OF CATEGORY",
-                        },
-                        "game_id": {
-                            "type": "string",
-                            "example": "n2680o1p",
-                            "description": "GAME ID THIS CATEGORY BELONGS TO",
-                        },
-                        "type": {
-                            "type": "string",
-                            "enum": ["per-game", "per-level"],
-                            "example": "per-game",
-                            "description": "CATEGORY TYPE",
-                        },
-                        "rules": {
-                            "type": "string",
-                            "example": "Rulez.",
-                            "description": "CATEGORY RULES",
-                        },
-                        "appear_on_main": {
-                            "type": "boolean",
-                            "example": True,
-                            "description": "WHETHER CATEGORY APPEARS ON MAIN PAGE",
-                        },
-                        "hidden": {
-                            "type": "boolean",
-                            "example": False,
-                            "description": "WHETHER CATEGORY IS HIDDEN",
-                        },
-                    },
-                },
-                "example": {
-                    "name": "Any%",
-                    "game_id": "n2680o1p",
-                    "type": "per-game",
-                    "rules": "Rulez.",
-                    "appear_on_main": True,
-                    "hidden": False,
-                },
-            }
-        },
-    },
-}
-
-CATEGORIES_PUT = {
-    "responses": {
-        200: {
-            "description": "Category updated successfully!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "rklge08d",
-                        "name": "Any%",
-                        "slug": "any",
-                        "type": "per-game",
-                        "url": "https://speedrun.com/thps4/full_game#Any",
-                        "rules": "Complete the game as fast as possible.",
-                        "appear_on_main": True,
-                        "hidden": False,
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid request data or game does not exist."},
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        404: {"description": "Category does not exist."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "rklge08d",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Category ID to update",
-        },
-    ],
-    "requestBody": {
-        "required": True,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "example": "Any%",
-                            "description": "UPDATED CATEGORY NAME",
-                        },
-                        "game_id": {
-                            "type": "string",
-                            "example": "n2680o1p",
-                            "description": "UPDATED GAME ID",
-                        },
-                        "type": {
-                            "type": "string",
-                            "enum": ["per-game", "per-level"],
-                            "example": "per-game",
-                            "description": "UPDATED CATEGORY TYPE",
-                        },
-                        "rules": {
-                            "type": "string",
-                            "example": "Complete the game as fast as possible.",
-                            "description": "UPDATED CATEGORY RULES",
-                        },
-                        "appear_on_main": {
-                            "type": "boolean",
-                            "example": True,
-                            "description": "UPDATED MAIN PAGE APPEARANCE",
-                        },
-                        "hidden": {
-                            "type": "boolean",
-                            "example": False,
-                            "description": "UPDATED HIDDEN STATUS",
-                        },
-                    },
-                },
-                "example": {
-                    "name": "Any%",
-                    "rules": "Complete the game as fast as possible with new rules.",
-                    "appear_on_main": True,
-                },
-            }
-        },
-    },
-}
-
-CATEGORIES_DELETE = {
-    "responses": {
-        200: {
-            "description": "Category deleted successfully!",
-            "content": {
-                "application/json": {
-                    "example": {"message": "Category 'Any%' deleted successfully"}
-                }
-            },
-        },
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        404: {"description": "Category does not exist."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "rklge08d",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Category ID to delete",
-        },
-    ],
-}
-
-CATEGORIES_ALL = {
-    "responses": {
-        200: {
-            "description": "Success!",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {
-                            "id": "rklge08d",
-                            "name": "Any%",
-                            "slug": "any",
-                            "type": "per-game",
-                            "url": "https://speedrun.com/thps4/full_game#Any",
-                            "rules": "Rulez.",
-                            "appear_on_main": True,
-                            "hidden": False,
-                        },
-                        {
-                            "id": "xd1m508k",
-                            "name": "100%",
-                            "slug": "100",
-                            "type": "per-game",
-                            "url": "https://speedrun.com/thps4/full_game#100",
-                            "rules": "Rulez.",
-                            "appear_on_main": True,
-                            "hidden": False,
-                        },
-                    ]
-                }
-            },
-        },
-        400: {"description": "Invalid response sent to server."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "game_id",
-            "in": "query",
-            "example": "thps4",
-            "schema": {"type": "string"},
-            "description": "Filter by game ID",
-        },
-        {
-            "name": "type",
-            "in": "query",
-            "example": "per-game",
-            "schema": {"type": "string", "pattern": "^(per-game|per-level)$"},
-            "description": "Filter by category type",
-        },
-        {
-            "name": "embed",
-            "in": "query",
-            "example": "game,variables",
-            "schema": {"type": "string"},
-            "description": "Comma-separated embeds",
-        },
-        {
-            "name": "limit",
-            "in": "query",
-            "example": 50,
-            "schema": {"type": "integer", "minimum": 1, "maximum": 100},
-            "description": "Results per page (default 50, max 100)",
-        },
-        {
-            "name": "offset",
-            "in": "query",
-            "example": 0,
-            "schema": {"type": "integer", "minimum": 0},
-            "description": "Results to skip (default 0)",
-        },
-    ],
-}
-# END OPENAPI DOCUMENTATION #
 
 
 def category_embeds(
@@ -381,6 +45,8 @@ def category_embeds(
                 "ipointsmax": category.game.ipointsmax,
             }
 
+    # If variables or values are declared, and depending on which is,
+    # additional context and metadata is added to the query.
     if "variables" in embed_fields or "values" in embed_fields:
         variables = Variables.objects.filter(
             game=category.game,
@@ -394,7 +60,7 @@ def category_embeds(
                 "name": var.name,
                 "slug": var.slug,
                 "scope": var.scope,
-                "hidden": var.archive,
+                "archive": var.archive,
             }
 
             if "values" in embed_fields:
@@ -404,7 +70,7 @@ def category_embeds(
                         "value": val.value,
                         "name": val.name,
                         "slug": val.slug,
-                        "hidden": val.archive,
+                        "archive": val.archive,
                         "rules": val.rules,
                     }
                     for val in values
@@ -412,6 +78,9 @@ def category_embeds(
 
             variables_data.append(var_data)
 
+        # If values are specified in the embed field, then it will embed
+        # the values' metadata to the request. Otherwise, it will return
+        # only basic IDs.
         embed_key = "values" if "values" in embed_fields else "variables"
         embeds[embed_key] = variables_data
 
@@ -425,17 +94,21 @@ def category_embeds(
     description="""
     Retrieves a single category based upon its ID, including optional embedding.
 
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the category being queried.
+    - `embed` (Optional[list]): Comma-separated list of resources to embed.
+
     **Supported Embeds:**
-    - `game`: Includes the metadata of the game the category belongs to
-    - `variables`: Include metadata of the variables belonging to this category
-    - `values`: Include all metadata for each variable and its values
+    - `game`: Includes the metadata of the game the category belongs to.
+    - `variables`: Include metadata of the variables belonging to this category.
+    - `values`: Include all metadata for each variable and its values.
 
     **Examples:**
-    - `/categories/rklge08d` - Get category by ID
-    - `/categories/rklge08d?embed=game` - Get category with game info
-    - `/categories/rklge08d?embed=variables,values` - Get category with variables and values
+    - `/categories/rklge08d` - Get category by ID.
+    - `/categories/rklge08d?embed=game` - Get category with game info.
+    - `/categories/rklge08d?embed=variables,values` - Get category with variables and values.
     """,
-    auth=read_only_auth,
+    auth=public_auth,
     openapi_extra=CATEGORIES_GET,
 )
 def get_category(
@@ -453,6 +126,9 @@ def get_category(
             code=400,
         )
 
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
     embed_fields = []
     if embed:
         embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
@@ -468,7 +144,7 @@ def get_category(
         category = Categories.objects.filter(id__iexact=id).first()
         if not category:
             return ErrorResponse(
-                error="Category ID does not exist",
+                error="Category ID Doesn't Exist",
                 details=None,
                 code=404,
             )
@@ -483,7 +159,7 @@ def get_category(
         return category_data
     except Exception as e:
         return ErrorResponse(
-            error="Failed to retrieve category",
+            error="Category Retrieval Failure",
             details={"exception": str(e)},
             code=500,
         )
@@ -496,24 +172,24 @@ def get_category(
     description="""
     Retrieves all categories within a `Games` object, including optional embedding and querying.
 
-    **Supported Embeds:**
-    - `variables`: Include metadata of the variables belonging to this category
-    - `values`: Include all metadata for each variable and its values
-
     **Supported Parameters:**
-    - `game`: Filter by specific game ID or its slug
-    - `type`: Filter by category type (`per-game` or `per-level`)
-    - `embed`: Comma-separated list of resources to embed
-    - `limit`: Results per page (default 50, max 100)
-    - `offset`: Results to skip (default 0)
+    - `game` (Optional[str]): Filter by specific game ID or its slug.
+    - `type` (Optional[str]: Filter by category type (`per-game` or `per-level`).
+    - `limit` (Optional[int]): Results per page (default 50, max 100).
+    - `offset` (Optional[int]): Results to skip (default 0).
+    - `embed` (Optional[list]): Comma-separated list of resources to embed.
+
+    **Supported Embeds:**
+    - `variables`: Include metadata of the variables belonging to this category.
+    - `values`: Include all metadata for each variable and its values.
 
     **Examples:**
     - `/categories/all` - Get all categories
-    - `/categories/all?game=thps4` - Get all categories for THPS4
-    - `/categories/all?type=per-game&limit=20` - Get first 20 full-game categories
-    - `/categories/all?game=thps4&embed=variables` - Get THPS4 categories with variables
+    - `/categories/all?game=thps4` - Get all categories for THPS4.
+    - `/categories/all?type=per-game&limit=20` - Get first 20 full-game categories.
+    - `/categories/all?game=thps4&embed=variables` - Get THPS4 categories with variables.
     """,
-    auth=read_only_auth,
+    auth=public_auth,
     openapi_extra=CATEGORIES_ALL,
 )
 def get_all_categories(
@@ -543,6 +219,9 @@ def get_all_categories(
         description="Offset from 0",
     ),
 ) -> Union[List[CategorySchema], ErrorResponse]:
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
     embed_fields = []
     if embed:
         embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
@@ -571,6 +250,9 @@ def get_all_categories(
 
         categories = queryset[offset : offset + limit]
 
+        # For each of the categories, it will go through and add additional context
+        # if the embed option is provided. If not, it will provide basic information
+        # (e.g. the ID of the value), with additional information provided if declared.
         category_schemas = []
         for category in categories:
             category_data = CategorySchema.model_validate(category)
@@ -585,7 +267,7 @@ def get_all_categories(
         return category_schemas
     except Exception as e:
         return ErrorResponse(
-            error="Failed to retrieve categories",
+            error="Category Retrieval Failed",
             details={"exception": str(e)},
             code=500,
         )
@@ -599,8 +281,21 @@ def get_all_categories(
     Creates a brand new category.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Request Body:**
+    - `id` (str): Unique ID (usually based on SRC) of the category.
+    - `name` (str): Category name (e.g., "Any%", "100%").
+    - `slug` (str): URL-friendly version.
+    - `type` (str): Whether this is per-game or per-level category.
+    - `url` (str): Link to category on Speedrun.com.
+    - `rules` (Optional[str]): Category-specific rules text.
+    - `appear_on_main` (bool): Whether to show on main page.
+    - `archive` (bool): Whether category is hidden from listings.
+    - `game` (str): Game this category belongs to.
+    - `variables` (List[dict]): Associated variables to the category.
+    - `values` (List[dict]): Associated values to the category.
     """,
-    auth=api_moderator_check,
+    auth=moderator_auth,
     openapi_extra=CATEGORIES_POST,
 )
 def create_category(
@@ -611,7 +306,7 @@ def create_category(
         game = Games.objects.filter(id=category_data.game_id).first()
         if not game:
             return ErrorResponse(
-                error="Game does not exist",
+                error="Game Doesn't Exist",
                 details=None,
                 code=404,
             )
@@ -638,8 +333,23 @@ def create_category(
     Updates the category based on its unique ID.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the category being edited.
+
+    **Request Body:**
+    - `name` (Optional[str]): Category name (e.g., "Any%", "100%").
+    - `slug` (Optional[str]): URL-friendly version.
+    - `type` (Optional[str]): Whether this is per-game or per-level category.
+    - `url` (Optional[str]): Link to category on Speedrun.com.
+    - `rules` (Optional[str]): Category-specific rules text.
+    - `appear_on_main` (Optional[bool]): Whether to show on main page.
+    - `archive` (Optional[bool]): Whether category is hidden from listings.
+    - `game` (Optional[str]): Game this category belongs to.
+    - `variables` (Optional[List[dict]]): Associated variables to the category.
+    - `values` (Optional[List[dict]]): Associated values to the category.
     """,
-    auth=api_moderator_check,
+    auth=moderator_auth,
     openapi_extra=CATEGORIES_PUT,
 )
 def update_category(
@@ -689,8 +399,11 @@ def update_category(
     Deletes the selected category based on its ID.
 
     **REQUIRES ADMIN ACCESS.**
+
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the category being deleted.
     """,
-    auth=api_admin_check,
+    auth=admin_auth,
     openapi_extra=CATEGORIES_DELETE,
 )
 def delete_category(

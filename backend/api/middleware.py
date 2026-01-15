@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import json
-from typing import Callable, Optional, Tuple
+import logging
+from typing import Callable, Optional
 
 from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.contrib.auth.models import User
@@ -7,58 +10,64 @@ from django.contrib.contenttypes.models import ContentType
 from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 
-from backend.api.models import RoleAPIKey
+from api.models import RoleAPIKey
+
+logger = logging.getLogger(__name__)
+
+MAX_LOG_BODY_SIZE = 10000
 
 
 class APIActivityLogMiddleware:
-    """
-    Middleware to log API activities to Django admin Recent Actions.
+    """Middleware to log API activities to Django admin Recent Actions.
 
     This captures API calls that modify data (POST, PUT, PATCH, DELETE) and
     creates LogEntry records so they appear in the Django admin's Recent Actions section.
     """
 
-    def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
+    def __init__(
+        self,
+        get_response: Callable[[HttpRequest], HttpResponse],
+    ) -> None:
         self.get_response = get_response
 
-    def __call__(self, request: HttpRequest) -> HttpResponse:
+    def __call__(
+        self,
+        request: HttpRequest,
+    ) -> HttpResponse:
         response = self.get_response(request)
 
-        # Only log for API endpoints that modify data
         if (
             request.path.startswith("/api/v1/")
             and request.method in ["POST", "PUT", "PATCH", "DELETE"]
             and response.status_code < 400
-        ):  # Only log successful requests
-
+        ):
             self.log_api_activity(request, response)
 
         return response
 
-    def log_api_activity(self, request: HttpRequest, response: HttpResponse) -> None:
+    def log_api_activity(
+        self,
+        request: HttpRequest,
+        response: HttpResponse,
+    ) -> None:
         """Log API activity to Django admin."""
         try:
-            # Get the API key user info
             user_id = self.get_api_user_id(request)
             if not user_id:
                 return
 
-            # Determine action type
             action_flag = self.get_action_flag(request.method)
             if not action_flag:
                 return
 
-            # Extract object info from URL
             object_info = self.extract_object_info(request)
             if not object_info:
                 return
 
             content_type, object_id, object_repr = object_info
 
-            # Create change message
             change_message = self.create_change_message(request, response)
 
-            # Create log entry
             LogEntry.objects.create(
                 user_id=user_id,
                 content_type=content_type,
@@ -69,29 +78,32 @@ class APIActivityLogMiddleware:
                 action_time=timezone.now(),
             )
 
-        except Exception:
+        except Exception as e:
             # Don't break API calls if logging fails
-            pass
+            logger.warning(
+                f"Failed to log API activity: {e}",
+                exc_info=True,
+                extra={"path": request.path, "method": request.method},
+            )
 
-    def get_api_user_id(self, request: HttpRequest) -> Optional[int]:
-        """
-        Get user ID from API key or create/get an API user.
+    def get_api_user_id(
+        self,
+        request: HttpRequest,
+    ) -> Optional[int]:
+        """Get user ID from API key or create/get an API user.
 
         Since API calls don't have traditional Django users, we'll create
         a special user account for API activities.
         """
         try:
-            # Check if we have API key auth info
             api_key_header = request.headers.get("X-API-Key")
             if not api_key_header:
                 return None
 
-            # Get the API key object
             api_key_obj = RoleAPIKey.objects.get_from_key(api_key_header)
             if not api_key_obj:
                 return None
 
-            # Get or create a user for this API key
             username = f"api_key_{api_key_obj.name}".replace(" ", "_").replace(
                 "-", "_"
             )[:150]
@@ -101,14 +113,15 @@ class APIActivityLogMiddleware:
                     "first_name": "API Key",
                     "last_name": api_key_obj.name,
                     "email": f"{username}@api.thpsrun.local",
-                    "is_active": False,  # Not a real login user
+                    "is_active": False,
                     "is_staff": False,
                 },
             )
 
             return user.id
 
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get/create API user: {e}", exc_info=True)
             return None
 
     def get_action_flag(self, method: str) -> Optional[int]:
@@ -122,17 +135,18 @@ class APIActivityLogMiddleware:
         return method_mapping.get(method)
 
     def extract_object_info(
-        self, request: HttpRequest
-    ) -> Optional[Tuple[ContentType, Optional[str], str]]:
+        self,
+        request: HttpRequest,
+    ) -> Optional[tuple[ContentType, Optional[str], str]]:
         """
         Extract object information from the API request.
+
 
         Returns tuple of (ContentType, object_id, object_repr) or None.
         """
         try:
             path = request.path
 
-            # Map API paths to Django models
             model_mappings = {
                 "/api/v1/games/": "srl.games",
                 "/api/v1/categories/": "srl.categories",
@@ -143,7 +157,6 @@ class APIActivityLogMiddleware:
                 "/api/v1/variables/": "srl.variables",
             }
 
-            # Find matching model
             app_label, model_name = None, None
             for path_prefix, model_path in model_mappings.items():
                 if path.startswith(path_prefix):
@@ -153,7 +166,6 @@ class APIActivityLogMiddleware:
             if not app_label or not model_name:
                 return None
 
-            # Get ContentType
             try:
                 content_type = ContentType.objects.get(
                     app_label=app_label, model=model_name
@@ -161,16 +173,13 @@ class APIActivityLogMiddleware:
             except ContentType.DoesNotExist:
                 return None
 
-            # Extract object ID from URL (for single object operations)
             path_parts = [p for p in path.split("/") if p]
 
             if request.method == "POST":
-                # For POST, we don't have an ID yet, use generic representation
                 object_id = None
                 object_repr = f"New {model_name.title()}"
             else:
-                # For PUT/PATCH/DELETE, try to get ID from URL
-                if len(path_parts) >= 4:  # /api/v1/games/some_id
+                if len(path_parts) >= 4:
                     potential_id = path_parts[3]
                     object_id = potential_id
                     object_repr = f"{model_name.title()} {potential_id}"
@@ -180,17 +189,23 @@ class APIActivityLogMiddleware:
 
             return content_type, object_id, object_repr
 
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"Failed to extract object info from request: {e}",
+                exc_info=True,
+                extra={"path": request.path},
+            )
             return None
 
     def create_change_message(
-        self, request: HttpRequest, response: HttpResponse
+        self,
+        request: HttpRequest,
+        response: HttpResponse,
     ) -> str:
         """Create a descriptive change message for the log entry."""
         try:
             method = request.method
 
-            # Get API key name for context
             api_key_name = "Unknown"
             api_key_header = request.headers.get("X-API-Key")
             if api_key_header:
@@ -198,11 +213,12 @@ class APIActivityLogMiddleware:
                     api_key_obj = RoleAPIKey.objects.get_from_key(api_key_header)
                     if api_key_obj:
                         api_key_name = api_key_obj.name
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to retrieve API key name: {e}", exc_info=True
+                    )
 
-            # Create base message
-            messages = {
+            messages: dict[str, str] = {
                 "POST": f"Created via API (Key: {api_key_name})",
                 "PUT": f"Updated via API (Key: {api_key_name})",
                 "PATCH": f"Partially updated via API (Key: {api_key_name})",
@@ -210,32 +226,40 @@ class APIActivityLogMiddleware:
             }
 
             base_message = messages.get(
-                method, f"{method} via API (Key: {api_key_name})"
+                method or "", f"{method} via API (Key: {api_key_name})"
             )
 
-            # Add request data for context (but limit size)
             if hasattr(request, "body") and request.body:
                 try:
-                    body = request.body.decode("utf-8")
-                    if len(body) < 500:  # Only include small request bodies
-                        data = json.loads(body)
-                        # Only include safe fields
-                        safe_data = {}
-                        for key, value in data.items():
-                            if key.lower() not in [
-                                "password",
-                                "secret",
-                                "token",
-                                "key",
-                            ]:
-                                safe_data[key] = value
+                    if len(request.body) > MAX_LOG_BODY_SIZE:
+                        base_message += " | Data: [Request body too large for logging]"
+                    else:
+                        body = request.body.decode("utf-8")
+                        if len(body) < 500:
+                            data = json.loads(body)
+                            safe_data = {}
+                            for key, value in data.items():
+                                if key.lower() not in [
+                                    "password",
+                                    "secret",
+                                    "token",
+                                    "key",
+                                ]:
+                                    safe_data[key] = value
 
-                        if safe_data:
-                            base_message += f" | Data: {json.dumps(safe_data)}"
-                except Exception:
-                    pass
+                            if safe_data:
+                                base_message += f" | Data: {json.dumps(safe_data)}"
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to parse/sanitize request body for logging: {e}",
+                        exc_info=True,
+                    )
 
             return base_message[:255]
-
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"Failed to create change message: {e}",
+                exc_info=True,
+                extra={"method": request.method},
+            )
             return f"API {request.method} operation"

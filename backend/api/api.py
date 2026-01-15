@@ -1,9 +1,11 @@
+import logging
 from typing import Any, Dict
 
-from django.http import HttpRequest
+import sentry_sdk
+from django.conf import settings
+from django.http import HttpRequest, HttpResponse
 from ninja import NinjaAPI
 from ninja.errors import ValidationError
-from ninja.responses import Response
 
 from api.routers.aggregations.website import router as website_router
 from api.routers.guides.guides import router as guides_router
@@ -19,6 +21,8 @@ from api.routers.resources.variables import router as variables_router
 
 from .schemas.base import ErrorResponse, ValidationErrorResponse
 
+logger = logging.getLogger(__name__)
+
 ninja_api: NinjaAPI = NinjaAPI(
     title="thps.run API",
     version="1.0.0",
@@ -27,17 +31,17 @@ ninja_api: NinjaAPI = NinjaAPI(
 
     AUTHENTICATION:
     - GET requests are public. No API key is required to access this information.
-    - All other HTTP reqeusts will require a valid API key in the X-API-Key header to proceed.
+    - All other HTTP requests will require a valid API key in the X-API-Key header to proceed.
         - If you want an API key, contact ThePackle on the thps.run Discord.
 
     QUERYING:
     Depending on the endpoint chosen, you will be able to further refine queries to reduce the
     amount of data sent to your application. Here is an example:
-    - `/api/v1/guides/all?query=thps4`: All guides belonging to THPS4 will be retuned.
+    - `/api/v1/guides/all?query=thps4`: All guides belonging to THPS4 will be returned.
 
     EMBEDDING:
     Most endpoints support an `embed` query parameter that further defines and enhances related
-    data. By defualt, if an eligible embed is not used, then the unique ID of that object will
+    data. By default, if an eligible embed is not used, then the unique ID of that object will
     be given. However, by specifying an embed, you will get more in-depth information; this will
     reduce the number of requests you have to send! Here is an example:
 
@@ -118,7 +122,7 @@ ninja_api: NinjaAPI = NinjaAPI(
 def validation_exception_handler(
     request: HttpRequest,
     exc: ValidationError,
-) -> Response:
+) -> HttpResponse:
     """Handle Pydantic validation errors.
 
     This provides consistent validation error responses across all endpoints.
@@ -128,7 +132,7 @@ def validation_exception_handler(
         exc: The validation exception from Pydantic.
 
     Returns:
-        Response: Standardized validation error response.
+        HttpResponse: Standardized validation error response.
     """
     return ninja_api.create_response(
         request,
@@ -145,26 +149,67 @@ def validation_exception_handler(
 def global_exception_handler(
     request: HttpRequest,
     exc: Exception,
-) -> Response:
+) -> HttpResponse:
     """Handle unexpected server errors.
 
-    Provides a consistent error response for unexpected exceptions and logs them for later use.
+    Provides a consistent error response for unexpected exceptions and logs them to Sentry.
 
     Args:
         request: The HTTP request that caused the error.
         exc: The unexpected exception (e.g. server errors).
 
     Returns:
-        Response: Object with a 500 status code denoting a server error has occurred.
+        HttpResponse: Object with a 500 status code denoting a server error has occurred.
     """
+    with sentry_sdk.push_scope() as scope:
+        scope.set_context(
+            "request",
+            {
+                "path": request.path,
+                "method": request.method,
+                "user_agent": request.META.get("HTTP_USER_AGENT", "Unknown"),
+                "remote_addr": request.META.get("REMOTE_ADDR", "Unknown"),
+            },
+        )
 
-    return ninja_api.create_response(
-        request,
-        ErrorResponse(
+        api_key_header = request.headers.get("X-API-Key")
+        if api_key_header:
+            scope.set_tag("has_api_key", "true")
+            scope.set_tag("api_key_prefix", api_key_header[:8] + "...")
+        else:
+            scope.set_tag("has_api_key", "false")
+
+        sentry_sdk.capture_exception(exc)
+
+    logger.error(
+        f"Unhandled exception in API: {exc}",
+        exc_info=True,
+        extra={
+            "path": request.path,
+            "method": request.method,
+            "user_agent": request.META.get("HTTP_USER_AGENT", "Unknown"),
+        },
+    )
+
+    if settings.DEBUG:
+        error_data = ErrorResponse(
+            error="An unexpected error occurred",
+            details={
+                "exception": str(exc),
+                "type": type(exc).__name__,
+            },
+            code=500,
+        ).model_dump()
+    else:
+        error_data = ErrorResponse(
             error="An unexpected error occurred",
             details=None,
             code=500,
-        ).model_dump(),
+        ).model_dump()
+
+    return ninja_api.create_response(
+        request,
+        error_data,
         status=500,
     )
 

@@ -12,6 +12,7 @@
         *   Roles system has also been added to API keys to manage scope.
 *   Rebuilt the Guides system to be within the API instead of GitHub.
 *   (Planned) Consolidated the SRC -> thps.run pipeline from two different chains into one.
+*   Migrated the entire API to Django Ninja, to include role-based API keys to better limit access to endpoints and provide some rate-limiting capabilities.
 
 ### Added
 *   (Planned) Added new login system that allows you to create an account on thps.run and associate your account with SRC.

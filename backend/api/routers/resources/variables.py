@@ -4,7 +4,13 @@ from django.http import HttpRequest
 from ninja import Query, Router
 from srl.models import Categories, Games, Levels, Variables, VariableValues
 
-from api.auth.api_key import api_admin_check, api_moderator_check, read_only_auth
+from api.docs.variables import (
+    VARIABLES_DELETE,
+    VARIABLES_GET,
+    VARIABLES_POST,
+    VARIABLES_PUT,
+)
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.schemas.base import ErrorResponse
 from api.schemas.variables import (
     VariableCreateSchema,
@@ -14,374 +20,6 @@ from api.schemas.variables import (
 )
 
 router = Router(tags=["Variables"])
-
-# START OPENAPI DOCUMENTATION #
-VARIABLES_GET = {
-    "responses": {
-        200: {
-            "description": "Success!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "5lygdn8q",
-                        "name": "Platform",
-                        "slug": "platform",
-                        "scope": "full-game",
-                        "all_cats": True,
-                        "hidden": False,
-                        "values": [
-                            {
-                                "value": "pc",
-                                "name": "PC",
-                                "slug": "pc",
-                                "hidden": False,
-                                "rules": "PC version of the game",
-                            },
-                            {
-                                "value": "ps2",
-                                "name": "PlayStation 2",
-                                "slug": "ps2",
-                                "hidden": False,
-                                "rules": "PlayStation 2 version of the game",
-                            },
-                        ],
-                        "game": {
-                            "id": "n2680o1p",
-                            "name": "Tony Hawk's Pro Skater 4",
-                            "slug": "thps4",
-                            "release": "2002-10-23",
-                            "boxart": "https://example.com/boxart.jpg",
-                            "twitch": "Tony Hawk's Pro Skater 4",
-                            "defaulttime": "realtime",
-                            "idefaulttime": "realtime",
-                            "pointsmax": 1000,
-                            "ipointsmax": 100,
-                        },
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid response sent to server."},
-        404: {"description": "Variable could not be found."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "5lygdn8q",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Variable ID",
-        },
-        {
-            "name": "embed",
-            "in": "query",
-            "example": "game,category,level",
-            "schema": {"type": "string"},
-            "description": "Comma-separated embeds: game, category, level",
-        },
-    ],
-}
-
-VARIABLES_POST = {
-    "responses": {
-        201: {
-            "description": "Variable created successfully!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "5lygdn8q",
-                        "name": "Platform",
-                        "slug": "platform",
-                        "scope": "full-game",
-                        "all_cats": True,
-                        "hidden": False,
-                    }
-                }
-            },
-        },
-        400: {
-            "description": "Invalid request data, validation failed, or resource does not exist."
-        },
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "requestBody": {
-        "required": True,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "required": ["name", "game_id", "scope"],
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "example": "Platform",
-                            "description": "VARIABLE NAME",
-                        },
-                        "game_id": {
-                            "type": "string",
-                            "example": "n2680o1p",
-                            "description": "GAME ID THIS VARIABLE BELONGS TO",
-                        },
-                        "category_id": {
-                            "type": "string",
-                            "example": "rklge08d",
-                            "description": "CATEGORY ID (REQUIRED IF all_cats IS FALSE)",
-                        },
-                        "level_id": {
-                            "type": "string",
-                            "example": "592pxj8d",
-                            "description": "LEVEL ID (REQUIRED IF scope IS single-level)",
-                        },
-                        "scope": {
-                            "type": "string",
-                            "enum": [
-                                "global",
-                                "full-game",
-                                "all-levels",
-                                "single-level",
-                            ],
-                            "example": "full-game",
-                            "description": "VARIABLE SCOPE",
-                        },
-                        "all_cats": {
-                            "type": "boolean",
-                            "example": True,
-                            "description": "WHETHER VARIABLE APPLIES TO ALL CATEGORIES",
-                        },
-                        "hidden": {
-                            "type": "boolean",
-                            "example": False,
-                            "description": "WHETHER VARIABLE IS HIDDEN",
-                        },
-                    },
-                },
-                "example": {
-                    "name": "Platform",
-                    "game_id": "n2680o1p",
-                    "scope": "full-game",
-                    "all_cats": True,
-                    "hidden": False,
-                },
-            }
-        },
-    },
-}
-
-VARIABLES_PUT = {
-    "responses": {
-        200: {
-            "description": "Variable updated successfully!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "5lygdn8q",
-                        "name": "Platform",
-                        "slug": "platform",
-                        "scope": "full-game",
-                        "all_cats": True,
-                        "hidden": False,
-                    }
-                }
-            },
-        },
-        400: {
-            "description": "Invalid request data, validation failed, or resource does not exist."
-        },
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        404: {"description": "Variable does not exist."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "5lygdn8q",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Variable ID to update",
-        },
-    ],
-    "requestBody": {
-        "required": True,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "example": "Platform",
-                            "description": "UPDATED VARIABLE NAME",
-                        },
-                        "game_id": {
-                            "type": "string",
-                            "example": "n2680o1p",
-                            "description": "UPDATED GAME ID",
-                        },
-                        "category_id": {
-                            "type": "string",
-                            "example": "rklge08d",
-                            "description": "UPDATED CATEGORY ID",
-                        },
-                        "level_id": {
-                            "type": "string",
-                            "example": "592pxj8d",
-                            "description": "UPDATED LEVEL ID",
-                        },
-                        "scope": {
-                            "type": "string",
-                            "enum": [
-                                "global",
-                                "full-game",
-                                "all-levels",
-                                "single-level",
-                            ],
-                            "example": "full-game",
-                            "description": "UPDATED VARIABLE SCOPE",
-                        },
-                        "all_cats": {
-                            "type": "boolean",
-                            "example": True,
-                            "description": "UPDATED ALL CATEGORIES FLAG",
-                        },
-                        "hidden": {
-                            "type": "boolean",
-                            "example": False,
-                            "description": "UPDATED HIDDEN STATUS",
-                        },
-                    },
-                },
-                "example": {"name": "Platform Updated", "hidden": True},
-            }
-        },
-    },
-}
-
-VARIABLES_DELETE = {
-    "responses": {
-        200: {
-            "description": "Variable deleted successfully!",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "message": "Variable 'Platform' and its values deleted successfully"
-                    }
-                }
-            },
-        },
-        401: {"description": "API key required for this operation."},
-        403: {"description": "Insufficient permissions."},
-        404: {"description": "Variable does not exist."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "id",
-            "in": "path",
-            "required": True,
-            "example": "5lygdn8q",
-            "schema": {"type": "string", "maxLength": 15},
-            "description": "Variable ID to delete",
-        },
-    ],
-}
-
-VARIABLES_ALL = {
-    "responses": {
-        200: {
-            "description": "Success!",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {
-                            "id": "5lygdn8q",
-                            "name": "Platform",
-                            "slug": "platform",
-                            "scope": "full-game",
-                            "all_cats": True,
-                            "hidden": False,
-                        },
-                        {
-                            "id": "9k2xfl7m",
-                            "name": "Difficulty",
-                            "slug": "difficulty",
-                            "scope": "single-level",
-                            "all_cats": False,
-                            "hidden": False,
-                        },
-                    ]
-                }
-            },
-        },
-        400: {"description": "Invalid response sent to server."},
-        429: {"description": "Rate limit exceeded, calm your horses."},
-        500: {"description": "Server Error. Error is logged."},
-    },
-    "parameters": [
-        {
-            "name": "game_id",
-            "in": "query",
-            "example": "thps4",
-            "schema": {"type": "string"},
-            "description": "Filter by game ID",
-        },
-        {
-            "name": "category_id",
-            "in": "query",
-            "example": "rklge08d",
-            "schema": {"type": "string"},
-            "description": "Filter by category ID",
-        },
-        {
-            "name": "level_id",
-            "in": "query",
-            "example": "592pxj8d",
-            "schema": {"type": "string"},
-            "description": "Filter by level ID",
-        },
-        {
-            "name": "scope",
-            "in": "query",
-            "example": "full-game",
-            "schema": {
-                "type": "string",
-                "pattern": "^(global|full-game|all-levels|single-level)$",
-            },
-            "description": "Filter by scope",
-        },
-        {
-            "name": "embed",
-            "in": "query",
-            "example": "game,category",
-            "schema": {"type": "string"},
-            "description": "Comma-separated embeds",
-        },
-        {
-            "name": "limit",
-            "in": "query",
-            "example": 50,
-            "schema": {"type": "integer", "minimum": 1, "maximum": 100},
-            "description": "Results per page (default 50, max 100)",
-        },
-        {
-            "name": "offset",
-            "in": "query",
-            "example": 0,
-            "schema": {"type": "integer", "minimum": 0},
-            "description": "Results to skip (default 0)",
-        },
-    ],
-}
-# END OPENAPI DOCUMENTATION #
 
 
 def apply_variable_embeds(
@@ -416,7 +54,7 @@ def apply_variable_embeds(
                 "url": variable.cat.url,
                 "rules": variable.cat.rules,
                 "appear_on_main": variable.cat.appear_on_main,
-                "hidden": variable.cat.archive,
+                "archive": variable.cat.archive,
             }
 
     if "level" in embed_fields:
@@ -449,7 +87,7 @@ def apply_variable_embeds(
     - `/variables/5lygdn8q?embed=game` - Get variable with game data
     - `/variables/5lygdn8q?embed=game,category,level` - Get variable with all embeds
     """,
-    auth=read_only_auth,
+    auth=public_auth,
     openapi_extra=VARIABLES_GET,
 )
 def get_variable(
@@ -467,6 +105,9 @@ def get_variable(
             code=400,
         )
 
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
     embed_fields = []
     if embed:
         embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
@@ -549,7 +190,7 @@ def get_variable(
     - `/variables/all?scope=full-game` - Get all full-game variables
     - `/variables/all?game_id=thps4&embed=game,category` - Get THPS4 variables with embeds
     """,
-    auth=read_only_auth,
+    auth=public_auth,
 )
 def get_all_variables(
     request: HttpRequest,
@@ -586,6 +227,9 @@ def get_all_variables(
         description="Offset from 0",
     ),
 ) -> Union[List[VariableSchema], ErrorResponse]:
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
     embed_fields = []
     if embed:
         embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
@@ -601,6 +245,8 @@ def get_all_variables(
     try:
         queryset = Variables.objects.all().order_by("name")
 
+        # If parameters are fulfilled by the client, this will further
+        # drill down what the client is looking for.
         if game_id:
             queryset = queryset.filter(game__id=game_id)
         if category_id:
@@ -612,6 +258,9 @@ def get_all_variables(
 
         variables = queryset[offset : offset + limit]
 
+        # For each of the variables, it will go through and add additional context
+        # if the embed option is provided. If not, it will provide basic information
+        # (e.g. the ID of the value), with additional information provided if declared.
         variable_schemas = []
         for variable in variables:
             variable_data = VariableSchema.model_validate(variable)
@@ -641,8 +290,16 @@ def get_all_variables(
     Creates a brand new variable with validation for scope and relationship constraints.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Request Body:**
+    - `game_id` (str): Game ID this variable belongs to.
+    - `name` (str): Variable name.
+    - `scope` (str): Where this variable applies (`global`, `full-game`, `all-levels`, `single-level`).
+    - `archive` (bool): Whether variable is archived/hidden from listings.
+    - `category_id` (Optional[str]): Specific category ID (if not all_cats).
+    - `level_id` (Optional[str]): Specific level ID (required if scope is `single-level`).
     """,
-    auth=api_moderator_check,
+    auth=moderator_auth,
     openapi_extra=VARIABLES_POST,
 )
 def create_variable(
@@ -660,12 +317,6 @@ def create_variable(
 
         category = None
         if variable_data.category_id:
-            return ErrorResponse(
-                error="Cannot set both category_id.",
-                details=None,
-                code=400,
-            )
-        elif variable_data.category_id:
             category = Categories.objects.filter(id=variable_data.category_id).first()
             if not category:
                 return ErrorResponse(
@@ -721,8 +372,20 @@ def create_variable(
     Updates the variable based on its unique ID.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the variable being updated.
+
+    **Request Body:**
+    - `game_id` (Optional[str]): Updated game ID.
+    - `name` (Optional[str]): Updated variable name.
+    - `scope` (Optional[str]): Updated scope (`global`, `full-game`, `all-levels`, `single-level`).
+    - `all_cats` (Optional[bool]): Updated all_cats flag.
+    - `archive` (Optional[bool]): Updated archive status.
+    - `category_id` (Optional[str]): Updated category ID.
+    - `level_id` (Optional[str]): Updated level ID.
     """,
-    auth=api_moderator_check,
+    auth=moderator_auth,
     openapi_extra=VARIABLES_PUT,
 )
 def update_variable(
@@ -814,8 +477,11 @@ def update_variable(
     Deletes the selected variable by its ID. **Also deletes associated values.**
 
     **REQUIRES ADMIN ACCESS.**
+
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the variable being deleted.
     """,
-    auth=api_admin_check,
+    auth=admin_auth,
     openapi_extra=VARIABLES_DELETE,
 )
 def delete_variable(
