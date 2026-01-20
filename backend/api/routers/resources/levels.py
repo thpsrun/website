@@ -1,7 +1,8 @@
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from django.http import HttpRequest
 from ninja import Query, Router
+from ninja.responses import codes_4xx
 from srl.models import Games, Levels, Variables, VariableValues
 
 from api.docs.levels import (
@@ -14,6 +15,7 @@ from api.docs.levels import (
 from api.permissions import admin_auth, moderator_auth, public_auth
 from api.schemas.base import ErrorResponse, validate_embeds
 from api.schemas.levels import LevelCreateSchema, LevelSchema, LevelUpdateSchema
+from api.utils import get_or_generate_id
 
 router = Router()
 
@@ -88,85 +90,8 @@ def apply_level_embeds(
 
 
 @router.get(
-    "/{id}",
-    response=Union[LevelSchema, ErrorResponse],
-    summary="Get Level by ID",
-    description="""
-    Retrieve a single level based upon its ID, including optional embedding.
-
-    **Supported Parameters:**
-    - `id` (str): Unique ID of the level being queried.
-    - `embed` (Optional[list]): Comma-separated list of resources to embed.
-
-    **Supported Embeds:**
-    - `game`: Includes the metadata of the game the level belongs to
-    - `variables`: Include metadata of the variables belonging to this level
-    - `values`: Include all metadata for each variable and its values
-
-    **Examples:**
-    - `/levels/592pxj8d` - Get level by ID
-    - `/levels/592pxj8d?embed=game` - Get level with game info
-    - `/levels/592pxj8d?embed=variables,values` - Get level with variables and values
-    """,
-    auth=public_auth,
-    openapi_extra=LEVELS_GET,
-)
-def get_level(
-    request: HttpRequest,
-    id: str,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-) -> Union[LevelSchema, ErrorResponse]:
-    if len(id) > 15:
-        return ErrorResponse(
-            error="ID must be 15 characters or less",
-            details=None,
-            code=400,
-        )
-
-    # Checks to see what embeds are being used versus what is allowed
-    # via this endpoint. It will return an error to the client if they
-    # have an embed type not supported.
-    embed_fields = []
-    if embed:
-        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
-        invalid_embeds = validate_embeds("levels", embed_fields)
-        if invalid_embeds:
-            return ErrorResponse(
-                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
-                details={"valid_embeds": ["game", "variables", "values"]},
-                code=400,
-            )
-
-    try:
-        level = Levels.objects.filter(id__iexact=id).first()
-        if not level:
-            return ErrorResponse(
-                error="Level ID does not exist",
-                details=None,
-                code=404,
-            )
-
-        level_data = LevelSchema.model_validate(level)
-
-        if embed_fields:
-            embed_data = apply_level_embeds(level, embed_fields)
-            for field, data in embed_data.items():
-                setattr(level_data, field, data)
-
-        return level_data
-
-    except Exception as e:
-        return ErrorResponse(
-            error="Failed to retrieve level", details={"exception": str(e)}, code=500
-        )
-
-
-@router.get(
     "/all",
-    response=Union[List[LevelSchema], ErrorResponse],
+    response={200: List[LevelSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get All Levels",
     description="""
     Retrieves all levels within a `Games` object, including optional embedding.
@@ -212,7 +137,7 @@ def get_all_levels(
         ge=0,
         description="Offset from 0",
     ),
-) -> Union[List[LevelSchema], ErrorResponse]:
+) -> Tuple[int, Union[List[LevelSchema], ErrorResponse]]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -221,10 +146,9 @@ def get_all_levels(
         embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
         invalid_embeds = validate_embeds("levels", embed_fields)
         if invalid_embeds:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
                 details=None,
-                code=400,
             )
 
     try:
@@ -249,23 +173,97 @@ def get_all_levels(
 
             level_schemas.append(level_data)
 
-        return level_schemas
+        return 200, level_schemas
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Level Retrieval Failure",
             details={"exception": str(e)},
-            code=500,
+        )
+
+
+@router.get(
+    "/{id}",
+    response={200: LevelSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Get Level by ID",
+    description="""
+    Retrieve a single level based upon its ID, including optional embedding.
+
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the level being queried.
+    - `embed` (Optional[list]): Comma-separated list of resources to embed.
+
+    **Supported Embeds:**
+    - `game`: Includes the metadata of the game the level belongs to
+    - `variables`: Include metadata of the variables belonging to this level
+    - `values`: Include all metadata for each variable and its values
+
+    **Examples:**
+    - `/levels/592pxj8d` - Get level by ID
+    - `/levels/592pxj8d?embed=game` - Get level with game info
+    - `/levels/592pxj8d?embed=variables,values` - Get level with variables and values
+    """,
+    auth=public_auth,
+    openapi_extra=LEVELS_GET,
+)
+def get_level(
+    request: HttpRequest,
+    id: str,
+    embed: Optional[str] = Query(
+        None,
+        description="Comma-separated embeds",
+    ),
+) -> Tuple[int, Union[LevelSchema, ErrorResponse]]:
+    if len(id) > 15:
+        return 400, ErrorResponse(
+            error="ID must be 15 characters or less",
+            details=None,
+        )
+
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
+    embed_fields = []
+    if embed:
+        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
+        invalid_embeds = validate_embeds("levels", embed_fields)
+        if invalid_embeds:
+            return 400, ErrorResponse(
+                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
+                details={"valid_embeds": ["game", "variables", "values"]},
+            )
+
+    try:
+        level = Levels.objects.filter(id__iexact=id).first()
+        if not level:
+            return 404, ErrorResponse(
+                error="Level ID does not exist",
+                details=None,
+            )
+
+        level_data = LevelSchema.model_validate(level)
+
+        if embed_fields:
+            embed_data = apply_level_embeds(level, embed_fields)
+            for field, data in embed_data.items():
+                setattr(level_data, field, data)
+
+        return 200, level_data
+
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to retrieve level",
+            details={"exception": str(e)},
         )
 
 
 @router.post(
     "/",
-    response=Union[LevelSchema, ErrorResponse],
+    response={200: LevelSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Level",
     description="""
     Creates a brand new level.
 
-    **REQUIRES MODERATOR ACCESS OR HIGHER.* `````*
+    **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
     **Request Body:**
     - `id` (str): Unique ID (usually based on SRC) of the level.
@@ -286,34 +284,42 @@ def get_all_levels(
 def create_level(
     request: HttpRequest,
     level_data: LevelCreateSchema,
-) -> Union[LevelSchema, ErrorResponse]:
+) -> Tuple[int, Union[LevelSchema, ErrorResponse]]:
     try:
         game = Games.objects.filter(id=level_data.game_id).first()
         if not game:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Game does not exist",
                 details=None,
-                code=404,
             )
 
-        level = Levels.objects.create(
-            game=game,
-            **{k: v for k, v in level_data.model_dump().items() if k != "game_id"},
-        )
+        try:
+            level_id = get_or_generate_id(
+                level_data.id,
+                lambda id: Levels.objects.filter(id=id).exists(),
+            )
+        except ValueError as e:
+            return 400, ErrorResponse(
+                error="ID Already Exists",
+                details={"exception": str(e)},
+            )
 
-        return LevelSchema.model_validate(level)
+        create_data = level_data.model_dump(exclude={"game_id"})
+        create_data["id"] = level_id
+        level = Levels.objects.create(game=game, **create_data)
+
+        return 200, LevelSchema.model_validate(level)
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to create level",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.put(
     "/{id}",
-    response=Union[LevelSchema, ErrorResponse],
+    response={200: LevelSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Level",
     description="""
     Updates the level based on its unique ID.
@@ -341,24 +347,22 @@ def update_level(
     request: HttpRequest,
     id: str,
     level_data: LevelUpdateSchema,
-) -> Union[LevelSchema, ErrorResponse]:
+) -> Tuple[int, Union[LevelSchema, ErrorResponse]]:
     try:
         level = Levels.objects.filter(id__iexact=id).first()
         if not level:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Level does not exist",
                 details=None,
-                code=404,
             )
 
         update_data = level_data.model_dump(exclude_unset=True)
         if "game_id" in update_data:
             game = Games.objects.filter(id=update_data["game_id"]).first()
             if not game:
-                return ErrorResponse(
+                return 404, ErrorResponse(
                     error="Game does not exist",
                     details=None,
-                    code=404,
                 )
             level.game = game
             del update_data["game_id"]
@@ -367,19 +371,18 @@ def update_level(
             setattr(level, field, value)
 
         level.save()
-        return LevelSchema.model_validate(level)
+        return 200, LevelSchema.model_validate(level)
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to update level",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.delete(
     "/{id}",
-    response=Union[dict, ErrorResponse],
+    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Level",
     description="""
     Deletes the selected level by its ID.
@@ -395,22 +398,20 @@ def update_level(
 def delete_level(
     request: HttpRequest,
     id: str,
-) -> Union[dict, ErrorResponse]:
+) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
     try:
         level = Levels.objects.filter(id__iexact=id).first()
         if not level:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Level does not exist",
                 details=None,
-                code=404,
             )
 
         name = level.name
         level.delete()
-        return {"message": f"Level '{name}' deleted successfully"}
+        return 200, {"message": f"Level '{name}' deleted successfully"}
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to delete level",
             details={"exception": str(e)},
-            code=500,
         )

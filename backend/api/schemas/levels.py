@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from api.schemas.base import BaseEmbedSchema, SlugMixin
 
@@ -45,19 +45,49 @@ class LevelSchema(LevelBaseSchema):
         None, description="Variables with their values"
     )
 
+    @field_validator("game", mode="before")
+    @classmethod
+    def convert_model_to_none(cls, v: Any) -> Optional[dict]:
+        """Convert Django model instance to None if not explicitly embedded."""
+        if v is None:
+            return None
+        if isinstance(v, dict):
+            return v
+        return None
+
+    @field_validator("variables", "values", mode="before")
+    @classmethod
+    def convert_list_to_none(cls, v: Any) -> Optional[List[dict]]:
+        """Convert Django QuerySet or Manager to None if not explicitly embedded."""
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return v
+        if hasattr(v, "all"):
+            return None
+        return v
+
 
 class LevelCreateSchema(BaseEmbedSchema):
     """Schema for creating new levels.
 
     Attributes:
+        id (Optional[str]): The level ID; if one is not given, it will auto-generate.
         game_id (str): Game ID this level belongs to.
         name (str): Level name.
+        slug (str): URL-friendly version.
         url (str): Speedrun.com URL.
         rules (Optional[str]): Level-specific rules.
     """
 
+    id: Optional[str] = Field(
+        default=None,
+        max_length=12,
+        description="The level ID; if one is not given, it will auto-generate.",
+    )
     game_id: str = Field(..., description="ID of the game this level belongs to")
-    name: str = Field(..., description="Level name")
+    name: str = Field(..., max_length=75, description="Level name")
+    slug: str = Field(..., max_length=75, description="URL-friendly level slug")
     url: str = Field(..., description="Speedrun.com URL")
     rules: Optional[str] = Field(default=None, description="Level-specific rules")
 

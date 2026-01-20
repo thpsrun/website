@@ -15,7 +15,6 @@ urlpatterns = [
     path("illiad/", admin.site.urls),
     # Django Ninja API
     path("api/v1/", include("api.urls")),
-    path("", include("srl.urls")),
     path("docs/", include("guides.urls")),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
@@ -23,5 +22,3 @@ if settings.DEBUG:
     from debug_toolbar.toolbar import debug_toolbar_urls
 
     urlpatterns = urlpatterns + debug_toolbar_urls()
-
-handler404 = "srl.static_views.page_not_found"

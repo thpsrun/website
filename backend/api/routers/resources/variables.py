@@ -1,23 +1,34 @@
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from django.http import HttpRequest
+from django.utils.text import slugify
 from ninja import Query, Router
+from ninja.responses import codes_4xx
 from srl.models import Categories, Games, Levels, Variables, VariableValues
 
 from api.docs.variables import (
+    VALUES_ALL,
+    VALUES_DELETE,
+    VALUES_GET,
+    VALUES_POST,
+    VALUES_PUT,
     VARIABLES_DELETE,
     VARIABLES_GET,
     VARIABLES_POST,
     VARIABLES_PUT,
 )
 from api.permissions import admin_auth, moderator_auth, public_auth
-from api.schemas.base import ErrorResponse
+from api.schemas.base import ErrorResponse, VariableScopeType
 from api.schemas.variables import (
     VariableCreateSchema,
     VariableSchema,
     VariableUpdateSchema,
+    VariableValueCreateSchema,
+    VariableValueSchema,
+    VariableValueUpdateSchema,
     VariableWithValuesSchema,
 )
+from api.utils import get_or_generate_id
 
 router = Router(tags=["Variables"])
 
@@ -70,105 +81,37 @@ def apply_variable_embeds(
     return embeds
 
 
-@router.get(
-    "/{id}",
-    response=Union[VariableWithValuesSchema, ErrorResponse],
-    summary="Get Variable by ID",
-    description="""
-    Retrieve a single variable by its ID, including optional embedding.
+def apply_value_embeds(
+    value: VariableValues,
+    embed_fields: List[str],
+) -> dict:
+    """Apply requested embeds to a variable value instance."""
+    embeds = {}
 
-    **Supported Embeds:**
-    - `game`: Include metadata related to the game
-    - `category`: Include metadata related to the category
-    - `level`: Include metadata related to the level
+    if "variable" in embed_fields:
+        if value.var:
+            embeds["variable"] = {
+                "id": value.var.id,
+                "name": value.var.name,
+                "slug": value.var.slug,
+                "scope": value.var.scope,
+                "archive": value.var.archive,
+            }
 
-    **Examples:**
-    - `/variables/5lygdn8q` - Get variable by ID
-    - `/variables/5lygdn8q?embed=game` - Get variable with game data
-    - `/variables/5lygdn8q?embed=game,category,level` - Get variable with all embeds
-    """,
-    auth=public_auth,
-    openapi_extra=VARIABLES_GET,
-)
-def get_variable(
-    request: HttpRequest,
-    id: str,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-) -> Union[VariableWithValuesSchema, ErrorResponse]:
-    if len(id) > 15:
-        return ErrorResponse(
-            error="ID must be 15 characters or less",
-            details=None,
-            code=400,
-        )
+    return embeds
 
-    # Checks to see what embeds are being used versus what is allowed
-    # via this endpoint. It will return an error to the client if they
-    # have an embed type not supported.
-    embed_fields = []
-    if embed:
-        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
-        valid_embeds = {"game", "category", "level"}
-        invalid_embeds = [field for field in embed_fields if field not in valid_embeds]
-        if invalid_embeds:
-            return ErrorResponse(
-                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
-                details={"valid_embeds": ["game", "category", "level"]},
-                code=400,
-            )
 
-    try:
-        variable = Variables.objects.filter(id__iexact=id).first()
-        if not variable:
-            return ErrorResponse(
-                error="Variable ID does not exist",
-                details=None,
-                code=404,
-            )
-
-        values = VariableValues.objects.filter(var=variable).order_by("name")
-
-        variable_data = {
-            "id": variable.id,
-            "name": variable.name,
-            "slug": variable.slug,
-            "scope": variable.scope,
-            "archive": variable.archive,
-            "values": [
-                {
-                    "value": val.value,
-                    "name": val.name,
-                    "slug": val.slug,
-                    "archive": val.archive,
-                    "rules": val.rules,
-                }
-                for val in values
-            ],
-        }
-
-        if embed_fields:
-            embed_data = apply_variable_embeds(variable, embed_fields)
-            variable_data.update(embed_data)
-
-        return VariableWithValuesSchema(**variable_data)
-
-    except Exception as e:
-        return ErrorResponse(
-            error="Failed to retrieve variable",
-            details={"exception": str(e)},
-            code=500,
-        )
+# ============================================================================
+# Variables Endpoints - Static routes first
+# ============================================================================
 
 
 @router.get(
     "/all",
-    response=Union[List[VariableSchema], ErrorResponse],
+    response={200: List[VariableSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get All Variables",
     description="""
-    Retrieve all variables within the `Variables` object, including optional embedding and filtering.
+    Retrieve all variables within the `Variables` object, including optional embedding and filtering
 
     **Supported Embeds:**
     - `game`: Include metadata of the game the variable belongs to
@@ -206,10 +149,9 @@ def get_all_variables(
         None,
         description="Filter by level ID",
     ),
-    scope: Optional[str] = Query(
+    scope: Optional[VariableScopeType] = Query(
         None,
         description="Filter by scope",
-        pattern="^(global|full-game|all-levels|single-level)$",
     ),
     embed: Optional[str] = Query(
         None,
@@ -226,7 +168,7 @@ def get_all_variables(
         ge=0,
         description="Offset from 0",
     ),
-) -> Union[List[VariableSchema], ErrorResponse]:
+) -> Tuple[int, Union[List[VariableSchema], ErrorResponse]]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -236,10 +178,9 @@ def get_all_variables(
         valid_embeds = {"game", "category", "level"}
         invalid_embeds = [field for field in embed_fields if field not in valid_embeds]
         if invalid_embeds:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
                 details=None,
-                code=400,
             )
 
     try:
@@ -272,19 +213,442 @@ def get_all_variables(
 
             variable_schemas.append(variable_data)
 
-        return variable_schemas
+        return 200, variable_schemas
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to retrieve variables",
             details={"exception": str(e)},
-            code=500,
+        )
+
+
+# ============================================================================
+# Variable Values Endpoints - MUST come before /{id} routes
+# ============================================================================
+
+
+@router.get(
+    "/values/all",
+    response={200: List[VariableValueSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Get All Variable Values",
+    description="""
+    Retrieve all values for a specific variable.
+
+    **Supported Embeds:**
+    - `variable`: Include metadata of the variable this value belongs to
+
+    **Supported Parameters:**
+    - `variable_id` (required): Filter by specific variable ID
+    - `embed`: Comma-separated list of resources to embed
+    - `limit`: Results per page (default 50, max 100)
+    - `offset`: Results to skip (default 0)
+
+    **Examples:**
+    - `/variables/values/all?variable_id=5lygdn8q` - Get all values for a variable
+    - `/variables/values/all?variable_id=5lygdn8q&embed=variable` - With embeds
+    """,
+    auth=public_auth,
+    openapi_extra=VALUES_ALL,
+)
+def get_all_values(
+    request: HttpRequest,
+    variable_id: Optional[str] = Query(
+        None,
+        description="Filter by variable ID (required)",
+    ),
+    embed: Optional[str] = Query(
+        None,
+        description="Comma-separated embeds",
+    ),
+    limit: int = Query(
+        50,
+        ge=1,
+        le=100,
+        description="Maximum number of returned objects (default 50, less than 100)",
+    ),
+    offset: int = Query(
+        0,
+        ge=0,
+        description="Offset from 0",
+    ),
+) -> Tuple[int, Union[List[VariableValueSchema], ErrorResponse]]:
+    if not variable_id:
+        return 400, ErrorResponse(
+            error="Please provide the variable's unique ID.",
+            details=None,
+        )
+
+    embed_fields = []
+    if embed:
+        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
+        valid_embeds = {"variable"}
+        invalid_embeds = [field for field in embed_fields if field not in valid_embeds]
+        if invalid_embeds:
+            return 400, ErrorResponse(
+                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
+                details={"valid_embeds": ["variable"]},
+            )
+
+    try:
+        variable = Variables.objects.filter(id__iexact=variable_id).first()
+        if not variable:
+            return 404, ErrorResponse(
+                error="Variable does not exist",
+                details=None,
+            )
+
+        queryset = VariableValues.objects.filter(var=variable).order_by("name")
+        values = queryset.select_related("var")[offset : offset + limit]
+
+        value_schemas = []
+        for value in values:
+            value_data = VariableValueSchema.model_validate(value)
+
+            if embed_fields:
+                embed_data = apply_value_embeds(value, embed_fields)
+                for field, data in embed_data.items():
+                    setattr(value_data, field, data)
+
+            value_schemas.append(value_data)
+
+        return 200, value_schemas
+
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to retrieve variable values",
+            details={"exception": str(e)},
+        )
+
+
+@router.post(
+    "/values/",
+    response={200: VariableValueSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Create Variable Value",
+    description="""
+    Creates a brand new variable value.
+
+    **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Request Body:**
+    - `variable_id` (str): Variable ID this value belongs to.
+    - `name` (str): Value name.
+    - `value` (Optional[str]): Value ID; if not provided, one will be auto-generated.
+    - `slug` (Optional[str]): URL-friendly slug; auto-generated from name if not provided.
+    - `archive` (bool): Whether value is archived/hidden.
+    - `rules` (Optional[str]): Rules specific to this value choice.
+    """,
+    auth=moderator_auth,
+    openapi_extra=VALUES_POST,
+)
+def create_value(
+    request: HttpRequest,
+    value_data: VariableValueCreateSchema,
+) -> Tuple[int, Union[VariableValueSchema, ErrorResponse]]:
+    try:
+        variable = Variables.objects.filter(id__iexact=value_data.variable_id).first()
+        if not variable:
+            return 400, ErrorResponse(
+                error="Variable does not exist",
+                details=None,
+            )
+
+        try:
+            value_id = get_or_generate_id(
+                value_data.value,
+                lambda id: VariableValues.objects.filter(value=id).exists(),
+            )
+        except ValueError as e:
+            return 400, ErrorResponse(
+                error="Value ID Already Exists",
+                details={"exception": str(e)},
+            )
+
+        value_slug = value_data.slug if value_data.slug else slugify(value_data.name)
+
+        new_value = VariableValues.objects.create(
+            value=value_id,
+            var=variable,
+            name=value_data.name,
+            slug=value_slug,
+            archive=value_data.archive,
+            rules=value_data.rules,
+        )
+
+        return 200, VariableValueSchema.model_validate(new_value)
+
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to create variable value",
+            details={"exception": str(e)},
+        )
+
+
+@router.get(
+    "/values/{value_id}",
+    response={200: VariableValueSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Get Variable Value by ID",
+    description="""
+    Retrieve a single variable value by its ID.
+
+    **Supported Embeds:**
+    - `variable`: Include metadata of the variable this value belongs to
+
+    **Examples:**
+    - `/variables/values/pc` - Get value by ID
+    - `/variables/values/pc?embed=variable` - Get value with variable data
+    """,
+    auth=public_auth,
+    openapi_extra=VALUES_GET,
+)
+def get_value(
+    request: HttpRequest,
+    value_id: str,
+    embed: Optional[str] = Query(
+        None,
+        description="Comma-separated embeds",
+    ),
+) -> Tuple[int, Union[VariableValueSchema, ErrorResponse]]:
+    if len(value_id) > 10:
+        return 400, ErrorResponse(
+            error="Value ID must be 10 characters or less",
+            details=None,
+        )
+
+    embed_fields = []
+    if embed:
+        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
+        valid_embeds = {"variable"}
+        invalid_embeds = [field for field in embed_fields if field not in valid_embeds]
+        if invalid_embeds:
+            return 400, ErrorResponse(
+                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
+                details={"valid_embeds": ["variable"]},
+            )
+
+    try:
+        value = VariableValues.objects.select_related("var").filter(
+            value__iexact=value_id
+        ).first()
+        if not value:
+            return 404, ErrorResponse(
+                error="Variable value does not exist",
+                details=None,
+            )
+
+        value_data = VariableValueSchema.model_validate(value)
+
+        if embed_fields:
+            embed_data = apply_value_embeds(value, embed_fields)
+            for field, data in embed_data.items():
+                setattr(value_data, field, data)
+
+        return 200, value_data
+
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to retrieve variable value",
+            details={"exception": str(e)},
+        )
+
+
+@router.put(
+    "/values/{value_id}",
+    response={200: VariableValueSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Update Variable Value",
+    description="""
+    Updates the variable value based on its unique ID.
+
+    **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Supported Parameters:**
+    - `value_id` (str): Unique ID of the value being updated.
+
+    **Request Body:**
+    - `variable_id` (Optional[str]): Updated variable ID.
+    - `name` (Optional[str]): Updated value name.
+    - `slug` (Optional[str]): Updated URL-friendly slug.
+    - `archive` (Optional[bool]): Updated archive status.
+    - `rules` (Optional[str]): Updated rules.
+    """,
+    auth=moderator_auth,
+    openapi_extra=VALUES_PUT,
+)
+def update_value(
+    request: HttpRequest,
+    value_id: str,
+    value_data: VariableValueUpdateSchema,
+) -> Tuple[int, Union[VariableValueSchema, ErrorResponse]]:
+    try:
+        value = VariableValues.objects.filter(value__iexact=value_id).first()
+        if not value:
+            return 404, ErrorResponse(
+                error="Variable value does not exist",
+                details=None,
+            )
+
+        update_data = value_data.model_dump(exclude_unset=True)
+
+        if "variable_id" in update_data:
+            variable = Variables.objects.filter(
+                id__iexact=update_data["variable_id"]
+            ).first()
+            if not variable:
+                return 400, ErrorResponse(
+                    error="Variable does not exist",
+                    details=None,
+                )
+            value.var = variable
+            del update_data["variable_id"]
+
+        for field, val in update_data.items():
+            setattr(value, field, val)
+
+        value.save()
+
+        return 200, VariableValueSchema.model_validate(value)
+
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to update variable value",
+            details={"exception": str(e)},
+        )
+
+
+@router.delete(
+    "/values/{value_id}",
+    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Delete Variable Value",
+    description="""
+    Deletes the selected variable value by its ID.
+
+    **REQUIRES ADMIN ACCESS.**
+
+    **Supported Parameters:**
+    - `value_id` (str): Unique ID of the value being deleted.
+    """,
+    auth=admin_auth,
+    openapi_extra=VALUES_DELETE,
+)
+def delete_value(
+    request: HttpRequest,
+    value_id: str,
+) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
+    try:
+        value = VariableValues.objects.filter(value__iexact=value_id).first()
+        if not value:
+            return 404, ErrorResponse(
+                error="Variable value does not exist",
+                details=None,
+            )
+
+        name = value.name
+        value.delete()
+        return 200, {"message": f"Variable value '{name}' deleted successfully"}
+
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to delete variable value",
+            details={"exception": str(e)},
+        )
+
+
+# ============================================================================
+# Variables Dynamic Routes - /{id} routes come AFTER static routes
+# ============================================================================
+
+
+@router.get(
+    "/{id}",
+    response={200: VariableWithValuesSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Get Variable by ID",
+    description="""
+    Retrieve a single variable by its ID, including optional embedding.
+
+    **Supported Embeds:**
+    - `game`: Include metadata related to the game
+    - `category`: Include metadata related to the category
+    - `level`: Include metadata related to the level
+
+    **Examples:**
+    - `/variables/5lygdn8q` - Get variable by ID
+    - `/variables/5lygdn8q?embed=game` - Get variable with game data
+    - `/variables/5lygdn8q?embed=game,category,level` - Get variable with all embeds
+    """,
+    auth=public_auth,
+    openapi_extra=VARIABLES_GET,
+)
+def get_variable(
+    request: HttpRequest,
+    id: str,
+    embed: Optional[str] = Query(
+        None,
+        description="Comma-separated embeds",
+    ),
+) -> Tuple[int, Union[VariableWithValuesSchema, ErrorResponse]]:
+    if len(id) > 15:
+        return 400, ErrorResponse(
+            error="ID must be 15 characters or less",
+            details=None,
+        )
+
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
+    embed_fields = []
+    if embed:
+        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
+        valid_embeds = {"game", "category", "level"}
+        invalid_embeds = [field for field in embed_fields if field not in valid_embeds]
+        if invalid_embeds:
+            return 400, ErrorResponse(
+                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
+                details={"valid_embeds": ["game", "category", "level"]},
+            )
+
+    try:
+        variable = Variables.objects.filter(id__iexact=id).first()
+        if not variable:
+            return 404, ErrorResponse(
+                error="Variable ID does not exist",
+                details=None,
+            )
+
+        values = VariableValues.objects.filter(var=variable).order_by("name")
+
+        variable_data = {
+            "id": variable.id,
+            "name": variable.name,
+            "slug": variable.slug,
+            "scope": variable.scope,
+            "archive": variable.archive,
+            "values": [
+                {
+                    "value": val.value,
+                    "name": val.name,
+                    "slug": val.slug,
+                    "archive": val.archive,
+                    "rules": val.rules,
+                }
+                for val in values
+            ],
+        }
+
+        if embed_fields:
+            embed_data = apply_variable_embeds(variable, embed_fields)
+            variable_data.update(embed_data)
+
+        return 200, VariableWithValuesSchema(**variable_data)
+
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to retrieve variable",
+            details={"exception": str(e)},
         )
 
 
 @router.post(
     "/",
-    response=Union[VariableSchema, ErrorResponse],
+    response={200: VariableSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Variable",
     description="""
     Creates a brand new variable with validation for scope and relationship constraints.
@@ -294,7 +658,7 @@ def get_all_variables(
     **Request Body:**
     - `game_id` (str): Game ID this variable belongs to.
     - `name` (str): Variable name.
-    - `scope` (str): Where this variable applies (`global`, `full-game`, `all-levels`, `single-level`).
+    - `scope` (str): Where variable applies (`global`, `full-game`, `all-levels`, `single-level`).
     - `archive` (bool): Whether variable is archived/hidden from listings.
     - `category_id` (Optional[str]): Specific category ID (if not all_cats).
     - `level_id` (Optional[str]): Specific level ID (required if scope is `single-level`).
@@ -305,68 +669,74 @@ def get_all_variables(
 def create_variable(
     request: HttpRequest,
     variable_data: VariableCreateSchema,
-) -> Union[VariableSchema, ErrorResponse]:
+) -> Tuple[int, Union[VariableSchema, ErrorResponse]]:
     try:
         game = Games.objects.filter(id=variable_data.game_id).first()
         if not game:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="Game does not exist",
                 details=None,
-                code=400,
             )
 
         category = None
         if variable_data.category_id:
             category = Categories.objects.filter(id=variable_data.category_id).first()
             if not category:
-                return ErrorResponse(
+                return 400, ErrorResponse(
                     error="Category does not exist",
                     details=None,
-                    code=400,
                 )
 
         level = None
         if variable_data.level_id:
             if variable_data.scope != "single-level":
-                return ErrorResponse(
+                return 400, ErrorResponse(
                     error="If level_id is provided, scope must be 'single-level'",
                     details=None,
-                    code=400,
                 )
             level = Levels.objects.filter(id=variable_data.level_id).first()
             if not level:
-                return ErrorResponse(
+                return 400, ErrorResponse(
                     error="Level does not exist",
                     details=None,
-                    code=400,
                 )
         elif variable_data.scope == "single-level":
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="If scope is 'single-level', level_id must be provided",
                 details=None,
-                code=400,
+            )
+
+        try:
+            variable_id = get_or_generate_id(
+                variable_data.id,
+                lambda id: Variables.objects.filter(id=id).exists(),
+            )
+        except ValueError as e:
+            return 400, ErrorResponse(
+                error="ID Already Exists",
+                details={"exception": str(e)},
             )
 
         create_data = variable_data.model_dump(
             exclude={"game_id", "category_id", "level_id"}
         )
+        create_data["id"] = variable_id
         variable = Variables.objects.create(
             game=game, cat=category, level=level, **create_data
         )
 
-        return VariableSchema.model_validate(variable)
+        return 200, VariableSchema.model_validate(variable)
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to create variable",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.put(
     "/{id}",
-    response=Union[VariableSchema, ErrorResponse],
+    response={200: VariableSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Variable",
     description="""
     Updates the variable based on its unique ID.
@@ -392,14 +762,13 @@ def update_variable(
     request: HttpRequest,
     id: str,
     variable_data: VariableUpdateSchema,
-) -> Union[VariableSchema, ErrorResponse]:
+) -> Tuple[int, Union[VariableSchema, ErrorResponse]]:
     try:
         variable = Variables.objects.filter(id__iexact=id).first()
         if not variable:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Variable does not exist",
                 details=None,
-                code=404,
             )
 
         update_data = variable_data.model_dump(exclude_unset=True)
@@ -407,10 +776,9 @@ def update_variable(
         if "game_id" in update_data:
             game = Games.objects.filter(id=update_data["game_id"]).first()
             if not game:
-                return ErrorResponse(
+                return 400, ErrorResponse(
                     error="Game does not exist",
                     details=None,
-                    code=400,
                 )
             variable.game = game
             del update_data["game_id"]
@@ -421,10 +789,9 @@ def update_variable(
                     id=update_data["category_id"]
                 ).first()
                 if not category:
-                    return ErrorResponse(
+                    return 400, ErrorResponse(
                         error="Category does not exist",
                         details=None,
-                        code=400,
                     )
                 variable.cat = category
             else:
@@ -435,10 +802,9 @@ def update_variable(
             if update_data["level_id"]:
                 level = Levels.objects.filter(id=update_data["level_id"]).first()
                 if not level:
-                    return ErrorResponse(
+                    return 400, ErrorResponse(
                         error="Level does not exist",
                         details=None,
-                        code=400,
                     )
                 variable.level = level
             else:
@@ -448,30 +814,28 @@ def update_variable(
         for field, value in update_data.items():
             setattr(variable, field, value)
 
-        variable.save()
-
         try:
             variable.clean()
         except Exception as validation_error:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="Validation failed",
                 details={"validation_error": str(validation_error)},
-                code=400,
             )
 
-        return VariableSchema.model_validate(variable)
+        variable.save()
+
+        return 200, VariableSchema.model_validate(variable)
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to update variable",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.delete(
     "/{id}",
-    response=Union[dict, ErrorResponse],
+    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Variable",
     description="""
     Deletes the selected variable by its ID. **Also deletes associated values.**
@@ -487,23 +851,21 @@ def update_variable(
 def delete_variable(
     request: HttpRequest,
     id: str,
-) -> Union[dict, ErrorResponse]:
+) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
     try:
         variable = Variables.objects.filter(id__iexact=id).first()
         if not variable:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Variable does not exist",
                 details=None,
-                code=404,
             )
 
         name = variable.name
         variable.delete()
-        return {"message": f"Variable '{name}' and its values deleted successfully"}
+        return 200, {"message": f"Variable '{name}' and its values deleted successfully"}
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to delete variable",
             details={"exception": str(e)},
-            code=500,
         )

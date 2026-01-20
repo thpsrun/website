@@ -13,6 +13,7 @@ from srl.models import (
     Levels,
     Platforms,
     Players,
+    RunPlayers,
     Runs,
     RunVariableValues,
     Series,
@@ -442,32 +443,13 @@ def invoke_single_run(
         else:
             points = 0
 
-        player1 = players[0].get("id")
-        player2 = (
-            players[1].get("id")
-            if len(players) > 1 and players[1]["rel"] == "user"
-            else None
-        )
-
-        if player1:
-            chain(update_player.s(player1, download_pfp))()
-            try:
-                player1 = Players.objects.only("id").get(id=player1)
-            except Players.DoesNotExist:
-                logger.warning(f"Player {player1} not found after update")
-                player1 = None
-
-        default["player"] = player1
-
-        if player2:
-            chain(update_player.s(player2, download_pfp))()
-            try:
-                player2 = Players.objects.only("id").get(id=player2)
-            except Players.DoesNotExist:
-                logger.warning(f"Player {player2} not found after update")
-                player2 = None
-
-            default["player2"] = player2
+        # Collect valid player IDs from the run data
+        player_ids = []
+        for player_data in players:
+            player_id = player_data.get("id")
+            if player_id and player_data.get("rel") == "user":
+                chain(update_player.s(player_id, download_pfp))()
+                player_ids.append(player_id)
 
         if run.get("run").get("level"):
             default["level"] = Levels.objects.only("id").get(id=run["run"]["level"])
@@ -480,6 +462,15 @@ def invoke_single_run(
                 id=run_id,
                 defaults=default,
             )
+
+            # Clear existing RunPlayers and recreate them with proper order
+            RunPlayers.objects.filter(run=run_obj).delete()
+            for order, player_id in enumerate(player_ids, start=1):
+                try:
+                    player_obj = Players.objects.only("id").get(id=player_id)
+                    RunPlayers.objects.create(run=run_obj, player=player_obj, order=order)
+                except Players.DoesNotExist:
+                    logger.warning(f"Player {player_id} not found when creating RunPlayers")
 
         if len(run["run"]["values"]) > 0:
             for var_id, val_id in run["run"]["values"].items():
@@ -631,6 +622,8 @@ def remove_obsolete(
 
     for player in players:
         if player is not None and player["rel"] != "guest":
+            player_id = player["id"]
+
             # Checks the defaulttime from the Games model.
             # Once found, it will set the slowest_runs variable based on the game ID, whether it
             # is already obsolete, from the same player, in the same category.
@@ -639,11 +632,11 @@ def remove_obsolete(
                     Games.objects.only("defaulttime").get(id=game_id).defaulttime
                 )
                 all_runs = (
-                    Runs.objects.prefetch_related("game", "player")
+                    Runs.objects.select_related("game")
+                    .prefetch_related("run_players__player")
                     .only(
                         "id",
                         "game__id",
-                        "player__id",
                         "subcategory",
                         "obsolete",
                         "time_secs",
@@ -653,7 +646,7 @@ def remove_obsolete(
                     .filter(
                         runtype="main",
                         game=game_id,
-                        player=player["id"],
+                        run_players__player__id=player_id,
                         subcategory=subcategory,
                         obsolete=False,
                     )
@@ -663,11 +656,11 @@ def remove_obsolete(
                     Games.objects.only("idefaulttime").get(id=game_id).idefaulttime
                 )
                 all_runs = (
-                    Runs.objects.prefetch_related("game", "player")
+                    Runs.objects.select_related("game")
+                    .prefetch_related("run_players__player")
                     .only(
                         "id",
                         "game__id",
-                        "player__id",
                         "subcategory",
                         "obsolete",
                         "time_secs",
@@ -677,7 +670,7 @@ def remove_obsolete(
                     .filter(
                         runtype="il",
                         game=game_id,
-                        player=player["id"],
+                        run_players__player__id=player_id,
                         subcategory=subcategory,
                         obsolete=False,
                     )

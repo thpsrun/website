@@ -1,10 +1,11 @@
-from typing import List, Union
+from typing import Dict, List, Tuple, Union
 
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest
 from guides.models import Tags
 from ninja import Router
+from ninja.responses import codes_4xx
 
 from api.docs.tags import TAGS_ALL, TAGS_DELETE, TAGS_GET, TAGS_POST, TAGS_PUT
 from api.permissions import contributor_auth, public_auth
@@ -21,7 +22,7 @@ router = Router()
 
 @router.get(
     "/all",
-    response=List[TagListSchema],
+    response={200: List[TagListSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="List All Tags",
     description="""
     Returns a list of all available tags to categorize guides.
@@ -34,14 +35,14 @@ router = Router()
 )
 def list_tags(
     request: HttpRequest,
-) -> List[TagListSchema]:
+) -> Tuple[int, List[TagListSchema]]:
     tags = Tags.objects.all().order_by("name")
-    return [TagListSchema.model_validate(tag) for tag in tags]
+    return 200, [TagListSchema.model_validate(tag) for tag in tags]
 
 
 @router.get(
     "/{slug}",
-    response=Union[TagSchema, ErrorResponse],
+    response={200: TagSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Tag by Slug",
     description="""
     Get a specific tag by its slug.
@@ -59,21 +60,20 @@ def list_tags(
 def get_tag(
     request: HttpRequest,
     slug: str,
-) -> Union[TagSchema, ErrorResponse]:
+) -> Tuple[int, Union[TagSchema, ErrorResponse]]:
     tag = Tags.objects.filter(slug__iexact=slug).first()
     if not tag:
-        return ErrorResponse(
+        return 404, ErrorResponse(
             error=f"Tag with slug '{slug}' not found",
             details=None,
-            code=404,
         )
 
-    return TagSchema.model_validate(tag)
+    return 200, TagSchema.model_validate(tag)
 
 
 @router.post(
     "/",
-    response=Union[TagSchema, ErrorResponse],
+    response={200: TagSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Tag",
     description="""
     Creates a brand new tag for categorizing guides.
@@ -90,13 +90,12 @@ def get_tag(
 def create_tag(
     request: HttpRequest,
     data: TagCreateSchema,
-) -> Union[TagSchema, ErrorResponse]:
+) -> Tuple[int, Union[TagSchema, ErrorResponse]]:
     existing_tag = Tags.objects.filter(name__iexact=data.name).first()
     if existing_tag:
-        return ErrorResponse(
+        return 400, ErrorResponse(
             error="Tag With Slug Already Exists",
             details={"slug": existing_tag.slug},
-            code=400,
         )
 
     try:
@@ -104,18 +103,17 @@ def create_tag(
             name=data.name,
             description=data.description,
         )
-        return TagSchema.model_validate(tag)
+        return 200, TagSchema.model_validate(tag)
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Tag Creation Failed",
             details={"exception": {str(e)}},
-            code=500,
         )
 
 
 @router.put(
     "/{slug}",
-    response=Union[TagSchema, ErrorResponse],
+    response={200: TagSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Tag",
     description="""
     Update an existing tag.
@@ -137,13 +135,12 @@ def update_tag(
     request: HttpRequest,
     slug: str,
     data: TagUpdateSchema,
-) -> Union[TagSchema, ErrorResponse]:
+) -> Tuple[int, Union[TagSchema, ErrorResponse]]:
     tag = Tags.objects.filter(slug__iexact=slug).first()
     if not tag:
-        return ErrorResponse(
+        return 404, ErrorResponse(
             error=f"Tag with slug '{slug}' not found",
             details=None,
-            code=404,
         )
 
     # After all validations, it will begin to update the tag in the database
@@ -161,10 +158,9 @@ def update_tag(
                     .first()
                 )
                 if existing_tag:
-                    return ErrorResponse(
+                    return 400, ErrorResponse(
                         error=f"A tag with slug '{data.slug}' already exists",
                         details={"slug": data.slug},
-                        code=400,
                     )
                 tag.slug = data.slug
 
@@ -172,19 +168,18 @@ def update_tag(
                 tag.description = data.description
 
             tag.save()
-            return TagSchema.model_validate(tag)
+            return 200, TagSchema.model_validate(tag)
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error=f"Failed to update tag: {str(e)}",
             details=None,
-            code=500,
         )
 
 
 @router.delete(
     "/{slug}",
-    response=Union[dict, ErrorResponse],
+    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Tag",
     description="""
     Delete a tag.
@@ -200,22 +195,20 @@ def update_tag(
 def delete_tag(
     request: HttpRequest,
     slug: str,
-) -> Union[dict, ErrorResponse]:
+) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
     tag = Tags.objects.filter(Q(slug__iexact=slug) | Q(pk__iexact=slug)).first()
     if not tag:
-        return ErrorResponse(
+        return 404, ErrorResponse(
             error=f"Tag with ID/slug '{slug}' not found",
             details=None,
-            code=404,
         )
 
     try:
         name = tag.name
         tag.delete()
-        return {"message": f"Tag '{name}' deleted successfully"}
+        return 200, {"message": f"Tag '{name}' deleted successfully"}
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error=f"Failed to delete tag: {str(e)}",
             details=None,
-            code=500,
         )

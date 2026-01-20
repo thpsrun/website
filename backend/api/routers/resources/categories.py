@@ -1,8 +1,9 @@
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from django.db.models import Q
 from django.http import HttpRequest
 from ninja import Query, Router
+from ninja.responses import codes_4xx
 from srl.models import Categories, Games, Variables, VariableValues
 
 from api.docs.categories import (
@@ -13,12 +14,13 @@ from api.docs.categories import (
     CATEGORIES_PUT,
 )
 from api.permissions import admin_auth, moderator_auth, public_auth
-from api.schemas.base import ErrorResponse, validate_embeds
+from api.schemas.base import CategoryTypeType, ErrorResponse, validate_embeds
 from api.schemas.categories import (
     CategoryCreateSchema,
     CategorySchema,
     CategoryUpdateSchema,
 )
+from api.utils import get_or_generate_id
 
 router = Router()
 
@@ -88,86 +90,8 @@ def category_embeds(
 
 
 @router.get(
-    "/{id}",
-    response=Union[CategorySchema, ErrorResponse],
-    summary="Get Category by ID",
-    description="""
-    Retrieves a single category based upon its ID, including optional embedding.
-
-    **Supported Parameters:**
-    - `id` (str): Unique ID of the category being queried.
-    - `embed` (Optional[list]): Comma-separated list of resources to embed.
-
-    **Supported Embeds:**
-    - `game`: Includes the metadata of the game the category belongs to.
-    - `variables`: Include metadata of the variables belonging to this category.
-    - `values`: Include all metadata for each variable and its values.
-
-    **Examples:**
-    - `/categories/rklge08d` - Get category by ID.
-    - `/categories/rklge08d?embed=game` - Get category with game info.
-    - `/categories/rklge08d?embed=variables,values` - Get category with variables and values.
-    """,
-    auth=public_auth,
-    openapi_extra=CATEGORIES_GET,
-)
-def get_category(
-    request: HttpRequest,
-    id: str,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-) -> Union[CategorySchema, ErrorResponse]:
-    if len(id) > 15:
-        return ErrorResponse(
-            error="ID must be 15 characters or less",
-            details=None,
-            code=400,
-        )
-
-    # Checks to see what embeds are being used versus what is allowed
-    # via this endpoint. It will return an error to the client if they
-    # have an embed type not supported.
-    embed_fields = []
-    if embed:
-        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
-        invalid_embeds = validate_embeds("categories", embed_fields)
-        if invalid_embeds:
-            return ErrorResponse(
-                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
-                details={"valid_embeds": ["game", "variables", "values"]},
-                code=400,
-            )
-
-    try:
-        category = Categories.objects.filter(id__iexact=id).first()
-        if not category:
-            return ErrorResponse(
-                error="Category ID Doesn't Exist",
-                details=None,
-                code=404,
-            )
-
-        category_data = CategorySchema.model_validate(category)
-
-        if embed_fields:
-            embed_data = category_embeds(category, embed_fields)
-            for field, data in embed_data.items():
-                setattr(category_data, field, data)
-
-        return category_data
-    except Exception as e:
-        return ErrorResponse(
-            error="Category Retrieval Failure",
-            details={"exception": str(e)},
-            code=500,
-        )
-
-
-@router.get(
     "/all",
-    response=Union[List[CategorySchema], ErrorResponse],
+    response={200: List[CategorySchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get All Categories",
     description="""
     Retrieves all categories within a `Games` object, including optional embedding and querying.
@@ -198,10 +122,9 @@ def get_all_categories(
         None,
         description="Filter by game ID or slug",
     ),
-    type: Optional[str] = Query(
+    type: Optional[CategoryTypeType] = Query(
         None,
         description="Filter by type",
-        pattern="^(per-game|per-level)$",
     ),
     embed: Optional[str] = Query(
         None,
@@ -218,7 +141,7 @@ def get_all_categories(
         ge=0,
         description="Offset from 0",
     ),
-) -> Union[List[CategorySchema], ErrorResponse]:
+) -> Tuple[int, Union[List[CategorySchema], ErrorResponse]]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -227,22 +150,20 @@ def get_all_categories(
         embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
         invalid_embeds = validate_embeds("categories", embed_fields)
         if invalid_embeds:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
                 details=None,
-                code=400,
             )
 
     try:
         if game:
             queryset = Categories.objects.filter(
-                Q(game_id__iexact=game) | Q(slug__iexact=game)
+                Q(game__id__iexact=game) | Q(game__slug__iexact=game)
             ).order_by("name")
         else:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="Please provide the game's unique ID or slug.",
                 details=None,
-                code=400,
             )
 
         if type:
@@ -264,18 +185,91 @@ def get_all_categories(
 
             category_schemas.append(category_data)
 
-        return category_schemas
+        return 200, category_schemas
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Category Retrieval Failed",
             details={"exception": str(e)},
-            code=500,
+        )
+
+
+@router.get(
+    "/{id}",
+    response={200: CategorySchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Get Category by ID",
+    description="""
+    Retrieves a single category based upon its ID, including optional embedding.
+
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the category being queried.
+    - `embed` (Optional[list]): Comma-separated list of resources to embed.
+
+    **Supported Embeds:**
+    - `game`: Includes the metadata of the game the category belongs to.
+    - `variables`: Include metadata of the variables belonging to this category.
+    - `values`: Include all metadata for each variable and its values.
+
+    **Examples:**
+    - `/categories/rklge08d` - Get category by ID.
+    - `/categories/rklge08d?embed=game` - Get category with game info.
+    - `/categories/rklge08d?embed=variables,values` - Get category with variables and values.
+    """,
+    auth=public_auth,
+    openapi_extra=CATEGORIES_GET,
+)
+def get_category(
+    request: HttpRequest,
+    id: str,
+    embed: Optional[str] = Query(
+        None,
+        description="Comma-separated embeds",
+    ),
+) -> Tuple[int, Union[CategorySchema, ErrorResponse]]:
+    if len(id) > 15:
+        return 400, ErrorResponse(
+            error="ID must be 15 characters or less",
+            details=None,
+        )
+
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
+    embed_fields = []
+    if embed:
+        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
+        invalid_embeds = validate_embeds("categories", embed_fields)
+        if invalid_embeds:
+            return 400, ErrorResponse(
+                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
+                details={"valid_embeds": ["game", "variables", "values"]},
+            )
+
+    try:
+        category = Categories.objects.filter(id__iexact=id).first()
+        if not category:
+            return 404, ErrorResponse(
+                error="Category ID Doesn't Exist",
+                details=None,
+            )
+
+        category_data = CategorySchema.model_validate(category)
+
+        if embed_fields:
+            embed_data = category_embeds(category, embed_fields)
+            for field, data in embed_data.items():
+                setattr(category_data, field, data)
+
+        return 200, category_data
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Category Retrieval Failure",
+            details={"exception": str(e)},
         )
 
 
 @router.post(
     "/",
-    response=Union[CategorySchema, ErrorResponse],
+    response={200: CategorySchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Category",
     description="""
     Creates a brand new category.
@@ -301,33 +295,41 @@ def get_all_categories(
 def create_category(
     request: HttpRequest,
     category_data: CategoryCreateSchema,
-) -> Union[CategorySchema, ErrorResponse]:
+) -> Tuple[int, Union[CategorySchema, ErrorResponse]]:
     try:
         game = Games.objects.filter(id=category_data.game_id).first()
         if not game:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Game Doesn't Exist",
                 details=None,
-                code=404,
             )
 
-        category = Categories.objects.create(
-            game=game,
-            **{k: v for k, v in category_data.model_dump().items() if k != "game_id"},
-        )
+        try:
+            category_id = get_or_generate_id(
+                category_data.id,
+                lambda id: Categories.objects.filter(id=id).exists(),
+            )
+        except ValueError as e:
+            return 400, ErrorResponse(
+                error="ID Already Exists",
+                details={"exception": str(e)},
+            )
 
-        return CategorySchema.model_validate(category)
+        create_data = category_data.model_dump(exclude={"game_id"})
+        create_data["id"] = category_id
+        category = Categories.objects.create(game=game, **create_data)
+
+        return 200, CategorySchema.model_validate(category)
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to create category",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.put(
     "/{id}",
-    response=Union[CategorySchema, ErrorResponse],
+    response={200: CategorySchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Category",
     description="""
     Updates the category based on its unique ID.
@@ -356,24 +358,22 @@ def update_category(
     request: HttpRequest,
     id: str,
     category_data: CategoryUpdateSchema,
-) -> Union[CategorySchema, ErrorResponse]:
+) -> Tuple[int, Union[CategorySchema, ErrorResponse]]:
     try:
         category = Categories.objects.filter(id__iexact=id).first()
         if not category:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Category does not exist",
                 details=None,
-                code=404,
             )
 
         update_data = category_data.model_dump(exclude_unset=True)
         if "game_id" in update_data:
             game = Games.objects.filter(id=update_data["game_id"]).first()
             if not game:
-                return ErrorResponse(
+                return 400, ErrorResponse(
                     error="Game does not exist",
                     details=None,
-                    code=400,
                 )
             category.game = game
             del update_data["game_id"]
@@ -382,18 +382,17 @@ def update_category(
             setattr(category, field, value)
 
         category.save()
-        return CategorySchema.model_validate(category)
+        return 200, CategorySchema.model_validate(category)
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to update category",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.delete(
     "/{id}",
-    response=Union[dict, ErrorResponse],
+    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Category",
     description="""
     Deletes the selected category based on its ID.
@@ -409,22 +408,20 @@ def update_category(
 def delete_category(
     request: HttpRequest,
     id: str,
-) -> Union[dict, ErrorResponse]:
+) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
     try:
         category = Categories.objects.filter(id__iexact=id).first()
         if not category:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Category does not exist",
                 details=None,
-                code=404,
             )
 
         name = category.name
         category.delete()
-        return {"message": f"Category '{name}' deleted successfully"}
+        return 200, {"message": f"Category '{name}' deleted successfully"}
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to delete category",
             details={"exception": str(e)},
-            code=500,
         )

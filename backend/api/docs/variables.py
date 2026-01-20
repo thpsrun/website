@@ -363,3 +363,302 @@ VARIABLES_ALL = {
         },
     ],
 }
+
+
+# ============================================================================
+# Variable Values OpenAPI Documentation
+# ============================================================================
+
+VALUES_GET = {
+    "responses": {
+        200: {
+            "description": "Success!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "value": "pc",
+                        "name": "PC",
+                        "slug": "pc",
+                        "archive": False,
+                        "rules": "PC version of the game",
+                        "variable": {
+                            "id": "5lygdn8q",
+                            "name": "Platform",
+                            "slug": "platform",
+                            "scope": "full-game",
+                            "archive": False,
+                        },
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid response sent to server."},
+        404: {"description": "Variable value could not be found."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "value_id",
+            "in": "path",
+            "required": True,
+            "example": "pc",
+            "schema": {"type": "string", "maxLength": 10},
+            "description": "Variable Value ID",
+        },
+        {
+            "name": "embed",
+            "in": "query",
+            "example": "variable",
+            "schema": {"type": "string"},
+            "description": "Comma-separated embeds: variable",
+        },
+    ],
+}
+
+VALUES_ALL = {
+    "responses": {
+        200: {
+            "description": "Success!",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "value": "pc",
+                            "name": "PC",
+                            "slug": "pc",
+                            "archive": False,
+                            "rules": "PC version",
+                        },
+                        {
+                            "value": "ps2",
+                            "name": "PlayStation 2",
+                            "slug": "ps2",
+                            "archive": False,
+                            "rules": "PS2 version",
+                        },
+                    ]
+                }
+            },
+        },
+        400: {"description": "Invalid response sent to server."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "variable_id",
+            "in": "query",
+            "example": "5lygdn8q",
+            "schema": {"type": "string"},
+            "description": "Filter by variable ID (required)",
+        },
+        {
+            "name": "embed",
+            "in": "query",
+            "example": "variable",
+            "schema": {"type": "string"},
+            "description": "Comma-separated embeds: variable",
+        },
+        {
+            "name": "limit",
+            "in": "query",
+            "example": 50,
+            "schema": {"type": "integer", "minimum": 1, "maximum": 100},
+            "description": "Results per page (default 50, max 100)",
+        },
+        {
+            "name": "offset",
+            "in": "query",
+            "example": 0,
+            "schema": {"type": "integer", "minimum": 0},
+            "description": "Results to skip (default 0)",
+        },
+    ],
+}
+
+VALUES_POST = {
+    "responses": {
+        201: {
+            "description": "Variable value created successfully!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "value": "pc",
+                        "name": "PC",
+                        "slug": "pc",
+                        "archive": False,
+                        "rules": "PC version of the game",
+                    }
+                }
+            },
+        },
+        400: {
+            "description": "Invalid request data, validation failed, or resource does not exist."
+        },
+        401: {"description": "API key required for this operation."},
+        403: {"description": "Insufficient permissions."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "required": ["variable_id", "name"],
+                    "properties": {
+                        "value": {
+                            "type": "string",
+                            "maxLength": 10,
+                            "example": "pc",
+                            "description": "VALUE ID (AUTO-GENERATED IF NOT PROVIDED)",
+                        },
+                        "variable_id": {
+                            "type": "string",
+                            "example": "5lygdn8q",
+                            "description": "VARIABLE ID THIS VALUE BELONGS TO",
+                        },
+                        "name": {
+                            "type": "string",
+                            "maxLength": 50,
+                            "example": "PC",
+                            "description": "VALUE NAME",
+                        },
+                        "slug": {
+                            "type": "string",
+                            "maxLength": 50,
+                            "example": "pc",
+                            "description": "URL-FRIENDLY SLUG (AUTO-GENERATED IF NOT PROVIDED)",
+                        },
+                        "archive": {
+                            "type": "boolean",
+                            "example": False,
+                            "description": "WHETHER VALUE IS ARCHIVED/HIDDEN",
+                        },
+                        "rules": {
+                            "type": "string",
+                            "maxLength": 1000,
+                            "example": "PC version of the game",
+                            "description": "RULES SPECIFIC TO THIS VALUE CHOICE",
+                        },
+                    },
+                },
+                "example": {
+                    "variable_id": "5lygdn8q",
+                    "name": "PC",
+                    "slug": "pc",
+                    "archive": False,
+                    "rules": "PC version of the game",
+                },
+            }
+        },
+    },
+}
+
+VALUES_PUT = {
+    "responses": {
+        200: {
+            "description": "Variable value updated successfully!",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "value": "pc",
+                        "name": "PC Updated",
+                        "slug": "pc-updated",
+                        "archive": False,
+                        "rules": "Updated rules for PC",
+                    }
+                }
+            },
+        },
+        400: {
+            "description": "Invalid request data, validation failed, or resource does not exist."
+        },
+        401: {"description": "API key required for this operation."},
+        403: {"description": "Insufficient permissions."},
+        404: {"description": "Variable value does not exist."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "value_id",
+            "in": "path",
+            "required": True,
+            "example": "pc",
+            "schema": {"type": "string", "maxLength": 10},
+            "description": "Variable value ID to update",
+        },
+    ],
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "variable_id": {
+                            "type": "string",
+                            "example": "5lygdn8q",
+                            "description": "UPDATED VARIABLE ID",
+                        },
+                        "name": {
+                            "type": "string",
+                            "maxLength": 50,
+                            "example": "PC Updated",
+                            "description": "UPDATED VALUE NAME",
+                        },
+                        "slug": {
+                            "type": "string",
+                            "maxLength": 50,
+                            "example": "pc-updated",
+                            "description": "UPDATED URL-FRIENDLY SLUG",
+                        },
+                        "archive": {
+                            "type": "boolean",
+                            "example": True,
+                            "description": "UPDATED ARCHIVE STATUS",
+                        },
+                        "rules": {
+                            "type": "string",
+                            "maxLength": 1000,
+                            "example": "Updated rules",
+                            "description": "UPDATED RULES",
+                        },
+                    },
+                },
+                "example": {"name": "PC Updated", "rules": "Updated rules for PC"},
+            }
+        },
+    },
+}
+
+VALUES_DELETE = {
+    "responses": {
+        200: {
+            "description": "Variable value deleted successfully!",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Variable value 'PC' deleted successfully"}
+                }
+            },
+        },
+        401: {"description": "API key required for this operation."},
+        403: {"description": "Insufficient permissions."},
+        404: {"description": "Variable value does not exist."},
+        429: {"description": "Rate limit exceeded, calm your horses."},
+        500: {"description": "Server Error. Error is logged."},
+    },
+    "parameters": [
+        {
+            "name": "value_id",
+            "in": "path",
+            "required": True,
+            "example": "pc",
+            "schema": {"type": "string", "maxLength": 10},
+            "description": "Variable value ID to delete",
+        },
+    ],
+}

@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from api.schemas.base import BaseEmbedSchema, SlugMixin
 
@@ -66,6 +66,28 @@ class CategorySchema(CategoryBaseSchema):
         None, description="Variables with their values - included with ?embed=values"
     )
 
+    @field_validator("game", mode="before")
+    @classmethod
+    def convert_model_to_none(cls, v: Any) -> Optional[dict]:
+        """Convert Django model instance to None if not explicitly embedded."""
+        if v is None:
+            return None
+        if isinstance(v, dict):
+            return v
+        return None
+
+    @field_validator("variables", "values", mode="before")
+    @classmethod
+    def convert_list_to_none(cls, v: Any) -> Optional[List[dict]]:
+        """Convert Django QuerySet or Manager to None if not explicitly embedded."""
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return v
+        if hasattr(v, "all"):
+            return None
+        return v
+
 
 class CategoryCreateSchema(BaseEmbedSchema):
     """Schema for creating new categories.
@@ -74,8 +96,10 @@ class CategoryCreateSchema(BaseEmbedSchema):
     Game ID is required to link the category to a game.
 
     Attributes:
-        game_id (str): Unique ID (usually based on SRC) of the category.
+        id (Optional[str]): The category ID; if one is not given, it will auto-generate.
+        game_id (str): ID of the game this category belongs to.
         name (str): The category name.
+        slug (str): URL-friendly version.
         type (str): The category type (per-level or per-game).
         url (str): Speedrun.com URL.
         rules (Optional[str]): Category-specific rules.
@@ -83,8 +107,14 @@ class CategoryCreateSchema(BaseEmbedSchema):
         archive (bool): Whether category is hidden.
     """
 
+    id: Optional[str] = Field(
+        default=None,
+        max_length=12,
+        description="The category ID; if one is not given, it will auto-generate.",
+    )
     game_id: str = Field(..., description="ID of the game this category belongs to")
     name: str = Field(..., description="Category name")
+    slug: str = Field(..., max_length=50, description="URL-friendly category slug")
     type: str = Field(
         ..., pattern="^(per-level|per-game)$", description="Category type"
     )
@@ -120,4 +150,4 @@ class CategoryUpdateSchema(BaseEmbedSchema):
     appear_on_main: Optional[bool] = Field(
         None, description="Updated main page visibility"
     )
-    hidden: Optional[bool] = Field(default=None, description="Updated hidden status")
+    archive: Optional[bool] = Field(default=None, description="Updated archive status")

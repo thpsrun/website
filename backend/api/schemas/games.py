@@ -1,7 +1,7 @@
 from datetime import date
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from api.schemas.base import BaseEmbedSchema, SlugMixin
 
@@ -74,6 +74,20 @@ class GameSchema(GameBaseSchema):
         description="Supported platforms for this game",
     )
 
+    @field_validator("platforms", "categories", "levels", mode="before")
+    @classmethod
+    def convert_manager_to_list(cls, v: Any) -> Optional[List[dict]]:
+        """Convert Django ManyRelatedManager or QuerySet to list of dicts."""
+        if v is None:
+            return None
+        # If it's already a list, return as-is
+        if isinstance(v, list):
+            return v
+        # If it's a Django queryset or manager, convert to list
+        if hasattr(v, "all"):
+            return None  # Return None if not explicitly embedded
+        return v
+
 
 class GameListSchema(BaseEmbedSchema):
     """Schema for paginated game list responses.
@@ -91,6 +105,7 @@ class GameCreateSchema(BaseEmbedSchema):
     """Schema for creating new games.
 
     Attributes:
+        id (Optional[str]): The game ID; if one is not given, it will auto-generate.
         name (str): Game name.
         slug (str): URL-friendly game abbreviation.
         twitch (Optional[str]): Game name as it appears on Twitch.
@@ -102,6 +117,11 @@ class GameCreateSchema(BaseEmbedSchema):
         ipointsmax (int): Maximum points for world record individual level runs.
     """
 
+    id: Optional[str] = Field(
+        default=None,
+        max_length=12,
+        description="The game ID; if one is not given, it will auto-generate.",
+    )
     name: str = Field(..., max_length=55)
     slug: str = Field(..., max_length=20)
     twitch: Optional[str] = Field(default=None, max_length=55)

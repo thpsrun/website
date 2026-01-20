@@ -28,6 +28,8 @@
     *   THPS4 5th Gen, you're welcome.
 *   Added `slug` field to `Variables`, `VariableValues`, `Categories`, `Levels` and `Platforms`.
 *   Added a new `/website` endpoint that is more catered to interacting with React.
+*   Added Pydantic schema and models.
+    *   About time tbh.
 
 ### Fixed
 *   Fixed the type checking for API responses to be `JsonResponse` and not `HttpResponse`.

@@ -1,0 +1,37 @@
+from celery import shared_task
+from django.db import transaction
+
+from srl.m_tasks import src_api
+from srl.models import Games, Levels
+from srl.srcom.schema.src import SrcLevelsModel
+
+
+@shared_task
+def sync_levels(
+    levels_data: str | dict,
+) -> None:
+    """Creates or updates a `Levels` model object based on the `levels_data` argument.
+
+    Arguments:
+        levels_data (str | dict): Either the unique ID (str) of the level or the embedded
+            level dict information.
+    """
+    if isinstance(levels_data, str):
+        src_data: dict[dict, str] = src_api(
+            f"https://speedrun.com/api/v1/levels/{levels_data}"
+        )
+
+        src_category = SrcLevelsModel.model_validate(src_data)
+    else:
+        src_category = SrcLevelsModel.model_validate(levels_data)
+
+    with transaction.atomic():
+        Levels.objects.update_or_create(
+            id=src_category.id,
+            defaults={
+                "name": src_category.name,
+                "game": Games.objects.only("id").get(src_category.game),
+                "url": src_category.weblink,
+                "rules": src_category.rules,
+            },
+        )

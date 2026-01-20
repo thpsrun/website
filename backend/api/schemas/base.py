@@ -1,7 +1,15 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Literal, Optional, Set, Tuple
 
 from pydantic import BaseModel, Field, field_serializer
+
+
+# Literal types for model choices - these match the Django model choices exactly
+RunTypeType = Literal["main", "il"]
+RunStatusType = Literal["verified", "new", "rejected"]
+CategoryTypeType = Literal["per-level", "per-game"]
+VariableScopeType = Literal["global", "full-game", "all-levels", "single-level"]
+LeaderboardTimeType = Literal["realtime", "realtime_noloads", "ingame"]
 
 
 class ErrorResponse(BaseModel):
@@ -12,14 +20,12 @@ class ErrorResponse(BaseModel):
     Attributes:
         error (str): Error message sent to the client.
         details (Optional[Dict[str, Any]]): Additional details related to the error.
-        code (int): HTTP status code.
     """
 
     error: str = Field(..., description="Error message")
     details: Optional[Dict[str, Any]] = Field(
         default=None, description="Additional error details"
     )
-    code: int = Field(..., description="HTTP status code")
 
 
 class ValidationErrorResponse(BaseModel):
@@ -30,14 +36,12 @@ class ValidationErrorResponse(BaseModel):
     Attributes:
         error (str): Error message sent to the client.
         validation_errors (Dict[str, List[str]]): Field-specific validation errors.
-        code (int): HTTP status code.
     """
 
     error: str = Field(default="Validation failed")
     validation_errors: Dict[str, List[str]] = Field(
         ..., description="Field validation errors"
     )
-    code: int = Field(default=422)
 
 
 class PaginatedResponse(BaseModel):
@@ -106,7 +110,7 @@ VALID_EMBEDS: Dict[str, Set[str]] = {
     "levels": {"game", "variables", "values"},
     "variables": {"game", "category", "level", "values"},
     "players": {"country", "awards", "runs"},
-    "runs": {"game", "category", "level", "players", "variables"},
+    "runs": {"game", "category", "level", "variables"},
     "guides": {"game", "tags"},
     "tags": set(),
 }

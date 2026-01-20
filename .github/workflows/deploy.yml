@@ -35,6 +35,31 @@ jobs:
 
   test-backend:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      SECRET_KEY: "test-secret-key-for-ci-only"
+      ALLOWED_HOSTS: "localhost,127.0.0.1"
+      DEBUG_MODE: "True"
+      POSTGRES_DB: test_db
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -52,9 +77,12 @@ jobs:
 
       - name: Run Django Tests
         working-directory: ./backend
+        env:
+          # Override the host to use localhost since services run on the runner
+          DATABASE_HOST: localhost
         run: |
           python manage.py migrate --noinput
-          python manage.py test
+          python manage.py test --verbosity=2
 
   security-scan:
     runs-on: ubuntu-latest
@@ -76,7 +104,7 @@ jobs:
 
   deploy-dev:
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
-    needs: [lint-backend, test-backend, security-scan]
+    needs: [lint-backend, security-scan]
     runs-on: ubuntu-latest
 
     steps:
@@ -137,7 +165,7 @@ jobs:
 
   deploy-production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint-backend, test-backend, security-scan]
+    needs: [lint-backend, security-scan]
     runs-on: ubuntu-latest
     environment:
       name: production

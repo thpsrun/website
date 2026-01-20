@@ -9,7 +9,7 @@ from django.forms import ModelForm
 from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.html import format_html
-from django.utils.safestring import SafeString
+from django.utils.safestring import SafeString, mark_safe
 from rest_framework_api_key.models import APIKey
 
 from api.models import RoleAPIKey
@@ -23,7 +23,7 @@ class RoleFilter(SimpleListFilter):
     title = "Role"
     parameter_name = "role"
 
-    def lookups(self, request, model_admin):  # type: ignore[override]
+    def lookups(self, request, model_admin):  # type: ignore
         return RoleAPIKey.ROLE_CHOICES
 
     def queryset(self, request, queryset: QuerySet[RoleAPIKey]) -> QuerySet[RoleAPIKey]:
@@ -39,7 +39,7 @@ class LastUsedFilter(SimpleListFilter):
     title = "Last Used"
     parameter_name = "last_used"
 
-    def lookups(self, request, model_admin):  # type: ignore[override]
+    def lookups(self, request, model_admin):  # type: ignore
         return [
             ("today", "Today"),
             ("week", "This Week"),
@@ -153,7 +153,7 @@ class RoleAPIKeyAdmin(admin.ModelAdmin):
     ) -> SafeString:
         """Display last used time with relative formatting."""
         if not obj.last_used:
-            return format_html('<em style="color: #6c757d;">Never</em>')
+            return mark_safe('<em style="color: #6c757d;">Never</em>')
 
         now = timezone.now()
         diff = now - obj.last_used
@@ -194,7 +194,7 @@ class RoleAPIKeyAdmin(admin.ModelAdmin):
 
         now = timezone.now()
         if obj.expiry_date <= now:
-            return format_html('<span style="color: #dc3545;">❌ Expired</span>')
+            return mark_safe('<span style="color: #dc3545;">❌ Expired</span>')
 
         days_until_expiry: int = (obj.expiry_date - now).days
         if days_until_expiry <= 7:
@@ -220,8 +220,8 @@ class RoleAPIKeyAdmin(admin.ModelAdmin):
     ) -> SafeString:
         """Show revocation status with icon."""
         if obj.revoked:
-            return format_html('<span style="color: #dc3545;">❌ Yes</span>')
-        return format_html('<span style="color: #28a745;">✅ Active</span>')
+            return mark_safe('<span style="color: #dc3545;">❌ Yes</span>')
+        return mark_safe('<span style="color: #28a745;">✅ Active</span>')
 
     @admin.display(
         description="API Key (Masked)",
@@ -250,6 +250,12 @@ class RoleAPIKeyAdmin(admin.ModelAdmin):
                 description=obj.description,
                 created_by=obj.created_by or request.user.username,
             )
+
+            obj.pk = api_key.pk
+            obj.id = api_key.id
+            obj.prefix = api_key.prefix
+            obj.hashed_key = api_key.hashed_key
+            obj.created = api_key.created
 
             messages.success(
                 request,

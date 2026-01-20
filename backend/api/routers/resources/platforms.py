@@ -1,8 +1,9 @@
-from typing import List, Union
+from typing import Dict, List, Tuple, Union
 
 from django.db.models import Q
 from django.http import HttpRequest
 from ninja import Query, Router
+from ninja.responses import codes_4xx
 from srl.models import Platforms
 
 from api.docs.platforms import (
@@ -19,62 +20,14 @@ from api.schemas.platforms import (
     PlatformSchema,
     PlatformUpdateSchema,
 )
+from api.utils import get_or_generate_id
 
 router = Router()
 
 
 @router.get(
-    "/{id}",
-    response=Union[PlatformSchema, ErrorResponse],
-    summary="Get Platform by ID",
-    description="""
-    Retrieve a single platform by its ID or its slug.
-
-    **Supported Parameters:**
-    - `id` (str): Unique ID of the platform being queried.
-
-    **Examples:**
-    - `/platforms/8gej2n3z` - Get platform by ID
-    - `/platforms/pc` - Get platform by slug
-    """,
-    auth=public_auth,
-    openapi_extra=PLATFORMS_GET,
-)
-def get_platform(
-    request: HttpRequest,
-    id: str,
-) -> Union[PlatformSchema, ErrorResponse]:
-    if len(id) > 15:
-        return ErrorResponse(
-            error="ID must be 15 characters or less",
-            details=None,
-            code=400,
-        )
-
-    try:
-        platform = Platforms.objects.filter(
-            Q(id__iexact=id) | Q(slug__iexact=id)
-        ).first()
-        if not platform:
-            return ErrorResponse(
-                error="Platform ID does not exist",
-                details=None,
-                code=404,
-            )
-
-        return PlatformSchema.model_validate(platform)
-
-    except Exception as e:
-        return ErrorResponse(
-            error="Failed to retrieve platform",
-            details={"exception": str(e)},
-            code=500,
-        )
-
-
-@router.get(
     "/all",
-    response=Union[List[PlatformSchema], ErrorResponse],
+    response={200: List[PlatformSchema], 500: ErrorResponse},
     summary="Get All Platforms",
     description="""
     Retrieve all platforms within the `Platforms` object, ordered by name.
@@ -104,21 +57,66 @@ def get_all_platforms(
         ge=0,
         description="Offset from 0",
     ),
-) -> Union[List[PlatformSchema], ErrorResponse]:
+) -> Tuple[int, Union[List[PlatformSchema], ErrorResponse]]:
     try:
         platforms = Platforms.objects.all().order_by("name")[offset : offset + limit]
-        return [PlatformSchema.model_validate(platform) for platform in platforms]
+        return 200, [PlatformSchema.model_validate(platform) for platform in platforms]
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to retrieve platforms",
             details={"exception": str(e)},
-            code=500,
+        )
+
+
+@router.get(
+    "/{id}",
+    response={200: PlatformSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Get Platform by ID",
+    description="""
+    Retrieve a single platform by its ID or its slug.
+
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the platform being queried.
+
+    **Examples:**
+    - `/platforms/8gej2n3z` - Get platform by ID
+    - `/platforms/pc` - Get platform by slug
+    """,
+    auth=public_auth,
+    openapi_extra=PLATFORMS_GET,
+)
+def get_platform(
+    request: HttpRequest,
+    id: str,
+) -> Tuple[int, Union[PlatformSchema, ErrorResponse]]:
+    if len(id) > 15:
+        return 400, ErrorResponse(
+            error="ID must be 15 characters or less",
+            details=None,
+        )
+
+    try:
+        platform = Platforms.objects.filter(
+            Q(id__iexact=id) | Q(slug__iexact=id)
+        ).first()
+        if not platform:
+            return 404, ErrorResponse(
+                error="Platform ID does not exist",
+                details=None,
+            )
+
+        return 200, PlatformSchema.model_validate(platform)
+
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to retrieve platform",
+            details={"exception": str(e)},
         )
 
 
 @router.post(
     "/",
-    response=Union[PlatformSchema, ErrorResponse],
+    response={200: PlatformSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Platform",
     description="""
     Creates a brand new platform.
@@ -136,22 +134,34 @@ def get_all_platforms(
 def create_platform(
     request: HttpRequest,
     platform_data: PlatformCreateSchema,
-) -> Union[PlatformSchema, ErrorResponse]:
+) -> Tuple[int, Union[PlatformSchema, ErrorResponse]]:
     try:
-        platform = Platforms.objects.create(**platform_data.model_dump())
-        return PlatformSchema.model_validate(platform)
+        try:
+            platform_id = get_or_generate_id(
+                platform_data.id,
+                lambda id: Platforms.objects.filter(id=id).exists(),
+            )
+        except ValueError as e:
+            return 400, ErrorResponse(
+                error="ID Already Exists",
+                details={"exception": str(e)},
+            )
+
+        create_data = platform_data.model_dump()
+        create_data["id"] = platform_id
+        platform = Platforms.objects.create(**create_data)
+        return 200, PlatformSchema.model_validate(platform)
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to create platform",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.put(
     "/{id}",
-    response=Union[PlatformSchema, ErrorResponse],
+    response={200: PlatformSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Platform",
     description="""
     Updates the platform based on its unique ID.
@@ -172,14 +182,13 @@ def update_platform(
     request: HttpRequest,
     id: str,
     platform_data: PlatformUpdateSchema,
-) -> Union[PlatformSchema, ErrorResponse]:
+) -> Tuple[int, Union[PlatformSchema, ErrorResponse]]:
     try:
         platform = Platforms.objects.filter(id__iexact=id).first()
         if not platform:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Platform does not exist",
                 details=None,
-                code=404,
             )
 
         update_data = platform_data.model_dump(exclude_unset=True)
@@ -187,19 +196,18 @@ def update_platform(
             setattr(platform, field, value)
 
         platform.save()
-        return PlatformSchema.model_validate(platform)
+        return 200, PlatformSchema.model_validate(platform)
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to update platform",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.delete(
     "/{id}",
-    response=Union[dict, ErrorResponse],
+    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Platform",
     description="""
     Deletes the selected platform based on its ID.
@@ -215,23 +223,21 @@ def update_platform(
 def delete_platform(
     request: HttpRequest,
     id: str,
-) -> Union[dict, ErrorResponse]:
+) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
     try:
         platform = Platforms.objects.filter(id__iexact=id).first()
         if not platform:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Platform does not exist",
                 details=None,
-                code=404,
             )
 
         name = platform.name
         platform.delete()
-        return {"message": f"Platform '{name}' deleted successfully"}
+        return 200, {"message": f"Platform '{name}' deleted successfully"}
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to delete platform",
             details={"exception": str(e)},
-            code=500,
         )

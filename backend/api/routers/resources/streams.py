@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from django.http import HttpRequest
 from ninja import Query, Router
+from ninja.responses import codes_4xx
 from srl.models import Games, NowStreaming, Players
 
 from api.docs.streams import STREAMS_DELETE, STREAMS_LIVE, STREAMS_POST, STREAMS_PUT
@@ -29,21 +30,15 @@ def get_mock_streaming_data() -> List[Dict[str, Any]]:
             "player": {"id": "player1", "name": "SpeedRunner123"},
             "game": {"id": "thps4", "name": "Tony Hawk's Pro Skater 4"},
             "title": "Going for Any% WR - Day 47",
-            "url": "https://twitch.tv/speedrunner123",
-            "platform": "twitch",
-            "viewers": 1250,
-            "started_at": datetime.now() - timedelta(hours=2),
-            "last_updated": datetime.now(),
+            "offline_ct": 0,
+            "stream_time": datetime.now() - timedelta(hours=2),
         },
         {
             "player": {"id": "player2", "name": "THPSMaster"},
             "game": {"id": "thps2", "name": "Tony Hawk's Pro Skater 2"},
             "title": "100% Speedrun Practice",
-            "url": "https://twitch.tv/thpsmaster",
-            "platform": "twitch",
-            "viewers": 834,
-            "started_at": datetime.now() - timedelta(minutes=45),
-            "last_updated": datetime.now(),
+            "offline_ct": 0,
+            "stream_time": datetime.now() - timedelta(minutes=45),
         },
     ]
 
@@ -52,7 +47,7 @@ def get_mock_streaming_data() -> List[Dict[str, Any]]:
 
 @router.get(
     "/live",
-    response=Union[List[StreamSchema], ErrorResponse],
+    response={200: List[StreamSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Live Streamers",
     description="""
     Get list of currently live streamers playing speedrun games.
@@ -86,7 +81,7 @@ def get_live_streams(
         le=50,
         description="Max results",
     ),
-) -> Union[List[StreamSchema], ErrorResponse]:
+) -> Tuple[int, Union[List[StreamSchema], ErrorResponse]]:
     try:
         # TODO: DELETE BEFORE PROD.
         streams_data = get_mock_streaming_data()
@@ -106,19 +101,18 @@ def get_live_streams(
             stream_schema = StreamSchema(**stream_data)
             stream_schemas.append(stream_schema)
 
-        return stream_schemas
+        return 200, stream_schemas
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to retrieve live streams",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.post(
     "/",
-    response=Union[StreamSchema, ErrorResponse],
+    response={200: StreamSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Stream",
     description="""
     Creates a new stream record for a player.
@@ -138,33 +132,30 @@ def get_live_streams(
 def create_stream(
     request: HttpRequest,
     stream_data: StreamCreateSchema,
-) -> Union[StreamSchema, ErrorResponse]:
+) -> Tuple[int, Union[StreamSchema, ErrorResponse]]:
     """Create a new stream for a player."""
     try:
         player = Players.objects.filter(id=stream_data.player_id).first()
         if not player:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="Player does not exist",
                 details=None,
-                code=400,
             )
 
         existing_stream = NowStreaming.objects.filter(streamer=player).first()
         if existing_stream:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="Player already has an active stream. Use PUT to update it.",
                 details=None,
-                code=400,
             )
 
         game = None
         if stream_data.game_id:
             game = Games.objects.filter(id=stream_data.game_id).first()
             if not game:
-                return ErrorResponse(
+                return 400, ErrorResponse(
                     error="Game does not exist",
                     details=None,
-                    code=400,
                 )
 
         stream = NowStreaming.objects.create(
@@ -175,19 +166,18 @@ def create_stream(
             stream_time=stream_data.stream_time or datetime.now(),
         )
 
-        return StreamSchema.model_validate(stream)
+        return 200, StreamSchema.model_validate(stream)
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to create stream",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.put(
     "/{player_id}",
-    response=Union[StreamSchema, ErrorResponse],
+    response={200: StreamSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Stream",
     description="""
     Updates the stream for a specific player.
@@ -210,22 +200,20 @@ def update_stream(
     request: HttpRequest,
     player_id: str,
     stream_data: StreamUpdateSchema,
-) -> Union[StreamSchema, ErrorResponse]:
+) -> Tuple[int, Union[StreamSchema, ErrorResponse]]:
     try:
         player = Players.objects.filter(id=player_id).first()
         if not player:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Player does not exist",
                 details=None,
-                code=404,
             )
 
         stream = NowStreaming.objects.filter(streamer=player).first()
         if not stream:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Stream does not exist for this player",
                 details=None,
-                code=404,
             )
 
         update_data = stream_data.model_dump(exclude_unset=True)
@@ -234,10 +222,9 @@ def update_stream(
             if update_data["game_id"]:
                 game = Games.objects.filter(id=update_data["game_id"]).first()
                 if not game:
-                    return ErrorResponse(
+                    return 400, ErrorResponse(
                         error="Game does not exist",
                         details=None,
-                        code=400,
                     )
                 stream.game = game
             else:
@@ -249,19 +236,18 @@ def update_stream(
 
         stream.save()
 
-        return StreamSchema.model_validate(stream)
+        return 200, StreamSchema.model_validate(stream)
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to update stream",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.delete(
     "/{player_id}",
-    response=Union[dict, ErrorResponse],
+    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Stream",
     description="""
     Deletes the stream for a specific player.
@@ -277,32 +263,29 @@ def update_stream(
 def delete_stream(
     request: HttpRequest,
     player_id: str,
-) -> Union[dict, ErrorResponse]:
+) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
     try:
         player = Players.objects.filter(id=player_id).first()
         if not player:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Player does not exist",
                 details=None,
-                code=404,
             )
 
         stream = NowStreaming.objects.filter(streamer=player).first()
         if not stream:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Stream does not exist for this player",
                 details=None,
-                code=404,
             )
 
         player_name = player.nickname if player.nickname else player.name
         stream.delete()
 
-        return {"message": f"Stream for player '{player_name}' deleted successfully"}
+        return 200, {"message": f"Stream for player '{player_name}' deleted successfully"}
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to delete stream",
             details={"exception": str(e)},
-            code=500,
         )

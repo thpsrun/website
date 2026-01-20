@@ -23,10 +23,18 @@ class PlatformCreateSchema(BaseEmbedSchema):
     """Schema for creating new platforms.
 
     Attributes:
+        id (Optional[str]): The platform ID; if one is not given, it will auto-generate.
         name (str): Platform name.
+        slug (str): URL-friendly version of the platform name.
     """
 
-    name: str = Field(..., description="Platform name")
+    id: Optional[str] = Field(
+        default=None,
+        max_length=12,
+        description="The platform ID; if one is not given, it will auto-generate.",
+    )
+    name: str = Field(..., max_length=30, description="Platform name")
+    slug: str = Field(..., max_length=30, description="URL-friendly platform slug")
 
 
 class PlatformUpdateSchema(BaseEmbedSchema):
@@ -34,6 +42,12 @@ class PlatformUpdateSchema(BaseEmbedSchema):
 
     Attributes:
         name (Optional[str]): Updated platform name.
+        slug (Optional[str]): Updated URL-friendly platform slug.
     """
 
-    name: Optional[str] = Field(default=None, description="Updated platform name")
+    name: Optional[str] = Field(
+        default=None, max_length=30, description="Updated platform name"
+    )
+    slug: Optional[str] = Field(
+        default=None, max_length=30, description="Updated platform slug"
+    )

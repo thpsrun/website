@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from api.schemas.base import BaseEmbedSchema
 
@@ -113,11 +113,34 @@ class PlayerSchema(PlayerBaseSchema):
         None, description="Recent player runs (limited to 20)"
     )
 
+    @field_validator("country", mode="before")
+    @classmethod
+    def convert_country_to_none(cls, v: Any) -> Optional[dict]:
+        """Convert Django model instance to None if not explicitly embedded."""
+        if v is None:
+            return None
+        if isinstance(v, dict):
+            return v
+        return None
+
+    @field_validator("awards", "runs", mode="before")
+    @classmethod
+    def convert_manager_to_none(cls, v: Any) -> Optional[List[dict]]:
+        """Convert Django ManyRelatedManager to None if not explicitly embedded."""
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return v
+        if hasattr(v, "all"):
+            return None
+        return v
+
 
 class PlayerCreateSchema(BaseEmbedSchema):
     """Schema for creating new players.
 
     Attributes:
+        id (Optional[str]): The player ID; if one is not given, it will auto-generate.
         name (str): Player name.
         nickname (Optional[str]): Custom nickname.
         url (str): Speedrun.com profile URL.
@@ -131,6 +154,11 @@ class PlayerCreateSchema(BaseEmbedSchema):
         ex_stream (bool): Whether to exclude from streaming features.
     """
 
+    id: Optional[str] = Field(
+        default=None,
+        max_length=12,
+        description="The player ID; if one is not given, it will auto-generate.",
+    )
     name: str = Field(..., max_length=30)
     nickname: Optional[str] = Field(default=None, max_length=30)
     url: str = Field(...)

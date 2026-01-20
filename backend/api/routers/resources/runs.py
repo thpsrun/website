@@ -1,8 +1,9 @@
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from django.db.models import Q
 from django.http import HttpRequest
 from ninja import Query, Router
+from ninja.responses import codes_4xx
 from srl.models import (
     Categories,
     Games,
@@ -17,10 +18,35 @@ from srl.models import (
 
 from api.docs.runs import RUNS_ALL, RUNS_DELETE, RUNS_GET, RUNS_POST, RUNS_PUT
 from api.permissions import admin_auth, moderator_auth, public_auth
-from api.schemas.base import ErrorResponse, validate_embeds
+from api.schemas.base import ErrorResponse, RunStatusType, RunTypeType, validate_embeds
 from api.schemas.runs import RunCreateSchema, RunSchema, RunUpdateSchema
+from api.utils import get_or_generate_id
 
 router = Router()
+
+
+def get_run_players(run: Runs) -> List[dict]:
+    """Get all players for a run as a list of dicts, ordered by their participation order.
+
+    This is always included in run responses (not an embed).
+    """
+    run_players = run.run_players.select_related("player__countrycode").order_by("order")
+
+    players_list = []
+    for rp in run_players:
+        players_list.append({
+            "id": rp.player.id,
+            "name": (rp.player.nickname if rp.player.nickname else rp.player.name),
+            "url": rp.player.url,
+            "country": (rp.player.countrycode.name if rp.player.countrycode else None),
+            "pronouns": rp.player.pronouns,
+            "twitch": rp.player.twitch,
+            "youtube": rp.player.youtube,
+            "twitter": rp.player.twitter,
+            "bluesky": rp.player.bluesky,
+        })
+
+    return players_list
 
 
 def apply_run_embeds(
@@ -69,33 +95,6 @@ def apply_run_embeds(
             "rules": run.level.rules,
         }
 
-    # When player or player2 are in the embed field, it will relate their country codes
-    # to the query and fill in additional information about the player(s) of the run.
-    if "player" in embed_fields or "player2" in embed_fields:
-        run_players = run.players.select_related("player__countrycode").order_by(
-            "order"
-        )
-
-        for rp in run_players:
-            player_data = {
-                "id": rp.player.id,
-                "name": (rp.player.nickname if rp.player.nickname else rp.player.name),
-                "url": rp.player.url,
-                "country": (
-                    rp.player.countrycode.name if rp.player.countrycode else None
-                ),
-                "pronouns": rp.player.pronouns,
-                "twitch": rp.player.twitch,
-                "youtube": rp.player.youtube,
-                "twitter": rp.player.twitter,
-                "bluesky": rp.player.bluesky,
-            }
-
-            if rp.order == 1 and "player" in embed_fields:
-                embeds["player"] = player_data
-            elif rp.order == 2 and "player2" in embed_fields:
-                embeds["player2"] = player_data
-
     if "variables" in embed_fields:
         try:
             run_variables = RunVariableValues.objects.filter(run=run).select_related(
@@ -129,108 +128,8 @@ def apply_run_embeds(
 
 
 @router.get(
-    "/{id}",
-    response=Union[RunSchema, ErrorResponse],
-    summary="Get Run by ID",
-    description="""
-    Retrieve a single run by its ID with full details and optional embeds.
-
-    **Supported Parameters:**
-    - `id` (str): Unique ID of the run being queried.
-    - `embed` (Optional[list]): Comma-separated list of resources to embed.
-
-    **Supported Embeds:**
-    - `game`: Includes the metadata of the game related to the run queried.
-    - `category`: Includes the metadata of the category related to the run queried.
-    - `level`: Include the metadata of the level related to the run queried (if an IL run).
-    - `player`: Includes the metadata of player 1's player information.
-    - `player2`: Include the metadata of player 2's player information (if a Co-Op run).
-    - `variables`: Include the metadata of the variables and values related to the run.
-
-    **Examples:**
-    - `/runs/y8dwozoj` - Basic run data.
-    - `/runs/y8dwozoj?embed=game,player` - Include game and player.
-    - `/runs/y8dwozoj?embed=player,player2,variables` - Co-op run with variables.
-    - `/runs/y8dwozoj?embed=game,category,level,player` - Full run details.
-    """,
-    auth=public_auth,
-    openapi_extra=RUNS_GET,
-)
-def get_run(
-    request: HttpRequest,
-    id: str,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-) -> Union[RunSchema, ErrorResponse]:
-    """Get a single run by ID."""
-    if len(id) > 15:
-        return ErrorResponse(
-            error="ID must be 15 characters or less",
-            details=None,
-            code=400,
-        )
-
-    # Checks to see what embeds are being used versus what is allowed
-    # via this endpoint. It will return an error to the client if they
-    # have an embed type not supported.
-    embed_fields = []
-    if embed:
-        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
-        invalid_embeds = validate_embeds("runs", embed_fields)
-        if invalid_embeds:
-            return ErrorResponse(
-                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
-                details={
-                    "valid_embeds": [
-                        "game",
-                        "category",
-                        "level",
-                        "player",
-                        "player2",
-                        "variables",
-                    ]
-                },
-                code=400,
-            )
-
-    try:
-        run = (
-            Runs.objects.filter(id__iexact=id)
-            .select_related("game", "category", "level", "platform", "approver")
-            .prefetch_related(
-                "runplayers_set__player",
-                "runvariablevalues_set__variable",
-                "runvariablevalues_set__value",
-            )
-            .first()
-        )
-        if not run:
-            return ErrorResponse(
-                error="Run ID does not exist",
-                details=None,
-                code=404,
-            )
-
-        run_data = RunSchema.model_validate(run)
-
-        if embed_fields:
-            embed_data = apply_run_embeds(run, embed_fields)
-            for field, data in embed_data.items():
-                setattr(run_data, field, data)
-
-        return run_data
-
-    except Exception as e:
-        return ErrorResponse(
-            error="Failed to retrieve run", details={"exception": str(e)}, code=500
-        )
-
-
-@router.get(
     "/all",
-    response=Union[List[RunSchema], ErrorResponse],
+    response={200: List[RunSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get All Runs",
     description="""
     Retrieve runs with extensive filtering and search capabilities.
@@ -276,20 +175,18 @@ def get_all_runs(
         None,
         description="Filter by player",
     ),
-    runtype: Optional[str] = Query(
+    runtype: Optional[RunTypeType] = Query(
         None,
         description="Filter by type",
-        pattern="^(main|il)$",
     ),
     place: Optional[int] = Query(
         None,
         description="Filter by place",
         ge=1,
     ),
-    status: Optional[str] = Query(
+    status: Optional[RunStatusType] = Query(
         None,
         description="Filter by status",
-        pattern="^(verified|new|rejected)$",
     ),
     search: Optional[str] = Query(
         None,
@@ -310,7 +207,7 @@ def get_all_runs(
         ge=0,
         description="Offset from 0",
     ),
-) -> Union[List[RunSchema], ErrorResponse]:
+) -> Tuple[int, Union[List[RunSchema], ErrorResponse]]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -319,14 +216,16 @@ def get_all_runs(
         embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
         invalid_embeds = validate_embeds("runs", embed_fields)
         if invalid_embeds:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
                 details=None,
-                code=400,
             )
 
     try:
         queryset = Runs.objects.all().order_by("-v_date", "place")
+
+        # Prefetch run_players for efficient player data retrieval
+        queryset = queryset.prefetch_related("run_players__player__countrycode")
 
         # If parameters are fulfilled by the client, this will further
         # drill down what the client is looking for.
@@ -337,21 +236,13 @@ def get_all_runs(
         if level_id:
             queryset = queryset.filter(level__id=level_id)
         if player_id:
-            queryset = queryset.filter(
-                Q(player__id=player_id) | Q(player2__id=player_id)
-            )
+            queryset = queryset.filter(run_players__player__id=player_id)
         if runtype:
             queryset = queryset.filter(runtype=runtype)
         if place:
             queryset = queryset.filter(place=place)
         if status:
-            status_mapping = {
-                "verified": "verified",
-                "new": "new",
-                "rejected": "rejected",
-            }
-            if status in status_mapping:
-                queryset = queryset.filter(vid_status=status_mapping[status])
+            queryset = queryset.filter(vid_status=status)
         if search:
             queryset = queryset.filter(subcategory__icontains=search)
 
@@ -361,6 +252,9 @@ def get_all_runs(
         for run in runs:
             run_data = RunSchema.model_validate(run)
 
+            # Players are always included (not an embed)
+            run_data.players = get_run_players(run)
+
             if embed_fields:
                 embed_data = apply_run_embeds(run, embed_fields)
                 for field, data in embed_data.items():
@@ -368,19 +262,117 @@ def get_all_runs(
 
             run_schemas.append(run_data)
 
-        return run_schemas
+        return 200, run_schemas
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to retrieve runs",
             details={"exception": str(e)},
-            code=500,
+        )
+
+
+@router.get(
+    "/{id}",
+    response={200: RunSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Get Run by ID",
+    description="""
+    Retrieve a single run by its ID with full details and optional embeds.
+
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the run being queried.
+    - `embed` (Optional[list]): Comma-separated list of resources to embed.
+
+    **Response Fields:**
+    - `players`: Array of all players who participated in this run (always included).
+
+    **Supported Embeds:**
+    - `game`: Includes the metadata of the game related to the run queried.
+    - `category`: Includes the metadata of the category related to the run queried.
+    - `level`: Include the metadata of the level related to the run queried (if an IL run).
+    - `variables`: Include the metadata of the variables and values related to the run.
+
+    **Examples:**
+    - `/runs/y8dwozoj` - Basic run data with players.
+    - `/runs/y8dwozoj?embed=game` - Include game metadata.
+    - `/runs/y8dwozoj?embed=game,category,variables` - Full run details with embeds.
+    """,
+    auth=public_auth,
+    openapi_extra=RUNS_GET,
+)
+def get_run(
+    request: HttpRequest,
+    id: str,
+    embed: Optional[str] = Query(
+        None,
+        description="Comma-separated embeds",
+    ),
+) -> Tuple[int, Union[RunSchema, ErrorResponse]]:
+    """Get a single run by ID."""
+    if len(id) > 15:
+        return 400, ErrorResponse(
+            error="ID must be 15 characters or less",
+            details=None,
+        )
+
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
+    embed_fields = []
+    if embed:
+        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
+        invalid_embeds = validate_embeds("runs", embed_fields)
+        if invalid_embeds:
+            return 400, ErrorResponse(
+                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
+                details={
+                    "valid_embeds": [
+                        "game",
+                        "category",
+                        "level",
+                        "variables",
+                    ]
+                },
+            )
+
+    try:
+        run = (
+            Runs.objects.filter(id__iexact=id)
+            .select_related("game", "category", "level", "platform", "approver")
+            .prefetch_related(
+                "run_players__player__countrycode",
+                "runvariablevalues_set__variable",
+                "runvariablevalues_set__value",
+            )
+            .first()
+        )
+        if not run:
+            return 404, ErrorResponse(
+                error="Run ID does not exist",
+                details=None,
+            )
+
+        run_data = RunSchema.model_validate(run)
+
+        # Players are always included (not an embed)
+        run_data.players = get_run_players(run)
+
+        if embed_fields:
+            embed_data = apply_run_embeds(run, embed_fields)
+            for field, data in embed_data.items():
+                setattr(run_data, field, data)
+
+        return 200, run_data
+
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to retrieve run",
+            details={"exception": str(e)},
         )
 
 
 @router.post(
     "/",
-    response=Union[RunSchema, ErrorResponse],
+    response={200: RunSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Run",
     description="""
     Create a new speedrun record with full validation.
@@ -425,14 +417,13 @@ def get_all_runs(
 def create_run(
     request: HttpRequest,
     run_data: RunCreateSchema,
-) -> Union[RunSchema, ErrorResponse]:
+) -> Tuple[int, Union[RunSchema, ErrorResponse]]:
     try:
         game = Games.objects.filter(id=run_data.game_id).first()
         if not game:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="Game does not exist",
                 details=None,
-                code=400,
             )
 
         category = None
@@ -441,20 +432,18 @@ def create_run(
                 id=run_data.category_id, game=game
             ).first()
             if not category:
-                return ErrorResponse(
+                return 400, ErrorResponse(
                     error="Category does not exist for this game",
                     details=None,
-                    code=400,
                 )
 
         level = None
         if run_data.level_id:
             level = Levels.objects.filter(id=run_data.level_id, game=game).first()
             if not level:
-                return ErrorResponse(
+                return 400, ErrorResponse(
                     error="Level does not exist for this game",
                     details=None,
-                    code=400,
                 )
 
         players_list = []
@@ -462,18 +451,16 @@ def create_run(
             for player_id in run_data.player_ids:
                 player = Players.objects.filter(id=player_id).first()
                 if not player:
-                    return ErrorResponse(
+                    return 400, ErrorResponse(
                         error=f"Player with ID '{player_id}' does not exist",
                         details=None,
-                        code=400,
                     )
                 players_list.append(player)
 
         if category and run_data.runtype == "main" and category.type != "per-game":
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="Main runs require per-game categories",
                 details=None,
-                code=400,
             )
         if (
             level
@@ -481,10 +468,20 @@ def create_run(
             and category
             and category.type != "per-level"
         ):
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="IL runs require per-level categories",
                 details=None,
-                code=400,
+            )
+
+        try:
+            run_id = get_or_generate_id(
+                run_data.id,
+                lambda id: Runs.objects.filter(id=id).exists(),
+            )
+        except ValueError as e:
+            return 400, ErrorResponse(
+                error="ID Already Exists",
+                details={"exception": str(e)},
             )
 
         create_data = run_data.model_dump(
@@ -496,6 +493,7 @@ def create_run(
                 "variable_values",
             }
         )
+        create_data["id"] = run_id
 
         run = Runs.objects.create(
             game=game,
@@ -520,25 +518,37 @@ def create_run(
                             run=run, variable=variable, value=value
                         )
             except Exception as e:
-                return ErrorResponse(
+                return 500, ErrorResponse(
                     error="Run Update Failed (Variables)",
                     details={"exception": str(e)},
-                    code=500,
                 )
 
-        return RunSchema.model_validate(run)
+        # Refetch run with prefetched players to build proper response
+        refetched_run = (
+            Runs.objects.filter(id=run.id)
+            .prefetch_related("run_players__player__countrycode")
+            .first()
+        )
+        if refetched_run is None:
+            # This shouldn't happen since we just created the run
+            return 500, ErrorResponse(
+                error="Run Creation Failed",
+                details={"exception": "Failed to refetch created run"},
+            )
+        response = RunSchema.model_validate(refetched_run)
+        response.players = get_run_players(refetched_run)
+        return 200, response
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Run Creation Failed",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.put(
     "/{id}",
-    response=Union[RunSchema, ErrorResponse],
+    response={200: RunSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Run",
     description="""
     Updates the run based on its unique ID.
@@ -571,23 +581,22 @@ def update_run(
     request: HttpRequest,
     id: str,
     run_data: RunUpdateSchema,
-) -> Union[RunSchema, ErrorResponse]:
+) -> Tuple[int, Union[RunSchema, ErrorResponse]]:
     try:
         run = (
             Runs.objects.filter(id__iexact=id)
             .select_related("game", "category", "level", "platform", "approver")
             .prefetch_related(
-                "runplayers_set__player",
+                "run_players__player",
                 "runvariablevalues_set__variable",
                 "runvariablevalues_set__value",
             )
             .first()
         )
         if not run:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Run Doesn't Exist",
                 details=None,
-                code=404,
             )
 
         update_data = run_data.model_dump(exclude_unset=True)
@@ -595,10 +604,9 @@ def update_run(
         if "game_id" in update_data:
             game = Games.objects.filter(id=update_data["game_id"]).first()
             if not game:
-                return ErrorResponse(
+                return 400, ErrorResponse(
                     error="Game Doesn't Exist",
                     details=None,
-                    code=400,
                 )
             run.game = game
             del update_data["game_id"]
@@ -609,10 +617,9 @@ def update_run(
                     id=update_data["category_id"], game=run.game
                 ).first()
                 if not category:
-                    return ErrorResponse(
+                    return 400, ErrorResponse(
                         error="Category Doesn't Exist for This Game",
                         details=None,
-                        code=400,
                     )
                 run.category = category
             else:
@@ -625,10 +632,9 @@ def update_run(
                     id=update_data["level_id"], game=run.game
                 ).first()
                 if not level:
-                    return ErrorResponse(
+                    return 400, ErrorResponse(
                         error="Level Doesn't Exist for This Game",
                         details=None,
-                        code=400,
                     )
                 run.level = level
             else:
@@ -642,10 +648,9 @@ def update_run(
                 for index, player_id in enumerate(update_data["player_ids"], start=1):
                     player = Players.objects.filter(id=player_id).first()
                     if not player:
-                        return ErrorResponse(
+                        return 400, ErrorResponse(
                             error=f"Player ID '{player_id}' Doesn't Exist",
                             details=None,
-                            code=400,
                         )
                     RunPlayers.objects.create(run=run, player=player, order=index)
 
@@ -667,10 +672,9 @@ def update_run(
                                 run=run, variable=variable, value=value
                             )
             except Exception as e:
-                return ErrorResponse(
+                return 500, ErrorResponse(
                     error="Run Update Failed (Variables)",
                     details={"exception": str(e)},
-                    code=500,
                 )
 
             del update_data["variable_values"]
@@ -679,19 +683,33 @@ def update_run(
             setattr(run, field, value)
 
         run.save()
-        return RunSchema.model_validate(run)
+
+        # Refetch run with prefetched players to build proper response
+        refetched_run = (
+            Runs.objects.filter(id=run.id)
+            .prefetch_related("run_players__player__countrycode")
+            .first()
+        )
+        if refetched_run is None:
+            # This shouldn't happen since we just updated the run
+            return 500, ErrorResponse(
+                error="Run Update Failed",
+                details={"exception": "Failed to refetch updated run"},
+            )
+        response = RunSchema.model_validate(refetched_run)
+        response.players = get_run_players(refetched_run)
+        return 200, response
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Run Update Failed",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.delete(
     "/{id}",
-    response=Union[dict, ErrorResponse],
+    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Run",
     description="""
     Deletes the selected run by its ID.
@@ -707,39 +725,37 @@ def update_run(
 def delete_run(
     request: HttpRequest,
     id: str,
-) -> Union[dict, ErrorResponse]:
+) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
     try:
         run = (
             Runs.objects.filter(id__iexact=id)
             .select_related("game", "category", "level", "platform", "approver")
             .prefetch_related(
-                "runplayers_set__player",
+                "run_players__player",
                 "runvariablevalues_set__variable",
                 "runvariablevalues_set__value",
             )
             .first()
         )
         if not run:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Run does not exist",
                 details=None,
-                code=404,
             )
 
         game_name = run.game.name if run.game else "Unknown"
-        run_players = run.players.all()
+        run_player_entries = run.run_players.select_related("player").all()
         player_names = (
-            ", ".join([p.name for p in run_players])
-            if run_players.exists()
+            ", ".join([rp.player.name for rp in run_player_entries])
+            if run_player_entries.exists()
             else "Anonymous"
         )
 
         run.delete()
-        return {"message": f"Run by {player_names} in {game_name} deleted successfully"}
+        return 200, {"message": f"Run by {player_names} in {game_name} deleted successfully"}
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to delete run",
             details={"exception": str(e)},
-            code=500,
         )

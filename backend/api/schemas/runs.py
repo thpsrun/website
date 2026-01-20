@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from api.schemas.base import BaseEmbedSchema
 
@@ -24,7 +24,7 @@ class RunBaseSchema(BaseEmbedSchema):
 
     id: str = Field(..., max_length=10, description="Speedrun.com run ID")
     runtype: str = Field(..., description="Run type", pattern="^(main|il)$")
-    place: int = Field(..., description="Leaderboard position", ge=1)
+    place: int = Field(..., description="Leaderboard position", ge=0)
     subcategory: Optional[str] = Field(
         default=None,
         max_length=100,
@@ -49,21 +49,59 @@ class RunSchema(RunBaseSchema):
         game (Optional[dict]): Game information - included with ?embed=game.
         category (Optional[dict]): Category information - included with ?embed=category.
         level (Optional[dict]): Level information - included with ?embed=level.
-        players (Optional[List[dict]]): Players who participated - included with ?embed=players.
+        players (List[dict]): All players who participated in this run (always included).
         variables (Optional[List[dict]]): Variable selections - included with ?embed=variables.
     """
 
     game: Optional[dict] = Field(None, description="Game information")
     category: Optional[dict] = Field(None, description="Category information")
     level: Optional[dict] = Field(None, description="Level information")
-    players: Optional[List[dict]] = Field(None, description="Players who participated")
+    players: List[dict] = Field(default_factory=list, description="Players who participated")
     variables: Optional[List[dict]] = Field(None, description="Variable selections")
+
+    @field_validator("game", "category", "level", mode="before")
+    @classmethod
+    def convert_model_to_none(cls, v: Any) -> Optional[dict]:
+        """Convert Django model instance to None if not explicitly embedded."""
+        if v is None:
+            return None
+        if isinstance(v, dict):
+            return v
+        # If it's a Django model, return None (embeds will be applied separately)
+        return None
+
+    @field_validator("variables", mode="before")
+    @classmethod
+    def convert_variables_manager_to_none(cls, v: Any) -> Optional[List[dict]]:
+        """Convert Django ManyRelatedManager to None if not explicitly embedded."""
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return v
+        # If it's a Django manager, return None (embeds will be applied separately)
+        if hasattr(v, "all"):
+            return None
+        return v
+
+    @field_validator("players", mode="before")
+    @classmethod
+    def convert_players_manager_to_list(cls, v: Any) -> List[dict]:
+        """Convert Django ManyRelatedManager to empty list."""
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return v
+        # If it's a Django manager, return empty list (will be populated by router)
+        if hasattr(v, "all"):
+            return []
+        return []
 
 
 class RunCreateSchema(BaseEmbedSchema):
     """Schema for creating runs.
 
     Attributes:
+        id (Optional[str]): The run ID; if one is not given, it will auto-generate.
         game_id (str): Game ID.
         category_id (Optional[str]): Category ID.
         level_id (Optional[str]): Level ID (for ILs).
@@ -80,6 +118,11 @@ class RunCreateSchema(BaseEmbedSchema):
         variable_values (Optional[Dict[str, str]]): Variable value selections.
     """
 
+    id: Optional[str] = Field(
+        default=None,
+        max_length=12,
+        description="The run ID; if one is not given, it will auto-generate.",
+    )
     game_id: str = Field(..., description="Game ID")
     category_id: Optional[str] = Field(default=None, description="Category ID")
     level_id: Optional[str] = Field(default=None, description="Level ID (for ILs)")

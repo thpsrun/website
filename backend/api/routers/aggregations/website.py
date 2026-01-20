@@ -1,9 +1,10 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from django.db.models import Case, IntegerField, Prefetch, Q, QuerySet, Value, When
 from django.db.models.functions import TruncDate
 from django.http import HttpRequest
 from ninja import Path, Query, Router
+from ninja.responses import codes_4xx
 from srl.models import Categories, Games, Levels, Runs, Variables
 
 from api.docs.website import GAME_CATEGORIES_GET, GAME_LEVELS_GET, MAIN_PAGE_GET
@@ -18,7 +19,7 @@ router = Router()
 
 @router.get(
     "/main",
-    response=Union[Dict[str, Any], ErrorResponse],
+    response={200: Dict[str, Any], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Main Page Data",
     description="""
     Get aggregated data for the website main page including latest world records,
@@ -45,13 +46,12 @@ router = Router()
 def get_main_page_data(
     request: HttpRequest,
     data: Optional[str] = Query(None, description="Comma-separated data types"),
-) -> Union[Dict[str, Any], ErrorResponse]:
+) -> Tuple[int, Union[Dict[str, Any], ErrorResponse]]:
     """Get main page data with flexible data selection."""
     if not data:
-        return ErrorResponse(
+        return 400, ErrorResponse(
             error="Must specify data types to retrieve",
             details={"valid_data_types": ["latest-wrs", "latest-pbs", "records"]},
-            code=400,
         )
 
     data_fields = [field.strip() for field in data.split(",") if field.strip()]
@@ -59,10 +59,9 @@ def get_main_page_data(
     invalid_data = [field for field in data_fields if field not in valid_data_types]
 
     if invalid_data:
-        return ErrorResponse(
+        return 400, ErrorResponse(
             error=f"Invalid data type(s): {', '.join(invalid_data)}",
             details={"valid_data_types": list(valid_data_types)},
-            code=400,
         )
 
     try:
@@ -175,7 +174,9 @@ def get_main_page_data(
 
         if "records" in data_fields:
             runs = list(
-                Runs.objects.exclude(vid_status__in=["new", "rejected"], obsolete=True)
+                Runs.objects.exclude(
+                    Q(vid_status__in=["new", "rejected"]) | Q(obsolete=True)
+                )
                 .select_related("game", "category")
                 .prefetch_related("run_players__player__countrycode")
                 .filter(
@@ -187,7 +188,9 @@ def get_main_page_data(
                 .annotate(o_date=TruncDate("date"))
             )
 
-            # TODO: ADD COMMENT
+            # Finds the single best run for each game/category combination.
+            # Uses the game's default timing method to compare times and keeps only the
+            # fastest run (by time value) for each unique (game_id, category_id) pair.
             best_runs = {}
             for run in runs:
                 if run.game.defaulttime == "realtime":
@@ -279,19 +282,18 @@ def get_main_page_data(
                 grouped_runs, key=lambda x: x["game"]["release"]
             )
 
-        return response_data
+        return 200, response_data
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to retrieve main page data",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.get(
     "/game/{game_id}/categories",
-    response=Union[List[Dict[str, Any]], ErrorResponse],
+    response={200: List[Dict[str, Any]], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Game Categories with Variables",
     description="""
     Get all categories for a game with their variables and values.
@@ -318,13 +320,12 @@ def get_game_categories(
         ...,
         description="Game ID or slug",
     ),
-) -> Union[List[Dict[str, Any]], ErrorResponse]:
+) -> Tuple[int, Union[List[Dict[str, Any]], ErrorResponse]]:
     """Get categories for a game with variables."""
     if len(game_id) > 15:
-        return ErrorResponse(
+        return 400, ErrorResponse(
             error="ID must be 15 characters or less",
             details=None,
-            code=400,
         )
 
     try:
@@ -332,13 +333,14 @@ def get_game_categories(
             Q(id__iexact=game_id) | Q(slug__iexact=game_id)
         ).first()
         if not game:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Game not found",
                 details=None,
-                code=404,
             )
 
-        # TODO: ADD COMMENT
+        # Orders categories by a priority system for consistent display across the site.
+        # Common category types (Any%, 100%, etc.) are sorted to top with specific order,
+        # while other categories fall back to alphabetical sorting.
         categories = (
             Categories.objects.filter(game=game)
             .annotate(
@@ -404,19 +406,18 @@ def get_game_categories(
                 }
             )
 
-        return categories_data
+        return 200, categories_data
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to retrieve game categories",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.get(
     "/game/{game_id}/levels",
-    response=Union[List[Dict[str, Any]], ErrorResponse],
+    response={200: List[Dict[str, Any]], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Game Levels with Variables",
     description="""
     Get all levels for a game with their variables and values.
@@ -439,13 +440,12 @@ def get_game_categories(
 )
 def get_game_levels(
     request: HttpRequest, game_id: str = Path(..., description="Game ID or slug")
-) -> Union[List[Dict[str, Any]], ErrorResponse]:
+) -> Tuple[int, Union[List[Dict[str, Any]], ErrorResponse]]:
     """Get levels for a game with variables (converted from Web_Levels.py)."""
     if len(game_id) > 15:
-        return ErrorResponse(
+        return 400, ErrorResponse(
             error="ID must be 15 characters or less",
             details=None,
-            code=400,
         )
 
     try:
@@ -453,14 +453,14 @@ def get_game_levels(
             Q(id__iexact=game_id) | Q(slug__iexact=game_id)
         ).first()
         if not game:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Game not found",
                 details=None,
-                code=404,
             )
 
-        # TODO: ADD COMMENT
-        # Import the ordering function from the existing system
+        # Orders levels using a game-specific ordering system. The `get_ordered_level_names`
+        # function returns levels in the canonical order for each game (e.g., story order
+        # or difficulty progression), falling back to alphabetical if no custom order exists.
         from api.ordering import get_ordered_level_names
 
         get_order = get_ordered_level_names(game.slug)
@@ -518,11 +518,10 @@ def get_game_levels(
                 }
             )
 
-        return levels_data
+        return 200, levels_data
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to retrieve game levels",
             details={"exception": str(e)},
-            code=500,
         )

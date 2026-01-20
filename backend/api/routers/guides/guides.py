@@ -1,10 +1,11 @@
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest
 from guides.models import Guides, Tags
 from ninja import Query, Router
+from ninja.responses import codes_4xx
 from srl.models.games import Games
 
 from api.docs.guides import (
@@ -30,7 +31,7 @@ router = Router()
 
 @router.get(
     "/all",
-    response=Union[List[GuideListSchema], ErrorResponse],
+    response={200: List[GuideListSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="List All Guides",
     description="""
     Gets all guides within the database, with optional querying and embeds.
@@ -61,7 +62,7 @@ def list_guides(
         None,
         description="Comma-separated embeds (game,tags)",
     ),
-) -> Union[List[GuideListSchema], ErrorResponse]:
+) -> Tuple[int, Union[List[GuideListSchema], ErrorResponse]]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -70,10 +71,9 @@ def list_guides(
         embed_list = [e.strip() for e in embed.split(",")]
         invalid_embeds = validate_embeds("guides", embed_list)
         if invalid_embeds:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
                 details=None,
-                code=400,
             )
 
     queryset = Guides.objects.all()
@@ -111,12 +111,12 @@ def list_guides(
 
         result.append(guide_data)
 
-    return result
+    return 200, result
 
 
 @router.get(
     "/{slug}",
-    response=GuideSchema,
+    response={200: GuideSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Guide by Slug",
     description="""
     Get a specific guide by its slug.
@@ -127,7 +127,7 @@ def list_guides(
 
     **Supported Embeds:**
     - `game`: Includes the metadata of the game the tag belongs to.
-    - `tags`: Include metadata of the tags belonging to this guide.    
+    - `tags`: Include metadata of the tags belonging to this guide.
     """,
     auth=public_auth,
     openapi_extra=GUIDES_GET,
@@ -139,7 +139,7 @@ def get_guide(
         None,
         description="Comma-separated embeds (game,tags)",
     ),
-) -> Union[GuideSchema, ErrorResponse]:
+) -> Tuple[int, Union[GuideSchema, ErrorResponse]]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -148,10 +148,9 @@ def get_guide(
         embed_list = [e.strip() for e in embed.split(",")]
         invalid_embeds = validate_embeds("guides", embed_list)
         if invalid_embeds:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
                 details=None,
-                code=400,
             )
 
     # Will check to see if a query exists then related/prefetch the embeds
@@ -165,18 +164,17 @@ def get_guide(
 
     guide = queryset.first()
     if not guide:
-        return ErrorResponse(
+        return 404, ErrorResponse(
             error=f"Guide with slug '{slug}' not found",
             details=None,
-            code=404,
         )
 
-    return GuideSchema.model_validate(guide)
+    return 200, GuideSchema.model_validate(guide)
 
 
 @router.post(
     "/",
-    response=GuideSchema,
+    response={200: GuideSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create New Guide",
     description="""
     Creates a brand new guide.
@@ -196,14 +194,13 @@ def get_guide(
 def create_guide(
     request: HttpRequest,
     data: GuideCreateSchema,
-) -> Union[GuideSchema, ErrorResponse]:
+) -> Tuple[int, Union[GuideSchema, ErrorResponse]]:
     try:
         game = Games.objects.get(id=data.game_id)
     except Games.DoesNotExist:
-        return ErrorResponse(
+        return 400, ErrorResponse(
             error="Game ID Doesn't Exist",
             details={"games": {data.game_id}},
-            code=400,
         )
 
     # Bulk checking all tags specified by the user versus what is currently
@@ -222,10 +219,9 @@ def create_guide(
         missing_tags = provided_tags - found_identifiers
 
         if missing_tags:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="Tags not found",
                 details={"missing_tags": list(missing_tags)},
-                code=400,
             )
 
     # Will attempt to create the guide based on the payload provided by the client.
@@ -248,18 +244,17 @@ def create_guide(
                 TagSchema.model_validate(tag) for tag in guide.tags.all()
             ]
 
-            return guide_data
+            return 200, guide_data
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Guide Creation Failed",
             details={"exception": {str(e)}},
-            code=500,
         )
 
 
 @router.put(
     "/{slug}",
-    response=GuideSchema,
+    response={200: GuideSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Guide",
     description="""
     Modifies an existing guide.
@@ -280,23 +275,21 @@ def update_guide(
     request: HttpRequest,
     slug: str,
     data: GuideUpdateSchema,
-) -> Union[GuideSchema, ErrorResponse]:
+) -> Tuple[int, Union[GuideSchema, ErrorResponse]]:
     guide = Guides.objects.filter(slug__iexact=slug).first()
     if not guide:
-        return ErrorResponse(
+        return 404, ErrorResponse(
             error=f"Guide with slug '{slug}' not found",
             details=None,
-            code=404,
         )
 
     if data.game_id:
         try:
             Games.objects.get(id=data.game_id)
         except Games.DoesNotExist:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error=f"Game with ID '{data.game_id}' does not exist",
                 details=None,
-                code=400,
             )
 
     # Bulk checking all tags specified by the user versus what is currently
@@ -315,10 +308,9 @@ def update_guide(
         missing_tags = provided_tags - found_identifiers
 
         if missing_tags:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="Tags not found",
                 details={"missing_tags": list(missing_tags)},
-                code=400,
             )
 
     # After all validations, it will begin to update the guide in the database
@@ -336,10 +328,9 @@ def update_guide(
                     .first()
                 )
                 if existing_guide:
-                    return ErrorResponse(
+                    return 400, ErrorResponse(
                         error="Guide With Slug Already Exists",
                         details={"slug": data.slug},
-                        code=400,
                     )
                 guide.slug = data.slug
 
@@ -355,18 +346,17 @@ def update_guide(
             if data.tag_ids is not None:
                 guide.tags.set(data.tag_ids)
 
-            return GuideSchema.model_validate(guide)
+            return 200, GuideSchema.model_validate(guide)
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Guide Update Failed",
             details={"exception": {str(e)}},
-            code=500,
         )
 
 
 @router.delete(
     "/{slug}",
-    response={204: None},
+    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Guide",
     description="""
     Deletes an existing guide.
@@ -382,22 +372,20 @@ def update_guide(
 def delete_guide(
     request: HttpRequest,
     slug: str,
-) -> Union[dict, ErrorResponse]:
+) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
     guide = Guides.objects.filter(slug__iexact=slug).first()
     if not guide:
-        return ErrorResponse(
+        return 404, ErrorResponse(
             error=f"Guide with slug '{slug}' not found",
             details=None,
-            code=404,
         )
 
     try:
         title = guide.title
         guide.delete()
-        return {"message": f"Guide '{title} deleted successfully."}
+        return 200, {"message": f"Guide '{title} deleted successfully."}
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Guide Delete Failed",
             details={"exception": {str(e)}},
-            code=500,
         )

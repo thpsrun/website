@@ -1,13 +1,16 @@
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
+from django.db.models import Q
 from django.http import HttpRequest
 from ninja import Query, Router
+from ninja.responses import codes_4xx
 from srl.models import CountryCodes, Players, Runs
 
 from api.docs.players import PLAYERS_DELETE, PLAYERS_GET, PLAYERS_POST, PLAYERS_PUT
 from api.permissions import admin_auth, moderator_auth, public_auth
 from api.schemas.base import ErrorResponse, validate_embeds
 from api.schemas.players import PlayerCreateSchema, PlayerSchema, PlayerUpdateSchema
+from api.utils import get_or_generate_id
 
 router = Router()
 
@@ -40,7 +43,7 @@ def apply_player_embeds(
     # Embeds the 25 most recent runs to the player query, if runs is an embed.
     if "runs" in embed_fields:
         recent_runs = (
-            Runs.objects.filter(player=player)
+            Runs.objects.filter(run_players__player=player)
             .select_related("game", "category", "level")
             .order_by("-v_date")[:25]
         )
@@ -64,10 +67,12 @@ def apply_player_embeds(
 
 @router.get(
     "/{id}",
-    response=Union[PlayerSchema, ErrorResponse],
+    response={200: PlayerSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Player by ID",
     description="""
     Retrieve a single player by their ID, including optional embedding.
+
+    Exclusively for this endpoint, you can also GET a player by their username or their nickname.
 
     **Supported Parameters:**
     - `id` (str): Unique ID of the player being queried.
@@ -93,12 +98,11 @@ def get_player(
         None,
         description="Comma-separated embeds",
     ),
-) -> Union[PlayerSchema, ErrorResponse]:
+) -> Tuple[int, Union[PlayerSchema, ErrorResponse]]:
     if len(id) > 15:
-        return ErrorResponse(
+        return 400, ErrorResponse(
             error="ID must be 15 characters or less",
             details=None,
-            code=400,
         )
 
     # Checks to see what embeds are being used versus what is allowed
@@ -109,19 +113,19 @@ def get_player(
         embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
         invalid_embeds = validate_embeds("players", embed_fields)
         if invalid_embeds:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
                 details={"valid_embeds": ["country", "awards", "runs"]},
-                code=400,
             )
 
     try:
-        player = Players.objects.filter(id__iexact=id).first()
+        player = Players.objects.filter(
+            Q(id__iexact=id) | Q(name__iexact=id) | Q(nickname__iexact=id)
+        ).first()
         if not player:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Player ID does not exist",
                 details=None,
-                code=404,
             )
 
         player_data = PlayerSchema.model_validate(player)
@@ -131,19 +135,18 @@ def get_player(
             for field, data in embed_data.items():
                 setattr(player_data, field, data)
 
-        return player_data
+        return 200, player_data
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to retrieve player",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.post(
     "/",
-    response=Union[PlayerSchema, ErrorResponse],
+    response={200: PlayerSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Player",
     description="""
     Creates a brand new player.
@@ -151,17 +154,17 @@ def get_player(
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
     **Request Body:**
-    - id (str): Unique ID (usually based on SRC) of the player.
-    - name (str): Player's name on Speedrun.com.
-    - nickname (Optional[str]): Custom nickname override (displayed instead of name).
-    - url (str): Speedrun.com profile URL.
-    - pfp (Optional[str]): Profile picture URL.
-    - pronouns (Optional[str]): Player's pronouns.
-    - twitch (Optional[str]): Twitch channel URL.
-    - youtube (Optional[str]): YouTube channel URL.
-    - twitter (Optional[str]): Twitter profile URL.
-    - bluesky (Optional[str]): Bluesky profile URL.
-    - ex_stream (bool): Whether the player is marked to be excluded from streams.
+    - `id` (Optional[str]): The player ID; if one is not given, it will auto-generate.
+    - `name` (str): Player's name on Speedrun.com.
+    - `nickname` (Optional[str]): Custom nickname override (displayed instead of name).
+    - `url` (str): Speedrun.com profile URL.
+    - `pfp` (Optional[str]): Profile picture URL.
+    - `pronouns` (Optional[str]): Player's pronouns.
+    - `twitch` (Optional[str]): Twitch channel URL.
+    - `youtube` (Optional[str]): YouTube channel URL.
+    - `twitter` (Optional[str]): Twitter profile URL.
+    - `bluesky` (Optional[str]): Bluesky profile URL.
+    - `ex_stream` (bool): Whether the player is marked to be excluded from streams.
     """,
     auth=moderator_auth,
     openapi_extra=PLAYERS_POST,
@@ -169,34 +172,45 @@ def get_player(
 def create_player(
     request: HttpRequest,
     player_data: PlayerCreateSchema,
-) -> Union[PlayerSchema, ErrorResponse]:
+) -> Tuple[int, Union[PlayerSchema, ErrorResponse]]:
     try:
         country = None
         if player_data.country_id:
             country = CountryCodes.objects.filter(id=player_data.country_id).first()
             if not country:
-                return ErrorResponse(
+                return 400, ErrorResponse(
                     error="Country code does not exist",
                     details=None,
-                    code=400,
                 )
 
+        # Generate or validate the ID
+        try:
+            player_id = get_or_generate_id(
+                player_data.id,
+                lambda id: Players.objects.filter(id=id).exists(),
+            )
+        except ValueError as e:
+            return 400, ErrorResponse(
+                error="ID Already Exists",
+                details={"exception": str(e)},
+            )
+
         create_data = player_data.model_dump(exclude={"country_id"})
+        create_data["id"] = player_id
         player = Players.objects.create(countrycode=country, **create_data)
 
-        return PlayerSchema.model_validate(player)
+        return 200, PlayerSchema.model_validate(player)
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to create player",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.put(
     "/{id}",
-    response=Union[PlayerSchema, ErrorResponse],
+    response={200: PlayerSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Player",
     description="""
     Updates the player based on their unique ID.
@@ -225,14 +239,13 @@ def update_player(
     request: HttpRequest,
     id: str,
     player_data: PlayerUpdateSchema,
-) -> Union[PlayerSchema, ErrorResponse]:
+) -> Tuple[int, Union[PlayerSchema, ErrorResponse]]:
     try:
         player = Players.objects.filter(id__iexact=id).first()
         if not player:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Player does not exist",
                 details=None,
-                code=404,
             )
 
         update_data = player_data.model_dump(exclude_unset=True)
@@ -243,10 +256,9 @@ def update_player(
                     id=update_data["country_id"]
                 ).first()
                 if not country:
-                    return ErrorResponse(
+                    return 400, ErrorResponse(
                         error="Country code does not exist",
                         details=None,
-                        code=400,
                     )
                 player.countrycode = country
             else:
@@ -257,19 +269,18 @@ def update_player(
             setattr(player, field, value)
 
         player.save()
-        return PlayerSchema.model_validate(player)
+        return 200, PlayerSchema.model_validate(player)
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to update player",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.delete(
     "/{id}",
-    response=Union[dict, ErrorResponse],
+    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Player",
     description="""
     Deletes the selected player based on its ID.
@@ -285,23 +296,21 @@ def update_player(
 def delete_player(
     request: HttpRequest,
     id: str,
-) -> Union[dict, ErrorResponse]:
+) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
     try:
         player = Players.objects.filter(id__iexact=id).first()
         if not player:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Player does not exist",
                 details=None,
-                code=404,
             )
 
         name = player.nickname if player.nickname else player.name
         player.delete()
-        return {"message": f"Player '{name}' deleted successfully"}
+        return 200, {"message": f"Player '{name}' deleted successfully"}
 
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to delete player",
             details={"exception": str(e)},
-            code=500,
         )

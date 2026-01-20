@@ -26,7 +26,7 @@ from srl.models import (
 
 @shared_task
 def update_game(
-    src_game: dict[dict, dict],
+    src_game: str,
 ) -> None:
     """Creates or updates a `Games` model object based on the `src_game` argument.
 

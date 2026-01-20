@@ -9,7 +9,7 @@ volumes:
 services:
   postgres:
     container_name: postgres
-    image: postgres:18.1-bookworm
+    image: postgres:17.7-bookworm
     restart: unless-stopped
     shm_size: 128mb
     environment:
@@ -35,7 +35,6 @@ services:
     volumes:
       - ./backend:/app
       - static_files:/app/static:rw
-      - ../guides:/app/docs
     networks:
       - thpsrun
 

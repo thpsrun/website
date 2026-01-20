@@ -2,13 +2,6 @@ from django.db import models
 
 
 class RunPlayers(models.Model):
-    """
-    Through model for the many-to-many relationship between Runs and Players.
-
-    This replaces the previous player/player2 fields on the Runs model to allow
-    for any number of players per run (including anonymous runs with no players).
-    """
-
     class Meta:
         verbose_name = "Run Player"
         verbose_name_plural = "Run Players"
@@ -18,7 +11,7 @@ class RunPlayers(models.Model):
                 name="unique_run_player",
             )
         ]
-        ordering = ["run", "player__name"]
+        ordering = ["run", "order"]
 
     run = models.ForeignKey(
         "Runs", on_delete=models.CASCADE, related_name="run_players"
@@ -32,5 +25,12 @@ class RunPlayers(models.Model):
         help_text="Order of this player in the run (1 for primary player, 2 for secondary, etc.)",
     )
 
-    def __str__(self):
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        null=True,
+        blank=True,
+        help_text="Timestamp when this player-run association was created.",
+    )
+
+    def __str__(self) -> str:
         return f"{self.run.id} - {self.player.name} (#{self.order})"

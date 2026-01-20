@@ -1,14 +1,16 @@
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from django.db.models import Q
 from django.http import HttpRequest
 from ninja import Query, Router
+from ninja.responses import codes_4xx
 from srl.models import Games
 
 from api.docs.games import GAMES_ALL, GAMES_DELETE, GAMES_GET, GAMES_POST, GAMES_PUT
 from api.permissions import admin_auth, moderator_auth, public_auth
 from api.schemas.base import ErrorResponse, validate_embeds
 from api.schemas.games import GameCreateSchema, GameSchema, GameUpdateSchema
+from api.utils import get_or_generate_id
 
 router = Router()
 
@@ -34,78 +36,8 @@ def game_embeds(
 
 
 @router.get(
-    "/{id}",
-    response=GameSchema,
-    summary="Get Game by ID",
-    description="""
-    Retrieves a single game by its ID or its slug, including optional embedding.
-
-    **Supported Embeds:**
-    - `categories`: Include metadata related to the game's categories
-    - `levels`: Include metadata related to the game's levels
-    - `platforms`: Include metadata related to the game's available platforms
-
-    **Examples:**
-    - `/games/thps4` - Get game by slug
-    - `/games/n2680o1p` - Get game by ID
-    - `/games/thps4?embed=categories,levels` - Get game with categories and levels
-    """,
-    auth=public_auth,
-    openapi_extra=GAMES_GET,
-)
-def get_game(
-    request: HttpRequest,
-    id: str,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-) -> Union[GameSchema, ErrorResponse]:
-    if len(id) > 15:
-        return ErrorResponse(
-            error="ID must be 15 characters or less",
-            details=None,
-            code=400,
-        )
-
-    # Checks to see what embeds are being used versus what is allowed
-    # via this endpoint. It will return an error to the client if they
-    # have an embed type not supported.
-    embed_fields = []
-    if embed:
-        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
-        invalid_embeds = validate_embeds("games", embed_fields)
-        if invalid_embeds:
-            return ErrorResponse(
-                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
-                details={"valid_embeds": ["categories", "levels", "platforms"]},
-                code=400,
-            )
-
-    try:
-        queryset = Games.objects.all()
-        queryset = game_embeds(queryset, embed)
-
-        game = queryset.filter(Q(id__iexact=id) | Q(slug__iexact=id)).first()
-        if not game:
-            return ErrorResponse(
-                error="Game does not exist",
-                details=None,
-                code=404,
-            )
-
-        return GameSchema.model_validate(game)
-    except Exception as e:
-        return ErrorResponse(
-            error="Failed to retrieve game",
-            details={"exception": str(e)},
-            code=500,
-        )
-
-
-@router.get(
     "/all",
-    response=List[GameSchema],
+    response={200: List[GameSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get All Games",
     description="""
     Retrieves all games within the `Games` object, including optional embedding and pagination.
@@ -119,7 +51,7 @@ def get_game(
     - `categories`: Include metadata related to the game's categories.
     - `levels`: Include metadata related to the game's levels.
     - `platforms`: Include metadata related to the game's available platforms.
-    
+
     **Examples:**
     - `/games/all` - Get all games.
     - `/games/all?limit=20` - Get first 20 games.
@@ -145,7 +77,7 @@ def get_all_games(
         ge=0,
         description="Offset from 0",
     ),
-) -> Union[List[GameSchema], ErrorResponse]:
+) -> Tuple[int, Union[List[GameSchema], ErrorResponse]]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -154,10 +86,9 @@ def get_all_games(
         embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
         invalid_embeds = validate_embeds("games", embed_fields)
         if invalid_embeds:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
                 details={"valid_embeds": ["categories", "levels", "platforms"]},
-                code=400,
             )
 
     try:
@@ -172,18 +103,83 @@ def get_all_games(
             game_data = GameSchema.model_validate(game)
             game_schemas.append(game_data)
 
-        return game_schemas
+        return 200, game_schemas
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to retrieve games",
             details={"exception": str(e)},
-            code=500,
+        )
+
+
+@router.get(
+    "/{id}",
+    response={200: GameSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Get Game by ID",
+    description="""
+    Retrieves a single game by its ID or its slug, including optional embedding.
+
+    **Supported Embeds:**
+    - `categories`: Include metadata related to the game's categories
+    - `levels`: Include metadata related to the game's levels
+    - `platforms`: Include metadata related to the game's available platforms
+
+    **Examples:**
+    - `/games/thps4` - Get game by slug
+    - `/games/n2680o1p` - Get game by ID
+    - `/games/thps4?embed=categories,levels` - Get game with categories and levels
+    """,
+    auth=public_auth,
+    openapi_extra=GAMES_GET,
+)
+def get_game(
+    request: HttpRequest,
+    id: str,
+    embed: Optional[str] = Query(
+        None,
+        description="Comma-separated embeds",
+    ),
+) -> Tuple[int, Union[GameSchema, ErrorResponse]]:
+    if len(id) > 15:
+        return 400, ErrorResponse(
+            error="ID must be 15 characters or less",
+            details=None,
+        )
+
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
+    embed_fields = []
+    if embed:
+        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
+        invalid_embeds = validate_embeds("games", embed_fields)
+        if invalid_embeds:
+            return 400, ErrorResponse(
+                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
+                details={"valid_embeds": ["categories", "levels", "platforms"]},
+            )
+
+    try:
+        queryset = Games.objects.all()
+        queryset = game_embeds(queryset, embed)
+
+        game = queryset.filter(Q(id__iexact=id) | Q(slug__iexact=id)).first()
+        if not game:
+            return 404, ErrorResponse(
+                error="Game does not exist",
+                details=None,
+            )
+
+        return 200, GameSchema.model_validate(game)
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to retrieve game",
+            details={"exception": str(e)},
         )
 
 
 @router.post(
-    "",
-    response=Union[GameSchema, ErrorResponse],
+    "/",
+    response={200: GameSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Game",
     description="""
     Creates a brand new game.
@@ -191,6 +187,7 @@ def get_all_games(
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
     **Request Body:**
+    - `id` (Optional[str]): The game ID; if one is not given, it will auto-generate.
     - `name` (str): Game name.
     - `slug` (str): URL-friendly game abbreviation.
     - `twitch` (Optional[str]): Game name as it appears on Twitch.
@@ -207,34 +204,45 @@ def get_all_games(
 def create_game(
     request: HttpRequest,
     game_data: GameCreateSchema,
-) -> Union[GameSchema, ErrorResponse]:
+) -> Tuple[int, Union[GameSchema, ErrorResponse]]:
     try:
         game_check = Games.objects.filter(
             Q(name__iexact=game_data.name) | Q(slug__iexact=game_data.slug)
         ).first()
         if game_check:
-            return ErrorResponse(
+            return 400, ErrorResponse(
                 error="Game Already Exists",
                 details={
                     "exception": "Either the name of the game or its slug already exists."
                 },
-                code=400,
             )
 
-        game = Games.objects.create(**game_data.model_dump())
+        try:
+            game_id = get_or_generate_id(
+                game_data.id,
+                lambda id: Games.objects.filter(id=id).exists(),
+            )
+        except ValueError as e:
+            return 400, ErrorResponse(
+                error="ID Already Exists",
+                details={"exception": str(e)},
+            )
 
-        return GameSchema.model_validate(game)
+        create_data = game_data.model_dump()
+        create_data["id"] = game_id
+        game = Games.objects.create(**create_data)
+
+        return 200, GameSchema.model_validate(game)
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Game Creation Failed",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.put(
     "/{id}",
-    response=Union[GameSchema, ErrorResponse],
+    response={200: GameSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Game",
     description="""
     Updates the game based on its unique ID or slug.
@@ -245,7 +253,7 @@ def create_game(
     - `name` (Optional[str]): Game name.
     - `slug` (Optional[str]): URL-friendly game abbreviation.
     - `twitch` (Optional[str]): Game name as it appears on Twitch.
-    - `release` (Optiional[date]): Game release date (ISO format).
+    - `release` (Optional[date]): Game release date (ISO format).
     - `boxart` (Optional[str]): URL to game box art/cover image.
     - `defaulttime` (Optional[str]): Default timing method for full-game runs.
     - `idefaulttime` (Optional[str]): Default timing method for individual level runs.
@@ -259,32 +267,30 @@ def update_game(
     request: HttpRequest,
     id: str,
     game_data: GameUpdateSchema,
-) -> Union[GameSchema, ErrorResponse]:
+) -> Tuple[int, Union[GameSchema, ErrorResponse]]:
     try:
         game = Games.objects.filter(Q(id__iexact=id) | Q(slug__iexact=id)).first()
         if not game:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Game does not exist",
                 details=None,
-                code=404,
             )
 
         for attr, value in game_data.model_dump(exclude_unset=True).items():
             setattr(game, attr, value)
 
         game.save()
-        return GameSchema.model_validate(game)
+        return 200, GameSchema.model_validate(game)
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to update game",
             details={"exception": str(e)},
-            code=500,
         )
 
 
 @router.delete(
     "/{id}",
-    response=Union[dict, ErrorResponse],
+    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Game",
     description="""
     Deletes the selected game.
@@ -300,22 +306,20 @@ def update_game(
 def delete_game(
     request: HttpRequest,
     id: str,
-) -> Union[dict, ErrorResponse]:
+) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
     try:
         game = Games.objects.filter(Q(id__iexact=id) | Q(slug__iexact=id)).first()
         if not game:
-            return ErrorResponse(
+            return 404, ErrorResponse(
                 error="Game does not exist",
                 details=None,
-                code=404,
             )
 
         name = game.name
         game.delete()
-        return {"message": f"Game '{name}' deleted successfully"}
+        return 200, {"message": f"Game '{name}' deleted successfully"}
     except Exception as e:
-        return ErrorResponse(
+        return 500, ErrorResponse(
             error="Failed to delete game",
             details={"exception": str(e)},
-            code=500,
         )
