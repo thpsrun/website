@@ -1,14 +1,15 @@
-from .models import Players
-from .tasks import (
-    import_obsolete,
-    src_api,
-    update_category,
-    update_category_runs,
-    update_game,
-    update_level,
-    update_platform,
-    update_variable,
+from srcom import (
+    sync_categories,
+    sync_game,
+    sync_levels,
+    sync_platforms,
+    sync_run,
+    sync_variables,
 )
+from srcom.schema.src import SrcGamesModel
+
+from .models import Players
+from .tasks import import_obsolete, src_api
 
 
 def init_series(
@@ -35,45 +36,34 @@ def init_series(
     # Max is set to 50, but can be increased.
     src_games = src_api(f"https://speedrun.com/api/v1/series/{series_id}/games?max=50")
 
-    if not isinstance(src_games, int):
+    if isinstance(src_games, dict):
         for game in src_games:
-            game_check = src_api(
+            game_data = src_api(
                 f"https://speedrun.com/api/v1/games/"
                 f"{game['id']}?embed=platforms,levels,categories,variables"
             )
 
-            if not isinstance(game_check, int):
-                for plat in game_check["platforms"]["data"]:
-                    update_platform.delay(plat)
+            game_data = SrcGamesModel.model_validate(game_data)
 
-                update_game.delay(game["id"])
+            if not isinstance(game_data, int):
+                for platform in game_data.platforms:
+                    sync_platforms.delay(platform.model_dump())
 
-                for category in game_check["categories"]["data"]:
-                    update_category.delay(
-                        category,
-                        game["id"],
-                    )
+                sync_game.delay(game_data.id)
 
-                if len(game_check["levels"]["data"]) > 0:
-                    for level in game_check["levels"]["data"]:
-                        update_level.delay(
-                            level,
-                            game["id"],
-                        )
+                if game_data.categories:
+                    for category in game_data.categories:
+                        sync_categories.delay(category.model_dump())
 
-                if len(game_check["variables"]["data"]) > 0:
-                    for variable in game_check["variables"]["data"]:
-                        update_variable.delay(
-                            game["id"],
-                            variable,
-                        )
+                if game_data.levels:
+                    for level in game_data.levels:
+                        sync_levels.delay(level.model_dump())
 
-                for category in game_check["categories"]["data"]:
-                    update_category_runs.delay(
-                        game_check["id"],
-                        category,
-                        game_check["levels"]["data"],
-                    )
+                if game_data.variables:
+                    for variable in game_data.variables:
+                        sync_variables.delay(variable.model_dump())
+
+                # Add code for mass querying runs.
 
     # Speedrun.com API sucks sometimes and will miss some runs; this reiterates to add runs it
     # somehow missed the first time. Good website.
@@ -81,6 +71,7 @@ def init_series(
     redo = 0
     while redo < 2:
         for player in Players.objects.only("id").values_list("id", flat=True):
+            sync_run()  # <---- TODO
             import_obsolete.delay(player)
 
             redo = redo + 1

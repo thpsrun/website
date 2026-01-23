@@ -3,8 +3,8 @@ from typing import List
 from celery import shared_task
 from django.db.models import Count
 
-from srl.m_tasks import convert_time, points_formula, src_api
-from srl.models import Runs, VariableValues
+from srl.m_tasks import convert_time, points_formula, src_api, time_conversion
+from srl.models import Platforms, Players, Runs, VariableValues
 from srl.srcom.schema.src import SrcRunsPlayers
 
 
@@ -236,3 +236,50 @@ def update_obsolete(
 
     if obsolete_runs:
         Runs.objects.filter(id__in=obsolete_runs).update(obsolete=True)
+
+
+def create_run_default(
+    run_data: dict,
+    subcategory_name: str,
+    place: int,
+    lrtfix: bool,
+) -> dict:
+    try:
+        platform = Platforms.objects.only("id").get(id=run_data["system"]["platform"])
+    except Platforms.DoesNotExist:
+        platform = None
+
+    try:
+        approver = Players.objects.only("id").get(id=run_data["status"]["examiner"])
+    except Players.DoesNotExist:
+        approver = None
+
+    run_rta, run_nl, run_igt = time_conversion(run_data["times"])
+
+    default = {
+        "runtype": "main" if run_data["level"] is None else "il",
+        "game_id": run_data["game"],
+        "category_id": run_data["category"],
+        "subcategory": subcategory_name,
+        "place": place,
+        "url": run_data["weblink"],
+        "video": run_data["video_uri"],
+        "date": run_data["date"],
+        "v_date": run_data["status"]["verify_date"],
+        "time": run_rta,
+        "time_secs": run_data["times"]["realtime_t"],
+        "timenl": run_nl,
+        "timenl_secs": run_data["times"]["realtime_noloads_t"],
+        "timeigt": run_igt,
+        "timeigt_secs": run_data["times"]["ingame_t"],
+        "platform_id": platform.id if platform else None,
+        "emulated": run_data["system"]["emulated"],
+        "vid_status": run_data["status"]["status"],
+        "approver": approver,
+        "description": run_data["comment"],
+    }
+
+    if lrtfix:
+        default: dict = lrt_fix(default)
+
+    return default

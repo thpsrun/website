@@ -4,9 +4,10 @@ import time
 import requests
 from celery import shared_task
 from django.db import transaction
+from langcodes import standardize_tag
 
 from srl.m_tasks import src_api
-from srl.models import Players
+from srl.models import CountryCodes, Players
 from srl.srcom.schema.src import SrcPlayersModel
 
 
@@ -48,12 +49,33 @@ def sync_players(
     else:
         file_path = None
 
+    c_code = src_player.country_code
+    cc = standardize_tag(c_code.replace("/", "_")) if c_code is not None else None
+
+    if isinstance(cc, str) and cc.startswith("ca-"):
+        cc = "ca"
+
+    if cc is not None:
+        with transaction.atomic():
+            CountryCodes.objects.update_or_create(
+                id=cc,
+                defaults={
+                    "name": src_player.country_name,
+                },
+            )
+
+    try:
+        cc_get = CountryCodes.objects.only("id").get(id=cc)
+    except CountryCodes.DoesNotExist:
+        cc_get = None
+
     with transaction.atomic():
         Players.objects.update_or_create(
             id=src_player.id,
             defaults={
                 "name": src_player.names.international,
                 "url": src_player.weblink,
+                "countrycode": cc_get,
                 "pfp": file_path if download_pfp else None,
                 "pronouns": src_player.pronouns,
                 "twitch": src_player.twitch_url,

@@ -6,9 +6,9 @@ from srl.models import Platforms
 from srl.srcom.schema.src import SrcPlatformModel
 
 
-@shared_task
+@shared_task(pydantic=True)
 def sync_platforms(
-    platform_data: str | dict,
+    platform_data: str | dict | SrcPlatformModel,
 ) -> None:
     """Creates or updates a `Platforms` model object based on the `platform_data` argument.
 
@@ -22,8 +22,10 @@ def sync_platforms(
         )
 
         src_platform = SrcPlatformModel.model_validate(src_data)
-    else:
+    elif isinstance(platform_data, dict):
         src_platform = SrcPlatformModel.model_validate(platform_data)
+    else:
+        src_platform = platform_data
 
     with transaction.atomic():
         Platforms.objects.update_or_create(

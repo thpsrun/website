@@ -6,9 +6,9 @@ from srl.models import Games, Variables, VariableValues
 from srl.srcom.schema.src import SrcVariablesModel
 
 
-@shared_task
+@shared_task(pydantic=True)
 def sync_variables(
-    variables_data: str | dict,
+    variables_data: str | dict | SrcVariablesModel,
 ) -> None:
     """Creates or updates a `Variables` model object based on the `variables_data` argument.
 
@@ -22,8 +22,10 @@ def sync_variables(
         )
 
         src_variable = SrcVariablesModel.model_validate(src_data)
-    else:
+    elif isinstance(variables_data, dict):
         src_variable = SrcVariablesModel.model_validate(variables_data)
+    else:
+        src_variable = variables_data
 
     with transaction.atomic():
         Variables.objects.update_or_create(
@@ -38,13 +40,16 @@ def sync_variables(
         )
 
     if src_variable.is_subcategory:
-        sync_values.delay(src_variable.model_dump())  # type: ignore
+        sync_values.delay(src_variable.model_dump())
 
 
 @shared_task(pydantic=True)
 def sync_values(
-    src_variable: SrcVariablesModel,
+    src_variable: SrcVariablesModel | dict,
 ) -> None:
+    if isinstance(src_variable, dict):
+        src_variable = SrcVariablesModel.model_validate(src_variable)
+
     for value_id, value_data in src_variable.values.values.items():
         with transaction.atomic():
             VariableValues.objects.update_or_create(

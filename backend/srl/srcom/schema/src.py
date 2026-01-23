@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Dict, List
 
@@ -12,7 +14,7 @@ class SrcPlatformModel(BaseModel):
     """Base model for SRC Platforms."""
 
     id: str
-    name: str
+    name: str | None = None
 
 
 # GAMES SCHEMA #
@@ -52,8 +54,50 @@ class SrcGamesModel(BaseModel):
     names: SrcGamesNames
     release_date: str = Field(..., alias="release-date")
     ruleset: SrcGamesRuleset
-    platforms: List[SrcPlatformModel]
     assets: SrcGamesAssets
+    categories: List[SrcCategoriesModel] | None = None
+    levels: List[SrcLevelsModel] | None = None
+    variables: List[SrcVariablesModel] | None = None
+    platforms: List[SrcPlatformModel]
+
+    @field_validator("categories", mode="before")
+    @classmethod
+    def unwrap_categories(cls, v):
+        if v is None:
+            return []
+        elif isinstance(v, dict) and "data" in v:
+            return v["data"]
+        return v
+
+    @field_validator("levels", mode="before")
+    @classmethod
+    def unwrap_levels(cls, v):
+        if v is None:
+            return []
+        elif isinstance(v, dict) and "data" in v:
+            return v["data"]
+        return v
+
+    @field_validator("variables", mode="before")
+    @classmethod
+    def unwrap_variables(cls, v):
+        if v is None:
+            return []
+        elif isinstance(v, dict) and "data" in v:
+            return v["data"]
+        return v
+
+    @field_validator("platforms", mode="before")
+    @classmethod
+    def unwrap_platforms(cls, v):
+        """This is more complex logic since, for `games`, it could be EITHER a list or a dict."""
+        if v is None:
+            return []
+        elif isinstance(v, dict) and "data" in v:
+            return v["data"]
+        elif isinstance(v, list) and v and isinstance(v[0], str):
+            return [{"id": platform_id} for platform_id in v]
+        return v
 
 
 # CATEGORIES/LEVEL SCHEMA #
@@ -206,9 +250,9 @@ class SrcRunsModel(BaseModel):
 
     id: str
     weblink: str
-    game: str
-    level: str | None
-    category: str | None
+    game: str | SrcGamesModel
+    level: str | SrcLevelsModel | None
+    category: str | SrcCategoriesModel | None
     videos: SrcVideos | None
     comment: str | None
     status: SrcRunsStatus
@@ -217,13 +261,31 @@ class SrcRunsModel(BaseModel):
     submitted: datetime | None
     times: SrcRunsTimes
     system: SrcRunsSystem
-    values: Dict[str, str]
+    values: dict[str, str]
 
     @property
     def video_uri(self) -> str | None:
         if self.videos and self.videos.links:
             return self.videos.links[0].uri
         return None
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def unwrap_categories(cls, v):
+        if v is None:
+            return []
+        elif isinstance(v, dict) and "data" in v:
+            return v["data"]
+        return v
+
+    @field_validator("level", mode="before")
+    @classmethod
+    def unwrap_level(cls, v):
+        if v is None:
+            return []
+        elif isinstance(v, dict) and "data" in v:
+            return v["data"]
+        return v
 
 
 # PLAYERS SCHEMA #

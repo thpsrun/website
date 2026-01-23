@@ -1,34 +1,37 @@
+from typing import Any
+
 from celery import shared_task
 from django.db import transaction
 
-from srl.m_tasks import points_formula, time_conversion
-from srl.models import (
-    Categories,
-    Games,
-    Levels,
-    Platforms,
-    Players,
-    RunPlayers,
-    Runs,
-    RunVariableValues,
-)
+from srl.m_tasks import points_formula
+from srl.models import Categories, Games, Levels, RunPlayers, Runs, RunVariableValues
 from srl.srcom.players import sync_players
 from srl.srcom.schema.internal import RunSyncContext, RunSyncTimesContext
-from srl.srcom.schema.src import SrcLeaderboardModel
-from srl.srcom.utils import lrt_fix, update_obsolete, update_standings
+from srl.srcom.schema.src import (
+    SrcCategoriesModel,
+    SrcLeaderboardModel,
+    SrcLevelsModel,
+    SrcRunsModel,
+)
+from srl.srcom.utils import (
+    build_var_name,
+    create_run_default,
+    src_api,
+    update_obsolete,
+    update_standings,
+)
 
 
 @shared_task
 def sync_leaderboards(
     leaderboard_data: dict,
 ) -> None:
-    """Creates or updates a `Runs` model object based on the `runs_data` argument.
+    """Orchestrates the leaderboard to `Runs` workflow.
 
     Arguments:
-        runs_data (str | dict): Either the unique ID (str) of the player or the embedded
-            player dict information.
+        leaderboard_data (dict): Object from the leaderboards API endpoint on SRC.
     """
-    LRT_FIX = False
+    lrt_fix_check = False
 
     src_lb = SrcLeaderboardModel.model_validate(leaderboard_data)
 
@@ -49,11 +52,11 @@ def sync_leaderboards(
     if src_lb.level is None:
         max_points = game_info.pointsmax
         if game_info.defaulttime == "realtime_noloads":
-            LRT_FIX = True
+            lrt_fix_check = True
     else:
         max_points = game_info.ipointsmax
         if game_info.idefaulttime == "realtime_noloads":
-            LRT_FIX = True
+            lrt_fix_check = True
 
     base_context = RunSyncContext(
         game_id=game_info.id,
@@ -67,7 +70,7 @@ def sync_leaderboards(
         default_time_type=src_lb.timing,
         subcategory_name="",
         download_pfp=False,
-        lrt_fix=LRT_FIX,
+        lrt_fix=lrt_fix_check,
         players_data=src_lb.players.data if src_lb.players else [],
         runs_data=src_lb.runs[0],
     )
@@ -75,55 +78,119 @@ def sync_leaderboards(
     for lb_run in src_lb.runs:
         run_context = base_context.model_copy(update={"runs_data": lb_run})
 
-        sync_run.delay(run_context)  # type:ignore
+        sync_run.delay(run_context)
+
+
+@shared_task(pydantic=True)
+def sync_obsolete_runs(
+    player: str,
+) -> None:
+    run_data: dict[str, Any] | None = src_api(
+        f"https://speedrun.com/api/v1/runs?user={player}&max=200&embed=players,game,level,category",
+        True,
+    )
+
+    if run_data is not None:
+        all_runs: list[dict[str, Any]] = run_data["data"]
+        offset = 0
+
+        while run_data["pagination"]["max"] == run_data["pagination"]["size"]:
+            offset += 200
+            run_data = src_api(
+                f"https://speedrun.com/api/v1/"
+                f"runs?user={player}&max=200&offset={offset}&embed=players,game,level,category",
+                True,
+            )
+
+            if run_data is None:
+                break
+
+            all_runs.extend(run_data["data"])
+
+        for run in all_runs:
+            lrt_fix_check = False
+            run = SrcRunsModel.model_validate(run)
+
+            if run.status.status == "verified":
+                game_info = (
+                    Games.objects.only(
+                        "id",
+                        "defaulttime",
+                        "idefaulttime",
+                    )
+                    .filter(id=run.game)
+                    .first()
+                )
+
+                if game_info:
+                    if not Runs.objects.only("id").filter(id=run.id).exists():
+                        if run.level and isinstance(run.level, SrcLevelsModel):
+                            base_name = run.level.name
+                        elif isinstance(run.category, SrcCategoriesModel):
+                            base_name = run.category.name
+                        else:
+                            base_name = ""
+
+                        if game_info.defaulttime == "realtime_noloads":
+                            lrt_fix_check = True
+                        else:
+                            if game_info.idefaulttime == "realtime_noloads":
+                                lrt_fix_check = True
+
+                        if run.values:
+                            subcat_name = build_var_name(
+                                base_name=base_name,
+                                run_variables=run.values,
+                            )
+                        else:
+                            subcat_name = ""
+
+                        default: dict = create_run_default(
+                            run.model_dump(),
+                            subcategory_name=subcat_name,
+                            place=0,
+                            lrtfix=lrt_fix_check,
+                        )
+                        default["points"] = 0
+                        default["obsolete"] = True
+
+                        with transaction.atomic():
+                            run_obj, _ = Runs.objects.update_or_create(
+                                id=run.id,
+                                defaults=default,
+                            )
+
+                            RunPlayers.objects.filter(run=run_obj).delete()
+                            for order, player_data in enumerate(run.players, start=1):
+                                if player_data.id and player_data.rel == "user":
+                                    RunPlayers.objects.create(
+                                        run=run_obj,
+                                        player_id=player_data.id,
+                                        order=order,
+                                    )
 
 
 @shared_task(pydantic=True)
 def sync_run(
     context_data: RunSyncContext,
 ) -> None:
+    """Creates or updates a `Runs` model object based on the `context_data` argument.
+
+    Arguments:
+        runs_data (RunSyncContext): Pydantic model contextual information related to runs, usually
+            created from the leaderboards endpoint and `sync_leaderboards` function.
+    """
     player_ids: list[str] = []
 
     place = context_data.runs_data.place
     run_data = context_data.runs_data.run
     if run_data.players is not None:
-        try:
-            platform = Platforms.objects.only("id").get(id=run_data.system.platform)
-        except Platforms.DoesNotExist:
-            platform = None
-
-        try:
-            approver = Players.objects.only("id").get(id=run_data.status.examiner)
-        except Players.DoesNotExist:
-            approver = None
-
-        run_rta, run_nl, run_igt = time_conversion(run_data.times)
-
-        default = {
-            "runtype": "main" if run_data.level is None else "il",
-            "game_id": run_data.game,
-            "category_id": run_data.category,
-            "subcategory": "",
-            "place": place,
-            "url": run_data.weblink,
-            "video": run_data.video_uri,
-            "date": run_data.date,
-            "v_date": run_data.status.verify_date,
-            "time": run_rta,
-            "time_secs": run_data.times.realtime_t,
-            "timenl": run_nl,
-            "timenl_secs": run_data.times.realtime_noloads_t,
-            "timeigt": run_igt,
-            "timeigt_secs": run_data.times.ingame_t,
-            "platform_id": platform,
-            "emulated": run_data.system.emulated,
-            "vid_status": run_data.status.status,
-            "approver": approver,
-            "description": run_data.comment,
-        }
-
-        if context_data.lrt_fix:
-            default: dict = lrt_fix(default)
+        default: dict = create_run_default(
+            run_data=run_data.model_dump(),
+            subcategory_name=context_data.subcategory_name,
+            place=place,
+            lrtfix=context_data.lrt_fix,
+        )
 
         base_wr_query = Runs.objects.filter(
             game=context_data.game_id,

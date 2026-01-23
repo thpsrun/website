@@ -6,9 +6,9 @@ from srl.models import Games, Levels
 from srl.srcom.schema.src import SrcLevelsModel
 
 
-@shared_task
+@shared_task(pydantic=True)
 def sync_levels(
-    levels_data: str | dict,
+    levels_data: str | dict | SrcLevelsModel,
 ) -> None:
     """Creates or updates a `Levels` model object based on the `levels_data` argument.
 
@@ -21,17 +21,19 @@ def sync_levels(
             f"https://speedrun.com/api/v1/levels/{levels_data}"
         )
 
-        src_category = SrcLevelsModel.model_validate(src_data)
+        src_level = SrcLevelsModel.model_validate(src_data)
+    elif isinstance(levels_data, dict):
+        src_level = SrcLevelsModel.model_validate(levels_data)
     else:
-        src_category = SrcLevelsModel.model_validate(levels_data)
+        src_level = levels_data
 
     with transaction.atomic():
         Levels.objects.update_or_create(
-            id=src_category.id,
+            id=src_level.id,
             defaults={
-                "name": src_category.name,
-                "game": Games.objects.only("id").get(src_category.game),
-                "url": src_category.weblink,
-                "rules": src_category.rules,
+                "name": src_level.name,
+                "game": Games.objects.only("id").get(src_level.game),
+                "url": src_level.weblink,
+                "rules": src_level.rules,
             },
         )

@@ -6,9 +6,9 @@ from srl.models import Categories, Games
 from srl.srcom.schema.src import SrcCategoriesModel
 
 
-@shared_task
+@shared_task(pydantic=True)
 def sync_categories(
-    categories_data: str | dict,
+    categories_data: str | dict | SrcCategoriesModel,
 ) -> None:
     """Creates or updates a `Categories` model object based on the `categories_data` argument.
 
@@ -22,8 +22,10 @@ def sync_categories(
         )
 
         src_category = SrcCategoriesModel.model_validate(src_data)
-    else:
+    elif isinstance(categories_data, dict):
         src_category = SrcCategoriesModel.model_validate(categories_data)
+    else:
+        src_category = categories_data
 
     with transaction.atomic():
         Categories.objects.update_or_create(
