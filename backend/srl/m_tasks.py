@@ -1,8 +1,10 @@
 import math
 import time
-from typing import Any, TypedDict
+from typing import TypedDict
 
 import requests
+
+from srl.srcom.schema.src import SrcRunsTimes
 
 
 def convert_time(
@@ -10,7 +12,7 @@ def convert_time(
 ) -> str:
     """Converts the time given into a string.
 
-    Args:
+    Arguments:
         secs (float): The seconds of a speedrun time.
 
     Returns:
@@ -53,14 +55,14 @@ def convert_time(
 def src_api(
     url: str,
     paginate: bool = False,
-) -> Any:
+) -> dict:
     """Processes a Speedrun.com API GET request to return values from any of its endpoints.
 
     This function is primarily used to connect to a Speedrun.com API endpoint via GET. However,
     this can be used if the API call returns valid HTTP Request Codes for `420: Enhance Your Calm`
     and `503: Service Unavailable` *and* returns data in JSON format with the "data" key value.
 
-    Args:
+    Arguments:
         url (str): The complete URL of the API endpoint (usually Speedrun.com) being connected to.
         paginate (bool): False by default. Some use cases related to pagination *OR* to disable
             using the "data" key value lookup.
@@ -81,8 +83,9 @@ def src_api(
         response = requests.get(url)
 
     if response.status_code != 200:
-        response = response.status_code
-        return response
+        raise ValueError(
+            f"SRC API request failed with statuscode {response.status_code}"
+        )
 
     if paginate is False:
         response = response.json()["data"]
@@ -93,13 +96,13 @@ def src_api(
 
 
 def points_formula(
-    wr: int,
-    run: int,
+    wr: float,
+    run: float,
     max_points: int,
 ) -> int:
     """Processes points based on algorithmic formula
 
-    Args:
+    Arguments:
         wr (float): The world record time (as a float).
         run (float): The personal best time (as a float).
         max_points (int): Maximum points of a speedrun
@@ -117,12 +120,12 @@ class TimeDict(TypedDict):
 
 
 def time_conversion(
-    time: TimeDict,
+    time: SrcRunsTimes,
 ) -> tuple[str, str, str]:
     """Processes the returned time values of a run entry in a string.
 
-    Args:
-        time (dict): Raw run dictionary from the Speedrun.com API.
+    Arguments:
+        time (SrcRunsTimes): Time data from a speedrun.
 
     Returns:
         tuple: A tuple containing:
@@ -133,12 +136,11 @@ def time_conversion(
     Called Functions:
         - `convert_time`
     """
-    realtime = time["realtime_t"]
-    realtime_nl = time["realtime_noloads_t"]
-    ingame = time["ingame_t"]
 
-    rta = convert_time(realtime) if realtime > 0 else "0"
-    noloads = convert_time(realtime_nl) if realtime_nl > 0 else "0"
-    igt = convert_time(ingame) if ingame > 0 else "0"
+    rta = convert_time(time.realtime_t) if time.realtime_t > 0 else "0"
+    noloads = (
+        convert_time(time.realtime_noloads_t) if time.realtime_noloads_t > 0 else "0"
+    )
+    igt = convert_time(time.ingame_t) if time.ingame_t > 0 else "0"
 
     return rta, noloads, igt

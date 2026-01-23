@@ -1,12 +1,24 @@
 import time
+from dataclasses import dataclass
+from datetime import datetime
+from datetime import timezone as dt_timezone
 from functools import wraps
-from typing import Any, Callable, Dict
+from typing import Any
+from collections.abc import Callable
 
 from django.core.cache import cache
 from django.http import HttpRequest, JsonResponse
-from django.utils import timezone
 
 from api.models import RoleAPIKey
+
+
+@dataclass(frozen=True)
+class RateLimitConfig:
+    """Configuration for a rate limit tier."""
+
+    description: str
+    limit: int
+    window_seconds: int
 
 
 class RoleBasedRateLimit:
@@ -21,12 +33,12 @@ class RoleBasedRateLimit:
     - admin: 5000 requests/hour
     """
 
-    ROLE_LIMITS = {
-        "public": ("100/h", 100, 3600),
-        "read_only": ("500/h", 500, 3600),
-        "contributor": ("1000/h", 1000, 3600),
-        "moderator": ("2000/h", 2000, 3600),
-        "admin": ("5000/h", 5000, 3600),
+    ROLE_LIMITS: dict[str, RateLimitConfig] = {
+        "public": RateLimitConfig("100/h", 100, 3600),
+        "read_only": RateLimitConfig("500/h", 500, 3600),
+        "contributor": RateLimitConfig("1000/h", 1000, 3600),
+        "moderator": RateLimitConfig("2000/h", 2000, 3600),
+        "admin": RateLimitConfig("5000/h", 5000, 3600),
     }
 
     def __init__(
@@ -43,40 +55,42 @@ class RoleBasedRateLimit:
         """Generate cache key for rate limiting."""
         return f"{self.cache_prefix}:{identifier}:{window}"
 
+    def _get_public_identifier(self, request: HttpRequest) -> str:
+        """Get IP-based identifier for unauthenticated requests."""
+        return f"ip_{request.META.get('REMOTE_ADDR', 'unknown')}"
+
     def get_rate_limit_info(
         self,
         request: HttpRequest,
-    ) -> tuple:
+    ) -> tuple[str, int, int, str]:
         """Get rate limit information for the request.
 
         Returns:
             tuple: (role, limit_count, window_seconds, identifier)
         """
         api_key_header = request.headers.get("X-API-Key")
+        role = "public"
+        identifier = self._get_public_identifier(request)
+
         if api_key_header:
             try:
                 api_key_obj = RoleAPIKey.objects.get_from_key(api_key_header)
                 if api_key_obj:
                     role = api_key_obj.role
                     identifier = f"key_{api_key_obj.id}"
-                else:
-                    role = "public"
-                    identifier = f"ip_{request.META.get('REMOTE_ADDR', 'unknown')}"
             except RoleAPIKey.DoesNotExist:
-                role = "public"
-                identifier = f"ip_{request.META.get('REMOTE_ADDR', 'unknown')}"
-        else:
-            role = "public"
-            identifier = f"ip_{request.META.get('REMOTE_ADDR', 'unknown')}"
+                pass
 
-        rate_str, limit_count, window_seconds = self.ROLE_LIMITS[role]
-        return role, limit_count, window_seconds, identifier
+        config = self.ROLE_LIMITS[role]
+        return role, config.limit, config.window_seconds, identifier
 
     def is_rate_limited(
         self,
         request: HttpRequest,
-    ) -> tuple[bool, Dict[str, Any]]:
+    ) -> tuple[bool, dict[str, Any]]:
         """Check if request should be rate limited.
+
+        Uses atomic cache operations to prevent race conditions.
 
         Returns:
             tuple: (is_limited: bool, rate_info: dict)
@@ -87,25 +101,30 @@ class RoleBasedRateLimit:
 
         current_time = int(time.time())
         window_start = current_time - (current_time % window_seconds)
+        window_end = window_start + window_seconds
+
+        ttl = window_end - current_time
 
         cache_key = self.get_cache_key(identifier, str(window_start))
 
-        current_count = cache.get(cache_key, 0)
+        cache.add(cache_key, 0, ttl)
+        try:
+            current_count = cache.incr(cache_key)
+        except ValueError:
+            cache.add(cache_key, 1, ttl)
+            current_count = 1
 
         rate_info = {
             "role": role,
             "limit": limit_count,
             "current": current_count,
             "window_seconds": window_seconds,
-            "reset_time": window_start + window_seconds,
+            "reset_time": window_end,
             "identifier": identifier,
         }
 
-        if current_count >= limit_count:
+        if current_count > limit_count:
             return True, rate_info
-
-        cache.set(cache_key, current_count + 1, window_seconds)
-        rate_info["current"] = current_count + 1
 
         return False, rate_info
 
@@ -130,7 +149,9 @@ def role_based_rate_limit(
         is_limited, rate_info = role_rate_limiter.is_rate_limited(request)
 
         if is_limited:
-            reset_time = timezone.datetime.fromtimestamp(rate_info["reset_time"])
+            reset_time = datetime.fromtimestamp(
+                rate_info["reset_time"], tz=dt_timezone.utc
+            )
             return JsonResponse(
                 {
                     "error": "Rate limit exceeded",

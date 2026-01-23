@@ -1,9 +1,11 @@
-from typing import Dict, List, Optional, Tuple, Union
+from textwrap import dedent
+from typing import Annotated
 
 from django.db.models import Q
 from django.http import HttpRequest
 from ninja import Query, Router
 from ninja.responses import codes_4xx
+from pydantic import Field
 from srl.models import CountryCodes, Players, Runs
 
 from api.docs.players import PLAYERS_DELETE, PLAYERS_GET, PLAYERS_POST, PLAYERS_PUT
@@ -17,7 +19,7 @@ router = Router()
 
 def apply_player_embeds(
     player: Players,
-    embed_fields: List[str],
+    embed_fields: list[str],
 ) -> dict:
     """Apply requested embeds to a player instance."""
     embeds = {}
@@ -69,14 +71,14 @@ def apply_player_embeds(
     "/{id}",
     response={200: PlayerSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Player by ID",
-    description="""
-    Retrieve a single player by their ID, including optional embedding.
+    description=dedent(
+        """Retrieve a single player by their ID, including optional embedding.
 
     Exclusively for this endpoint, you can also GET a player by their username or their nickname.
 
     **Supported Parameters:**
     - `id` (str): Unique ID of the player being queried.
-    - `embed` (Optional[list]): Comma-separated list of resources to embed.
+    - `embed` (list | None): Comma-separated list of resources to embed.
 
     **Supported Embeds:**
     - `country`: Includes the metadata of the country associated with the player, if any.
@@ -87,18 +89,18 @@ def apply_player_embeds(
     - `/players/v8lponvj` - Get player by ID.
     - `/players/v8lponvj?embed=country` - Get player with country info.
     - `/players/v8lponvj?embed=country,awards,runs` - Get player with all embeds.
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=PLAYERS_GET,
 )
 def get_player(
     request: HttpRequest,
     id: str,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-) -> Tuple[int, Union[PlayerSchema, ErrorResponse]]:
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds")
+    ] = None,
+) -> tuple[int, PlayerSchema | ErrorResponse]:
     if len(id) > 15:
         return 400, ErrorResponse(
             error="ID must be 15 characters or less",
@@ -148,31 +150,32 @@ def get_player(
     "/",
     response={200: PlayerSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Player",
-    description="""
-    Creates a brand new player.
+    description=dedent(
+        """Creates a brand new player.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
     **Request Body:**
-    - `id` (Optional[str]): The player ID; if one is not given, it will auto-generate.
+    - `id` (str | None): The player ID; if one is not given, it will auto-generate.
     - `name` (str): Player's name on Speedrun.com.
-    - `nickname` (Optional[str]): Custom nickname override (displayed instead of name).
+    - `nickname` (str | None): Custom nickname override (displayed instead of name).
     - `url` (str): Speedrun.com profile URL.
-    - `pfp` (Optional[str]): Profile picture URL.
-    - `pronouns` (Optional[str]): Player's pronouns.
-    - `twitch` (Optional[str]): Twitch channel URL.
-    - `youtube` (Optional[str]): YouTube channel URL.
-    - `twitter` (Optional[str]): Twitter profile URL.
-    - `bluesky` (Optional[str]): Bluesky profile URL.
+    - `pfp` (str | None): Profile picture URL.
+    - `pronouns` (str | None): Player's pronouns.
+    - `twitch` (str | None): Twitch channel URL.
+    - `youtube` (str | None): YouTube channel URL.
+    - `twitter` (str | None): Twitter profile URL.
+    - `bluesky` (str | None): Bluesky profile URL.
     - `ex_stream` (bool): Whether the player is marked to be excluded from streams.
-    """,
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=PLAYERS_POST,
 )
 def create_player(
     request: HttpRequest,
     player_data: PlayerCreateSchema,
-) -> Tuple[int, Union[PlayerSchema, ErrorResponse]]:
+) -> tuple[int, PlayerSchema | ErrorResponse]:
     try:
         country = None
         if player_data.country_id:
@@ -183,7 +186,6 @@ def create_player(
                     details=None,
                 )
 
-        # Generate or validate the ID
         try:
             player_id = get_or_generate_id(
                 player_data.id,
@@ -212,8 +214,8 @@ def create_player(
     "/{id}",
     response={200: PlayerSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Player",
-    description="""
-    Updates the player based on their unique ID.
+    description=dedent(
+        """Updates the player based on their unique ID.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
@@ -221,17 +223,18 @@ def create_player(
     - `id` (str): Unique ID of the player being updated.
 
     **Request Body:**
-    - name (Optional[str]): Player's name on Speedrun.com.
-    - nickname (Optional[str]): Custom nickname override (displayed instead of name).
-    - url (Optional[str]): Speedrun.com profile URL.
-    - pfp (Optional[str]): Profile picture URL.
-    - pronouns (Optional[str]): Player's pronouns.
-    - twitch (Optional[str]): Twitch channel URL.
-    - youtube (Optional[str]): YouTube channel URL.
-    - twitter (Optional[str]): Twitter profile URL.
-    - bluesky (Optional[str]): Bluesky profile URL.
-    - ex_stream (Optional[bool]): Whether the player is marked to be excluded from streams.
-    """,
+    - name (str | None): Player's name on Speedrun.com.
+    - nickname (str | None): Custom nickname override (displayed instead of name).
+    - url (str | None): Speedrun.com profile URL.
+    - pfp (str | None): Profile picture URL.
+    - pronouns (str | None): Player's pronouns.
+    - twitch (str | None): Twitch channel URL.
+    - youtube (str | None): YouTube channel URL.
+    - twitter (str | None): Twitter profile URL.
+    - bluesky (str | None): Bluesky profile URL.
+    - ex_stream (bool | None): Whether the player is marked to be excluded from streams.
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=PLAYERS_PUT,
 )
@@ -239,7 +242,7 @@ def update_player(
     request: HttpRequest,
     id: str,
     player_data: PlayerUpdateSchema,
-) -> Tuple[int, Union[PlayerSchema, ErrorResponse]]:
+) -> tuple[int, PlayerSchema | ErrorResponse]:
     try:
         player = Players.objects.filter(id__iexact=id).first()
         if not player:
@@ -280,23 +283,24 @@ def update_player(
 
 @router.delete(
     "/{id}",
-    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Player",
-    description="""
-    Deletes the selected player based on its ID.
+    description=dedent(
+        """Deletes the selected player based on its ID.
 
     **REQUIRES ADMIN ACCESS.**
 
     **Supported Parameters:**
     - `id` (str): Unique ID of the player being deleted.
-    """,
+    """
+    ),
     auth=admin_auth,
     openapi_extra=PLAYERS_DELETE,
 )
 def delete_player(
     request: HttpRequest,
     id: str,
-) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
+) -> tuple[int, dict[str, str] | ErrorResponse]:
     try:
         player = Players.objects.filter(id__iexact=id).first()
         if not player:

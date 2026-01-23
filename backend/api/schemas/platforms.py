@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import Field
 
 from api.schemas.base import BaseEmbedSchema, SlugMixin
@@ -23,12 +21,12 @@ class PlatformCreateSchema(BaseEmbedSchema):
     """Schema for creating new platforms.
 
     Attributes:
-        id (Optional[str]): The platform ID; if one is not given, it will auto-generate.
+        id (str | None): The platform ID; if one is not given, it will auto-generate.
         name (str): Platform name.
         slug (str): URL-friendly version of the platform name.
     """
 
-    id: Optional[str] = Field(
+    id: str | None = Field(
         default=None,
         max_length=12,
         description="The platform ID; if one is not given, it will auto-generate.",
@@ -41,13 +39,13 @@ class PlatformUpdateSchema(BaseEmbedSchema):
     """Schema for updating platforms.
 
     Attributes:
-        name (Optional[str]): Updated platform name.
-        slug (Optional[str]): Updated URL-friendly platform slug.
+        name (str | None): Updated platform name.
+        slug (str | None): Updated URL-friendly platform slug.
     """
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         default=None, max_length=30, description="Updated platform name"
     )
-    slug: Optional[str] = Field(
+    slug: str | None = Field(
         default=None, max_length=30, description="Updated platform slug"
     )

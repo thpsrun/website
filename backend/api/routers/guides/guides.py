@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional, Tuple, Union
+from textwrap import dedent
+from typing import Annotated
 
 from django.db import transaction
 from django.db.models import Q
@@ -6,6 +7,7 @@ from django.http import HttpRequest
 from guides.models import Guides, Tags
 from ninja import Query, Router
 from ninja.responses import codes_4xx
+from pydantic import Field
 from srl.models.games import Games
 
 from api.docs.guides import (
@@ -31,38 +33,32 @@ router = Router()
 
 @router.get(
     "/all",
-    response={200: List[GuideListSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: list[GuideListSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="List All Guides",
-    description="""
-    Gets all guides within the database, with optional querying and embeds.
+    description=dedent(
+        """Gets all guides within the database, with optional querying and embeds.
 
     **Query Parameters:**
-    - `game` (Optional[str]): Filter guides based on the game's slug or ID.
-    - `tag` (Optional[str]): Filter guides based on the tag's slug or ID.
-    - `embed` (Optional[list]): Comma-separated list of resources to embed.
+    - `game` (str | None): Filter guides based on the game's slug or ID.
+    - `tag` (str | None): Filter guides based on the tag's slug or ID.
+    - `embed` (list | None): Comma-separated list of resources to embed.
 
     **Supported Embeds:**
     - `game`: Includes the metadata of the game the tag belongs to.
     - `tags`: Include metadata of the tags belonging to this guide.
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=GUIDES_ALL,
 )
 def list_guides(
     request: HttpRequest,
-    game: Optional[str] = Query(
-        None,
-        description="Filter by game slug",
-    ),
-    tag: Optional[str] = Query(
-        None,
-        description="Filter by tag slug",
-    ),
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds (game,tags)",
-    ),
-) -> Tuple[int, Union[List[GuideListSchema], ErrorResponse]]:
+    game: Annotated[str | None, Query, Field(description="Filter by game slug")] = None,
+    tag: Annotated[str | None, Query, Field(description="Filter by tag slug")] = None,
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds (game,tags)")
+    ] = None,
+) -> tuple[int, list[GuideListSchema] | ErrorResponse]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -96,8 +92,6 @@ def list_guides(
     if "tags" in embed_list:
         queryset = queryset.prefetch_related("tags")
 
-    # Validates the guides in the queryset before returning it
-    # to the client.
     result = []
     for guide in queryset:
         guide_data = GuideListSchema.model_validate(guide)
@@ -118,28 +112,28 @@ def list_guides(
     "/{slug}",
     response={200: GuideSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Guide by Slug",
-    description="""
-    Get a specific guide by its slug.
+    description=dedent(
+        """Get a specific guide by its slug.
 
     **Supported Parameters:**
     - `slug` (str): Simplified, URL friendly name of the guide.
-    - `embed` (Optional[list]): Comma-separated list of resources to embed.
+    - `embed` (list | None): Comma-separated list of resources to embed.
 
     **Supported Embeds:**
     - `game`: Includes the metadata of the game the tag belongs to.
     - `tags`: Include metadata of the tags belonging to this guide.
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=GUIDES_GET,
 )
 def get_guide(
     request: HttpRequest,
     slug: str,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds (game,tags)",
-    ),
-) -> Tuple[int, Union[GuideSchema, ErrorResponse]]:
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds (game,tags)")
+    ] = None,
+) -> tuple[int, GuideSchema | ErrorResponse]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -176,25 +170,26 @@ def get_guide(
     "/",
     response={200: GuideSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create New Guide",
-    description="""
-    Creates a brand new guide.
+    description=dedent(
+        """Creates a brand new guide.
 
     **REQUIRES CONTRIBUTOR ACCESS OR HIGHER.**
 
     **Request Body:**
     - `title` (str): Name of the guide.
     - `game_id` (str): Unique game ID or slug of the game this is associated with.
-    - `tag_ids` (Optional[list]): List of tag IDs or their slug.
+    - `tag_ids` (list | None): List of tag IDs or their slug.
     - `short_description` (str): Brief description of the guide (limit 500 characters).
     - `content` (str): Full guide content (markdown supported).
-    """,
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=GUIDES_POST,
 )
 def create_guide(
     request: HttpRequest,
     data: GuideCreateSchema,
-) -> Tuple[int, Union[GuideSchema, ErrorResponse]]:
+) -> tuple[int, GuideSchema | ErrorResponse]:
     try:
         game = Games.objects.get(id=data.game_id)
     except Games.DoesNotExist:
@@ -256,18 +251,19 @@ def create_guide(
     "/{slug}",
     response={200: GuideSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Guide",
-    description="""
-    Modifies an existing guide.
+    description=dedent(
+        """Modifies an existing guide.
 
     **REQUIRES CONTRIBUTOR ACCESS OR HIGHER.**
 
     **Request Body:**
-    - `title` (Optional[str]): Name of the guide.
-    - `game_id` (Optional[str]): Unique game ID or slug of the game this is associated with.
-    - `tag_ids` (Optional[list]): List of tag IDs or their slug.
-    - `short_description` (Optional[str]): Brief description of the guide (limit 500 characters).
-    - `content` (Optional[str]): Full guide content (markdown supported).
-    """,
+    - `title` (str | None): Name of the guide.
+    - `game_id` (str | None): Unique game ID or slug of the game this is associated with.
+    - `tag_ids` (list | None): List of tag IDs or their slug.
+    - `short_description` (str | None): Brief description of the guide (limit 500 characters).
+    - `content` (str | None): Full guide content (markdown supported).
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=GUIDES_PUT,
 )
@@ -275,7 +271,7 @@ def update_guide(
     request: HttpRequest,
     slug: str,
     data: GuideUpdateSchema,
-) -> Tuple[int, Union[GuideSchema, ErrorResponse]]:
+) -> tuple[int, GuideSchema | ErrorResponse]:
     guide = Guides.objects.filter(slug__iexact=slug).first()
     if not guide:
         return 404, ErrorResponse(
@@ -356,23 +352,24 @@ def update_guide(
 
 @router.delete(
     "/{slug}",
-    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Guide",
-    description="""
-    Deletes an existing guide.
+    description=dedent(
+        """Deletes an existing guide.
 
     **REQUIRES ADMIN ACCESS OR HIGHER.**
 
     **Supported Parameters:**
     - `slug` (str): Simplified, URL friendly name of the guide.
-    """,
+    """
+    ),
     auth=admin_auth,
     openapi_extra=GUIDES_DELETE,
 )
 def delete_guide(
     request: HttpRequest,
     slug: str,
-) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
+) -> tuple[int, dict[str, str] | ErrorResponse]:
     guide = Guides.objects.filter(slug__iexact=slug).first()
     if not guide:
         return 404, ErrorResponse(

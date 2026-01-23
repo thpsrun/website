@@ -1,9 +1,11 @@
-from typing import Dict, List, Optional, Tuple, Union
+from textwrap import dedent
+from typing import Annotated
 
 from django.db.models import Q
 from django.http import HttpRequest
 from ninja import Query, Router
 from ninja.responses import codes_4xx
+from pydantic import Field
 from srl.models import (
     Categories,
     Games,
@@ -25,33 +27,41 @@ from api.utils import get_or_generate_id
 router = Router()
 
 
-def get_run_players(run: Runs) -> List[dict]:
+def get_run_players(
+    run: Runs,
+) -> list[dict]:
     """Get all players for a run as a list of dicts, ordered by their participation order.
 
     This is always included in run responses (not an embed).
     """
-    run_players = run.run_players.select_related("player__countrycode").order_by("order")
+    run_players = run.run_players.select_related("player__countrycode").order_by(
+        "order"
+    )
 
     players_list = []
     for rp in run_players:
-        players_list.append({
-            "id": rp.player.id,
-            "name": (rp.player.nickname if rp.player.nickname else rp.player.name),
-            "url": rp.player.url,
-            "country": (rp.player.countrycode.name if rp.player.countrycode else None),
-            "pronouns": rp.player.pronouns,
-            "twitch": rp.player.twitch,
-            "youtube": rp.player.youtube,
-            "twitter": rp.player.twitter,
-            "bluesky": rp.player.bluesky,
-        })
+        players_list.append(
+            {
+                "id": rp.player.id,
+                "name": (rp.player.nickname if rp.player.nickname else rp.player.name),
+                "url": rp.player.url,
+                "country": (
+                    rp.player.countrycode.name if rp.player.countrycode else None
+                ),
+                "pronouns": rp.player.pronouns,
+                "twitch": rp.player.twitch,
+                "youtube": rp.player.youtube,
+                "twitter": rp.player.twitter,
+                "bluesky": rp.player.bluesky,
+            }
+        )
 
     return players_list
 
 
 def apply_run_embeds(
     run: Runs,
-    embed_fields: List[str],
+    embed_fields: list[str],
 ) -> dict:
     """Apply requested embeds to a run instance.
 
@@ -129,19 +139,19 @@ def apply_run_embeds(
 
 @router.get(
     "/all",
-    response={200: List[RunSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: list[RunSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get All Runs",
-    description="""
-    Retrieve runs with extensive filtering and search capabilities.
+    description=dedent(
+        """Retrieve runs with extensive filtering and search capabilities.
 
     **Supported Parameters:**
-    - `game_id` (Optional[str]): Filter by specific game ID or slug
-    - `category_id` (Optional[str]): Filter by specific category ID
-    - `level_id` (Optional[str]): Filter by specific level ID (for IL runs)
-    - `player_id` (Optional[str]): Filter by specific player ID
-    - `runtype` (Optional[str]): Filter by run type (`main` or `il`)
-    - `place` (Optional[int]): Filter by leaderboard position
-    - `status` (Optional[str]): Filter by verification status (`verified`, `new`, or `rejected`)
+    - `game_id` (str | None): Filter by specific game ID or slug
+    - `category_id` (str | None): Filter by specific category ID
+    - `level_id` (str | None): Filter by specific level ID (for IL runs)
+    - `player_id` (str | None): Filter by specific player ID
+    - `runtype` (str | None): Filter by run type (`main` or `il`)
+    - `place` (int | None): Filter by leaderboard position
+    - `status` (str | None): Filter by verification status (`verified`, `new`, or `rejected`)
     - `search`: Search in subcategory text
     - `embed`: Comma-separated list of resources to embed
     - `limit`: Results per page (default 50, max 100)
@@ -153,61 +163,47 @@ def apply_run_embeds(
     - `/runs/all?player_id=v8lponvj&runtype=main` - Player's full-game runs
     - `/runs/all?search=normal&place=1&status=verified` - Verified WRs with "normal" in subcategory
     - `/runs/all?game_id=thps4&level_id=alcatraz&embed=player,game` - Alcatraz ILs with embeds
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=RUNS_ALL,
 )
 def get_all_runs(
     request: HttpRequest,
-    game_id: Optional[str] = Query(
-        None,
-        description="Filter by game",
-    ),
-    category_id: Optional[str] = Query(
-        None,
-        description="Filter by category",
-    ),
-    level_id: Optional[str] = Query(
-        None,
-        description="Filter by level",
-    ),
-    player_id: Optional[str] = Query(
-        None,
-        description="Filter by player",
-    ),
-    runtype: Optional[RunTypeType] = Query(
-        None,
-        description="Filter by type",
-    ),
-    place: Optional[int] = Query(
-        None,
-        description="Filter by place",
-        ge=1,
-    ),
-    status: Optional[RunStatusType] = Query(
-        None,
-        description="Filter by status",
-    ),
-    search: Optional[str] = Query(
-        None,
-        description="Search subcategory text",
-    ),
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-    limit: int = Query(
-        50,
-        ge=1,
-        le=100,
-        description="Maximum number of returned objects (default 50, less than 100)",
-    ),
-    offset: int = Query(
-        0,
-        ge=0,
-        description="Offset from 0",
-    ),
-) -> Tuple[int, Union[List[RunSchema], ErrorResponse]]:
+    game_id: Annotated[str | None, Query, Field(description="Filter by game")] = None,
+    category_id: Annotated[
+        str | None, Query, Field(description="Filter by category")
+    ] = None,
+    level_id: Annotated[str | None, Query, Field(description="Filter by level")] = None,
+    player_id: Annotated[
+        str | None, Query, Field(description="Filter by player")
+    ] = None,
+    runtype: Annotated[
+        RunTypeType | None, Query, Field(description="Filter by type")
+    ] = None,
+    place: Annotated[
+        int | None, Query, Field(ge=1, description="Filter by place")
+    ] = None,
+    status: Annotated[
+        RunStatusType | None, Query, Field(description="Filter by status")
+    ] = None,
+    search: Annotated[
+        str | None, Query, Field(description="Search subcategory text")
+    ] = None,
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds")
+    ] = None,
+    limit: Annotated[
+        int,
+        Query,
+        Field(
+            ge=1,
+            le=100,
+            description="Maximum number of returned objects (default 50, less than 100)",
+        ),
+    ] = 50,
+    offset: Annotated[int, Query, Field(ge=0, description="Offset from 0")] = 0,
+) -> tuple[int, list[RunSchema] | ErrorResponse]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -224,7 +220,6 @@ def get_all_runs(
     try:
         queryset = Runs.objects.all().order_by("-v_date", "place")
 
-        # Prefetch run_players for efficient player data retrieval
         queryset = queryset.prefetch_related("run_players__player__countrycode")
 
         # If parameters are fulfilled by the client, this will further
@@ -252,7 +247,6 @@ def get_all_runs(
         for run in runs:
             run_data = RunSchema.model_validate(run)
 
-            # Players are always included (not an embed)
             run_data.players = get_run_players(run)
 
             if embed_fields:
@@ -275,12 +269,12 @@ def get_all_runs(
     "/{id}",
     response={200: RunSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Run by ID",
-    description="""
-    Retrieve a single run by its ID with full details and optional embeds.
+    description=dedent(
+        """Retrieve a single run by its ID with full details and optional embeds.
 
     **Supported Parameters:**
     - `id` (str): Unique ID of the run being queried.
-    - `embed` (Optional[list]): Comma-separated list of resources to embed.
+    - `embed` (list | None): Comma-separated list of resources to embed.
 
     **Response Fields:**
     - `players`: Array of all players who participated in this run (always included).
@@ -295,18 +289,18 @@ def get_all_runs(
     - `/runs/y8dwozoj` - Basic run data with players.
     - `/runs/y8dwozoj?embed=game` - Include game metadata.
     - `/runs/y8dwozoj?embed=game,category,variables` - Full run details with embeds.
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=RUNS_GET,
 )
 def get_run(
     request: HttpRequest,
     id: str,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-) -> Tuple[int, Union[RunSchema, ErrorResponse]]:
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds")
+    ] = None,
+) -> tuple[int, RunSchema | ErrorResponse]:
     """Get a single run by ID."""
     if len(id) > 15:
         return 400, ErrorResponse(
@@ -353,7 +347,6 @@ def get_run(
 
         run_data = RunSchema.model_validate(run)
 
-        # Players are always included (not an embed)
         run_data.players = get_run_players(run)
 
         if embed_fields:
@@ -374,8 +367,8 @@ def get_run(
     "/",
     response={200: RunSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Run",
-    description="""
-    Create a new speedrun record with full validation.
+    description=dedent(
+        """Create a new speedrun record with full validation.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
@@ -387,19 +380,19 @@ def get_run(
 
     **Request Body:**
     - `game_id` (str): Game ID the run belongs to.
-    - `category_id` (Optional[str]): Category ID the run belongs to.
-    - `level_id` (Optional[str]): Level ID (for IL runs).
-    - `player_ids` (Optional[List[str]]): List of player IDs in order of participation.
+    - `category_id` (str | None): Category ID the run belongs to.
+    - `level_id` (str | None): Level ID (for IL runs).
+    - `player_ids` (list[str] | None): List of player IDs in order of participation.
     - `runtype` (str): Run type (`main` or `il`).
     - `place` (int): Leaderboard position.
-    - `subcategory` (Optional[str]): Human-readable subcategory description.
-    - `time` (Optional[str]): Formatted time string (e.g., "1:23.456").
-    - `time_secs` (Optional[float]): Time in seconds (for sorting/calculations).
-    - `video` (Optional[str]): Video URL.
-    - `date` (Optional[datetime]): Submission date (ISO format).
-    - `v_date` (Optional[datetime]): Verification date (ISO format).
+    - `subcategory` (str | None): Human-readable subcategory description.
+    - `time` (str | None): Formatted time string (e.g., "1:23.456").
+    - `time_secs` (float | None): Time in seconds (for sorting/calculations).
+    - `video` (str | None): Video URL.
+    - `date` (datetime | None): Submission date (ISO format).
+    - `v_date` (datetime | None): Verification date (ISO format).
     - `url` (str): Speedrun.com URL.
-    - `variable_values` (Optional[Dict[str, str]]): Variable value selections as key-value pairs.
+    - `variable_values` (dict[str, str] | None): Variable value selections as key-value pairs.
 
     **Variable Values Format:**
     ```json
@@ -410,14 +403,15 @@ def get_run(
         }
     }
     ```
-    """,
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=RUNS_POST,
 )
 def create_run(
     request: HttpRequest,
     run_data: RunCreateSchema,
-) -> Tuple[int, Union[RunSchema, ErrorResponse]]:
+) -> tuple[int, RunSchema | ErrorResponse]:
     try:
         game = Games.objects.filter(id=run_data.game_id).first()
         if not game:
@@ -523,14 +517,12 @@ def create_run(
                     details={"exception": str(e)},
                 )
 
-        # Refetch run with prefetched players to build proper response
         refetched_run = (
             Runs.objects.filter(id=run.id)
             .prefetch_related("run_players__player__countrycode")
             .first()
         )
         if refetched_run is None:
-            # This shouldn't happen since we just created the run
             return 500, ErrorResponse(
                 error="Run Creation Failed",
                 details={"exception": "Failed to refetch created run"},
@@ -550,8 +542,8 @@ def create_run(
     "/{id}",
     response={200: RunSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Run",
-    description="""
-    Updates the run based on its unique ID.
+    description=dedent(
+        """Updates the run based on its unique ID.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
@@ -559,21 +551,23 @@ def create_run(
     - `id` (str): Unique ID of the run being edited.
 
     **Request Body:**
-    - `game_id` (Optional[str]): Updated game ID.
-    - `category_id` (Optional[str]): Updated category ID.
-    - `level_id` (Optional[str]): Updated level ID (for IL runs).
-    - `player_ids` (Optional[List[str]]): Updated list of player IDs in order of participation.
-    - `runtype` (Optional[str]): Updated run type (`main` or `il`).
-    - `place` (Optional[int]): Updated leaderboard position.
-    - `subcategory` (Optional[str]): Updated human-readable subcategory description.
-    - `time` (Optional[str]): Updated formatted time string (e.g., "1:23.456").
-    - `time_secs` (Optional[float]): Updated time in seconds (for sorting/calculations).
-    - `video` (Optional[str]): Updated video URL.
-    - `date` (Optional[datetime]): Updated submission date (ISO format).
-    - `v_date` (Optional[datetime]): Updated verification date (ISO format).
-    - `url` (Optional[str]): Updated Speedrun.com URL.
-    - `variable_values` (Optional[Dict[str, str]]): Updated variable value selections as key-value pairs.
-    """,
+    - `game_id` (str | None): Updated game ID.
+    - `category_id` (str | None): Updated category ID.
+    - `level_id` (str | None): Updated level ID (for IL runs).
+    - `player_ids` (list[str] | None): Updated list of player IDs in order of participation.
+    - `runtype` (str | None): Updated run type (`main` or `il`).
+    - `place` (int | None): Updated leaderboard position.
+    - `subcategory` (str | None): Updated human-readable subcategory description.
+    - `time` (str | None): Updated formatted time string (e.g., "1:23.456").
+    - `time_secs` (float | None): Updated time in seconds (for sorting/calculations).
+    - `video` (str | None): Updated video URL.
+    - `date` (datetime | None): Updated submission date (ISO format).
+    - `v_date` (datetime | None): Updated verification date (ISO format).
+    - `url` (str | None): Updated Speedrun.com URL.
+    - `variable_values` (dict[str, str] | None): Updated variable value selections as key-value
+        pairs.
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=RUNS_PUT,
 )
@@ -581,7 +575,7 @@ def update_run(
     request: HttpRequest,
     id: str,
     run_data: RunUpdateSchema,
-) -> Tuple[int, Union[RunSchema, ErrorResponse]]:
+) -> tuple[int, RunSchema | ErrorResponse]:
     try:
         run = (
             Runs.objects.filter(id__iexact=id)
@@ -684,14 +678,12 @@ def update_run(
 
         run.save()
 
-        # Refetch run with prefetched players to build proper response
         refetched_run = (
             Runs.objects.filter(id=run.id)
             .prefetch_related("run_players__player__countrycode")
             .first()
         )
         if refetched_run is None:
-            # This shouldn't happen since we just updated the run
             return 500, ErrorResponse(
                 error="Run Update Failed",
                 details={"exception": "Failed to refetch updated run"},
@@ -709,23 +701,25 @@ def update_run(
 
 @router.delete(
     "/{id}",
-    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Run",
-    description="""
+    description=dedent(
+        """
     Deletes the selected run by its ID.
 
     **REQUIRES ADMIN ACCESS.**
 
     **Supported Parameters:**
     - `id` (str): Unique ID of the run being deleted.
-    """,
+    """
+    ),
     auth=admin_auth,
     openapi_extra=RUNS_DELETE,
 )
 def delete_run(
     request: HttpRequest,
     id: str,
-) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
+) -> tuple[int, dict[str, str] | ErrorResponse]:
     try:
         run = (
             Runs.objects.filter(id__iexact=id)
@@ -752,7 +746,9 @@ def delete_run(
         )
 
         run.delete()
-        return 200, {"message": f"Run by {player_names} in {game_name} deleted successfully"}
+        return 200, {
+            "message": f"Run by {player_names} in {game_name} deleted successfully"
+        }
 
     except Exception as e:
         return 500, ErrorResponse(

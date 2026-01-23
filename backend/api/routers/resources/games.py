@@ -1,9 +1,11 @@
-from typing import Dict, List, Optional, Tuple, Union
+from textwrap import dedent
+from typing import Annotated
 
 from django.db.models import Q
 from django.http import HttpRequest
 from ninja import Query, Router
 from ninja.responses import codes_4xx
+from pydantic import Field
 from srl.models import Games
 
 from api.docs.games import GAMES_ALL, GAMES_DELETE, GAMES_GET, GAMES_POST, GAMES_PUT
@@ -37,15 +39,16 @@ def game_embeds(
 
 @router.get(
     "/all",
-    response={200: List[GameSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: list[GameSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get All Games",
-    description="""
-    Retrieves all games within the `Games` object, including optional embedding and pagination.
+    description=dedent(
+        """Retrieves all games within the `Games` object, including optional embedding and
+    pagination.
 
     **Supported Parameters:**
-    - `limit` (Optional[int]): Results per page (default 50, max 100).
-    - `offset` (Optional[int]): Results to skip (default 0).
-    - `embed` (Optional[list]): Comma-separated list of resources to embed,
+    - `limit` (int | None): Results per page (default 50, max 100).
+    - `offset` (int | None): Results to skip (default 0).
+    - `embed` (list | None): Comma-separated list of resources to embed,
 
     **Supported Embeds:**
     - `categories`: Include metadata related to the game's categories.
@@ -56,28 +59,27 @@ def game_embeds(
     - `/games/all` - Get all games.
     - `/games/all?limit=20` - Get first 20 games.
     - `/games/all?embed=categories,platforms` - Get games with categories and platforms.
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=GAMES_ALL,
 )
 def get_all_games(
     request: HttpRequest,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-    limit: int = Query(
-        50,
-        ge=1,
-        le=100,
-        description="Maximum number of returned objects (default 50, less than 100)",
-    ),
-    offset: int = Query(
-        0,
-        ge=0,
-        description="Offset from 0",
-    ),
-) -> Tuple[int, Union[List[GameSchema], ErrorResponse]]:
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds")
+    ] = None,
+    limit: Annotated[
+        int,
+        Query,
+        Field(
+            ge=1,
+            le=100,
+            description="Maximum number of returned objects (default 50, less than 100)",
+        ),
+    ] = 50,
+    offset: Annotated[int, Query, Field(ge=0, description="Offset from 0")] = 0,
+) -> tuple[int, list[GameSchema] | ErrorResponse]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -115,8 +117,8 @@ def get_all_games(
     "/{id}",
     response={200: GameSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Game by ID",
-    description="""
-    Retrieves a single game by its ID or its slug, including optional embedding.
+    description=dedent(
+        """Retrieves a single game by its ID or its slug, including optional embedding.
 
     **Supported Embeds:**
     - `categories`: Include metadata related to the game's categories
@@ -127,18 +129,18 @@ def get_all_games(
     - `/games/thps4` - Get game by slug
     - `/games/n2680o1p` - Get game by ID
     - `/games/thps4?embed=categories,levels` - Get game with categories and levels
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=GAMES_GET,
 )
 def get_game(
     request: HttpRequest,
     id: str,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-) -> Tuple[int, Union[GameSchema, ErrorResponse]]:
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds")
+    ] = None,
+) -> tuple[int, GameSchema | ErrorResponse]:
     if len(id) > 15:
         return 400, ErrorResponse(
             error="ID must be 15 characters or less",
@@ -181,30 +183,31 @@ def get_game(
     "/",
     response={200: GameSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Game",
-    description="""
-    Creates a brand new game.
+    description=dedent(
+        """Creates a brand new game.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
     **Request Body:**
-    - `id` (Optional[str]): The game ID; if one is not given, it will auto-generate.
+    - `id` (str | None): The game ID; if one is not given, it will auto-generate.
     - `name` (str): Game name.
     - `slug` (str): URL-friendly game abbreviation.
-    - `twitch` (Optional[str]): Game name as it appears on Twitch.
+    - `twitch` (str | None): Game name as it appears on Twitch.
     - `release` (date): Game release date (ISO format).
     - `boxart` (str): URL to game box art/cover image.
     - `defaulttime` (str): Default timing method for full-game runs.
     - `idefaulttime` (str): Default timing method for individual level runs.
     - `pointsmax` (int): Maximum points for world record full-game runs.
     - `ipointsmax` (int): Maximum points for world record individual level runs.
-    """,
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=GAMES_POST,
 )
 def create_game(
     request: HttpRequest,
     game_data: GameCreateSchema,
-) -> Tuple[int, Union[GameSchema, ErrorResponse]]:
+) -> tuple[int, GameSchema | ErrorResponse]:
     try:
         game_check = Games.objects.filter(
             Q(name__iexact=game_data.name) | Q(slug__iexact=game_data.slug)
@@ -244,22 +247,23 @@ def create_game(
     "/{id}",
     response={200: GameSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Game",
-    description="""
-    Updates the game based on its unique ID or slug.
+    description=dedent(
+        """Updates the game based on its unique ID or slug.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
     **Request Body:**
-    - `name` (Optional[str]): Game name.
-    - `slug` (Optional[str]): URL-friendly game abbreviation.
-    - `twitch` (Optional[str]): Game name as it appears on Twitch.
-    - `release` (Optional[date]): Game release date (ISO format).
-    - `boxart` (Optional[str]): URL to game box art/cover image.
-    - `defaulttime` (Optional[str]): Default timing method for full-game runs.
-    - `idefaulttime` (Optional[str]): Default timing method for individual level runs.
-    - `pointsmax` (Optional[int]): Maximum points for world record full-game runs.
-    - `ipointsmax` (Optional[int]): Maximum points for world record individual level runs.
-    """,
+    - `name` (str | None): Game name.
+    - `slug` (str | None): URL-friendly game abbreviation.
+    - `twitch` (str | None): Game name as it appears on Twitch.
+    - `release` (date | None): Game release date (ISO format).
+    - `boxart` (str | None): URL to game box art/cover image.
+    - `defaulttime` (str | None): Default timing method for full-game runs.
+    - `idefaulttime` (str | None): Default timing method for individual level runs.
+    - `pointsmax` (int | None): Maximum points for world record full-game runs.
+    - `ipointsmax` (int | None): Maximum points for world record individual level runs.
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=GAMES_PUT,
 )
@@ -267,7 +271,7 @@ def update_game(
     request: HttpRequest,
     id: str,
     game_data: GameUpdateSchema,
-) -> Tuple[int, Union[GameSchema, ErrorResponse]]:
+) -> tuple[int, GameSchema | ErrorResponse]:
     try:
         game = Games.objects.filter(Q(id__iexact=id) | Q(slug__iexact=id)).first()
         if not game:
@@ -290,23 +294,24 @@ def update_game(
 
 @router.delete(
     "/{id}",
-    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Game",
-    description="""
-    Deletes the selected game.
+    description=dedent(
+        """Deletes the selected game.
 
     **REQUIRES ADMIN ACCESS.**
 
     **Supported Parameters:**
     - id (str): Unique ID or slug of the specified game
-    """,
+    """
+    ),
     auth=admin_auth,
     openapi_extra=GAMES_DELETE,
 )
 def delete_game(
     request: HttpRequest,
     id: str,
-) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
+) -> tuple[int, dict[str, str] | ErrorResponse]:
     try:
         game = Games.objects.filter(Q(id__iexact=id) | Q(slug__iexact=id)).first()
         if not game:

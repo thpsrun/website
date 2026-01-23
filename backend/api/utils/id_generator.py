@@ -1,6 +1,6 @@
 import secrets
 import string
-from typing import Callable, Optional
+from collections.abc import Callable
 
 ID_CHARS = string.ascii_lowercase + string.digits
 ID_LENGTH = 8
@@ -21,7 +21,7 @@ def generate_unique_id(
 ) -> str:
     """Generate a unique ID, checking against existing records.
 
-    Args:
+    Arguments:
         exists_check: A callable that returns True if the ID already exists.
         max_attempts: Maximum number of generation attempts before raising an error.
 
@@ -40,7 +40,7 @@ def generate_unique_id(
 
 
 def get_or_generate_id(
-    provided_id: Optional[str],
+    provided_id: str | None,
     exists_check: Callable[[str], bool],
 ) -> str:
     """Get the provided ID or generate a new one if not provided.
@@ -48,7 +48,7 @@ def get_or_generate_id(
     If an ID is provided, validates it doesn't already exist. If no ID is provided, generates a new
     unique ID.
 
-    Args:
+    Arguments:
         provided_id: The ID provided by the user, or None.
         exists_check: A callable that returns True if the ID already exists.
 

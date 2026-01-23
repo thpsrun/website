@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any
 
 from pydantic import Field, field_validator
 
@@ -11,35 +11,35 @@ class PlayerBaseSchema(BaseEmbedSchema):
     Attributes:
         id (str): Unique ID (usually based on SRC) of the player.
         name (str): Player name on Speedrun.com.
-        nickname (Optional[str]): Custom nickname override (displayed instead of name).
+        nickname (str | None): Custom nickname override (displayed instead of name).
         url (str): Speedrun.com profile URL.
-        pfp (Optional[str]): Profile picture URL.
-        pronouns (Optional[str]): Player pronouns.
-        twitch (Optional[str]): Twitch channel URL.
-        youtube (Optional[str]): YouTube channel URL.
-        twitter (Optional[str]): Twitter profile URL.
-        bluesky (Optional[str]): Bluesky profile URL.
+        pfp (str | None): Profile picture URL.
+        pronouns (str | None): Player pronouns.
+        twitch (str | None): Twitch channel URL.
+        youtube (str | None): YouTube channel URL.
+        twitter (str | None): Twitter profile URL.
+        bluesky (str | None): Bluesky profile URL.
         ex_stream (bool): Whether player is excluded from streaming features.
     """
 
     id: str = Field(..., max_length=10, description="Speedrun.com player ID")
     name: str = Field(..., max_length=30, description="Player name on Speedrun.com")
-    nickname: Optional[str] = Field(
+    nickname: str | None = Field(
         default=None,
         max_length=30,
         description="Custom nickname (shown instead of name if provided)",
     )
     url: str = Field(..., description="Speedrun.com profile URL")
-    pfp: Optional[str] = Field(
+    pfp: str | None = Field(
         default=None, max_length=100, description="Profile picture URL"
     )
-    pronouns: Optional[str] = Field(
+    pronouns: str | None = Field(
         default=None, max_length=20, description="Player's pronouns"
     )
-    twitch: Optional[str] = Field(default=None, description="Twitch channel URL")
-    youtube: Optional[str] = Field(default=None, description="YouTube channel URL")
-    twitter: Optional[str] = Field(default=None, description="Twitter profile URL")
-    bluesky: Optional[str] = Field(default=None, description="Bluesky profile URL")
+    twitch: str | None = Field(default=None, description="Twitch channel URL")
+    youtube: str | None = Field(default=None, description="YouTube channel URL")
+    twitter: str | None = Field(default=None, description="Twitter profile URL")
+    bluesky: str | None = Field(default=None, description="Bluesky profile URL")
     ex_stream: bool = Field(
         default=False, description="Whether to exclude from streaming features/bots"
     )
@@ -62,13 +62,13 @@ class AwardSchema(BaseEmbedSchema):
 
     Attributes:
         name (str): Award name.
-        description (Optional[str]): Award description.
-        image (Optional[str]): Award image URL.
+        description (str | None): Award description.
+        image (str | None): Award image URL.
     """
 
     name: str = Field(..., description="Award name")
-    description: Optional[str] = Field(default=None, description="Award description")
-    image: Optional[str] = Field(default=None, description="Award image URL")
+    description: str | None = Field(default=None, description="Award description")
+    image: str | None = Field(default=None, description="Award image URL")
 
 
 class PlayerRunSchema(BaseEmbedSchema):
@@ -76,46 +76,44 @@ class PlayerRunSchema(BaseEmbedSchema):
 
     Attributes:
         id (str): Run ID.
-        game (Optional[str]): Game name.
-        category (Optional[str]): Category name.
-        level (Optional[str]): Level name (for IL runs).
-        place (Optional[int]): Placement on leaderboard.
-        time (Optional[str]): Run time.
-        date (Optional[str]): Run date (ISO format).
-        video (Optional[str]): Video URL.
+        game (str | None): Game name.
+        category (str | None): Category name.
+        level (str | None): Level name (for IL runs).
+        place (int | None): Placement on leaderboard.
+        time (str | None): Run time.
+        date (str | None): Run date (ISO format).
+        video (str | None): Video URL.
     """
 
     id: str = Field(..., description="Run ID")
-    game: Optional[str] = Field(default=None, description="Game name")
-    category: Optional[str] = Field(default=None, description="Category name")
-    level: Optional[str] = Field(default=None, description="Level name (for IL runs)")
-    place: Optional[int] = Field(default=None, description="Placement on leaderboard")
-    time: Optional[str] = Field(default=None, description="Run time")
-    date: Optional[str] = Field(default=None, description="Run date (ISO format)")
-    video: Optional[str] = Field(default=None, description="Video URL")
+    game: str | None = Field(default=None, description="Game name")
+    category: str | None = Field(default=None, description="Category name")
+    level: str | None = Field(default=None, description="Level name (for IL runs)")
+    place: int | None = Field(default=None, description="Placement on leaderboard")
+    time: str | None = Field(default=None, description="Run time")
+    date: str | None = Field(default=None, description="Run date (ISO format)")
+    video: str | None = Field(default=None, description="Video URL")
 
 
 class PlayerSchema(PlayerBaseSchema):
     """Complete player schema with optional embedded data.
 
     Attributes:
-        country (Optional[CountrySchema]): Country information - included with ?embed=country.
-        awards (Optional[List[AwardSchema]]): Player earned awards - included with ?embed=awards.
-        runs (Optional[List[PlayerRunSchema]]): Recent player runs (limited to 20) - included with
+        country (CountrySchema | None): Country information - included with ?embed=country.
+        awards (list[AwardSchema] | None): Player earned awards - included with ?embed=awards.
+        runs (list[PlayerRunSchema] | None): Recent player runs (limited to 20) - included with
             ?embed=runs.
     """
 
-    country: Optional[CountrySchema] = Field(None, description="Country information")
-    awards: Optional[List[AwardSchema]] = Field(
-        None, description="Player earned awards"
-    )
-    runs: Optional[List[PlayerRunSchema]] = Field(
+    country: CountrySchema | None = Field(None, description="Country information")
+    awards: list[AwardSchema] | None = Field(None, description="Player earned awards")
+    runs: list[PlayerRunSchema] | None = Field(
         None, description="Recent player runs (limited to 20)"
     )
 
     @field_validator("country", mode="before")
     @classmethod
-    def convert_country_to_none(cls, v: Any) -> Optional[dict]:
+    def convert_country_to_none(cls, v: Any) -> dict | None:
         """Convert Django model instance to None if not explicitly embedded."""
         if v is None:
             return None
@@ -125,7 +123,7 @@ class PlayerSchema(PlayerBaseSchema):
 
     @field_validator("awards", "runs", mode="before")
     @classmethod
-    def convert_manager_to_none(cls, v: Any) -> Optional[List[dict]]:
+    def convert_manager_to_none(cls, v: Any) -> list[dict] | None:
         """Convert Django ManyRelatedManager to None if not explicitly embedded."""
         if v is None:
             return None
@@ -140,35 +138,35 @@ class PlayerCreateSchema(BaseEmbedSchema):
     """Schema for creating new players.
 
     Attributes:
-        id (Optional[str]): The player ID; if one is not given, it will auto-generate.
+        id (str | None): The player ID; if one is not given, it will auto-generate.
         name (str): Player name.
-        nickname (Optional[str]): Custom nickname.
+        nickname (str | None): Custom nickname.
         url (str): Speedrun.com profile URL.
-        country_id (Optional[str]): Country code ID.
-        pfp (Optional[str]): Profile picture URL.
-        pronouns (Optional[str]): Player pronouns.
-        twitch (Optional[str]): Twitch channel URL.
-        youtube (Optional[str]): YouTube channel URL.
-        twitter (Optional[str]): Twitter profile URL.
-        bluesky (Optional[str]): Bluesky profile URL.
+        country_id (str | None): Country code ID.
+        pfp (str | None): Profile picture URL.
+        pronouns (str | None): Player pronouns.
+        twitch (str | None): Twitch channel URL.
+        youtube (str | None): YouTube channel URL.
+        twitter (str | None): Twitter profile URL.
+        bluesky (str | None): Bluesky profile URL.
         ex_stream (bool): Whether to exclude from streaming features.
     """
 
-    id: Optional[str] = Field(
+    id: str | None = Field(
         default=None,
         max_length=12,
         description="The player ID; if one is not given, it will auto-generate.",
     )
     name: str = Field(..., max_length=30)
-    nickname: Optional[str] = Field(default=None, max_length=30)
+    nickname: str | None = Field(default=None, max_length=30)
     url: str = Field(...)
-    country_id: Optional[str] = Field(default=None, description="Country code ID")
-    pfp: Optional[str] = Field(default=None, max_length=100)
-    pronouns: Optional[str] = Field(default=None, max_length=20)
-    twitch: Optional[str] = Field(default=None)
-    youtube: Optional[str] = Field(default=None)
-    twitter: Optional[str] = Field(default=None)
-    bluesky: Optional[str] = Field(default=None)
+    country_id: str | None = Field(default=None, description="Country code ID")
+    pfp: str | None = Field(default=None, max_length=100)
+    pronouns: str | None = Field(default=None, max_length=20)
+    twitch: str | None = Field(default=None)
+    youtube: str | None = Field(default=None)
+    twitter: str | None = Field(default=None)
+    bluesky: str | None = Field(default=None)
     ex_stream: bool = Field(default=False)
 
 
@@ -176,27 +174,27 @@ class PlayerUpdateSchema(BaseEmbedSchema):
     """Schema for updating players.
 
     Attributes:
-        name (Optional[str]): Updated player name.
-        nickname (Optional[str]): Updated nickname.
-        url (Optional[str]): Updated Speedrun.com profile URL.
-        country_id (Optional[str]): Updated country code ID.
-        pfp (Optional[str]): Updated profile picture URL.
-        pronouns (Optional[str]): Updated pronouns.
-        twitch (Optional[str]): Updated Twitch channel URL.
-        youtube (Optional[str]): Updated YouTube channel URL.
-        twitter (Optional[str]): Updated Twitter profile URL.
-        bluesky (Optional[str]): Updated Bluesky profile URL.
-        ex_stream (Optional[bool]): Updated streaming exclusion flag.
+        name (str | None): Updated player name.
+        nickname (str | None): Updated nickname.
+        url (str | None): Updated Speedrun.com profile URL.
+        country_id (str | None): Updated country code ID.
+        pfp (str | None): Updated profile picture URL.
+        pronouns (str | None): Updated pronouns.
+        twitch (str | None): Updated Twitch channel URL.
+        youtube (str | None): Updated YouTube channel URL.
+        twitter (str | None): Updated Twitter profile URL.
+        bluesky (str | None): Updated Bluesky profile URL.
+        ex_stream (bool | None): Updated streaming exclusion flag.
     """
 
-    name: Optional[str] = Field(default=None, max_length=30)
-    nickname: Optional[str] = Field(default=None, max_length=30)
-    url: Optional[str] = Field(default=None)
-    country_id: Optional[str] = Field(default=None)
-    pfp: Optional[str] = Field(default=None, max_length=100)
-    pronouns: Optional[str] = Field(default=None, max_length=20)
-    twitch: Optional[str] = Field(default=None)
-    youtube: Optional[str] = Field(default=None)
-    twitter: Optional[str] = Field(default=None)
-    bluesky: Optional[str] = Field(default=None)
-    ex_stream: Optional[bool] = Field(default=None)
+    name: str | None = Field(default=None, max_length=30)
+    nickname: str | None = Field(default=None, max_length=30)
+    url: str | None = Field(default=None)
+    country_id: str | None = Field(default=None)
+    pfp: str | None = Field(default=None, max_length=100)
+    pronouns: str | None = Field(default=None, max_length=20)
+    twitch: str | None = Field(default=None)
+    youtube: str | None = Field(default=None)
+    twitter: str | None = Field(default=None)
+    bluesky: str | None = Field(default=None)
+    ex_stream: bool | None = Field(default=None)

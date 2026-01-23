@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field, model_validator
 
@@ -11,21 +11,19 @@ class StreamSchema(BaseEmbedSchema):
 
     Attributes:
         player (dict): Player information from the Players model.
-        game (Optional[dict]): Game being played.
+        game (dict | None): Game being played.
         title (str): Stream title.
         offline_ct (int): Minutes since last seen online.
-        stream_time (Optional[datetime]): When the stream started.
+        stream_time (datetime | None): When the stream started.
     """
 
     player: dict = Field(..., description="Player information from the Players model")
-    game: Optional[dict] = Field(default=None, description="Game being played")
+    game: dict | None = Field(default=None, description="Game being played")
     title: str = Field(..., description="Stream title", max_length=100)
     offline_ct: int = Field(
         ..., description="Amount of minutes since last seen online", ge=0
     )
-    stream_time: Optional[datetime] = Field(
-        default=None, description="Stream start time"
-    )
+    stream_time: datetime | None = Field(default=None, description="Stream start time")
 
     @model_validator(mode="before")
     @classmethod
@@ -57,36 +55,32 @@ class StreamCreateSchema(BaseEmbedSchema):
 
     Attributes:
         player_id (str): Player ID who is streaming.
-        game_id (Optional[str]): Game ID being played.
+        game_id (str | None): Game ID being played.
         title (str): Stream title.
         offline_ct (int): Offline counter (minutes since last seen).
-        stream_time (Optional[datetime]): Stream start time.
+        stream_time (datetime | None): Stream start time.
     """
 
     player_id: str = Field(..., description="Player ID who is streaming")
-    game_id: Optional[str] = Field(default=None, description="Game ID being played")
+    game_id: str | None = Field(default=None, description="Game ID being played")
     title: str = Field(..., description="Stream title")
     offline_ct: int = Field(default=0, description="Offline counter (minutes)", ge=0)
-    stream_time: Optional[datetime] = Field(
-        default=None, description="Stream start time"
-    )
+    stream_time: datetime | None = Field(default=None, description="Stream start time")
 
 
 class StreamUpdateSchema(BaseEmbedSchema):
     """Schema for updating streams.
 
     Attributes:
-        game_id (Optional[str]): Updated game ID being played.
-        title (Optional[str]): Updated stream title.
-        offline_ct (Optional[int]): Updated offline counter (minutes since last seen).
-        stream_time (Optional[datetime]): Updated stream start time.
+        game_id (str | None): Updated game ID being played.
+        title (str | None): Updated stream title.
+        offline_ct (int | None): Updated offline counter (minutes since last seen).
+        stream_time (datetime | None): Updated stream start time.
     """
 
-    game_id: Optional[str] = Field(default=None, description="Game ID being played")
-    title: Optional[str] = Field(default=None, description="Stream title")
-    offline_ct: Optional[int] = Field(
+    game_id: str | None = Field(default=None, description="Game ID being played")
+    title: str | None = Field(default=None, description="Stream title")
+    offline_ct: int | None = Field(
         default=None, description="Offline counter (minutes)", ge=0
     )
-    stream_time: Optional[datetime] = Field(
-        default=None, description="Stream start time"
-    )
+    stream_time: datetime | None = Field(default=None, description="Stream start time")

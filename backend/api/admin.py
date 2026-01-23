@@ -27,7 +27,6 @@ class RoleFilter(SimpleListFilter):
         return RoleAPIKey.ROLE_CHOICES
 
     def queryset(self, request, queryset: QuerySet[RoleAPIKey]) -> QuerySet[RoleAPIKey]:
-        del request  # unused
         if self.value():
             return queryset.filter(role=self.value())
         return queryset
@@ -129,10 +128,10 @@ class RoleAPIKeyAdmin(admin.ModelAdmin):
     ) -> SafeString:
         """Display role as a colored badge."""
         colors: dict[str, str] = {
-            "admin": "#dc3545",  # Red
-            "moderator": "#fd7e14",  # Orange
-            "contributor": "#20c997",  # Teal
-            "read_only": "#6c757d",  # Gray
+            "admin": "#dc3545",
+            "moderator": "#fd7e14",
+            "contributor": "#20c997",
+            "read_only": "#6c757d",
         }
         color: str = colors.get(obj.role, "#6c757d")
 
@@ -159,11 +158,11 @@ class RoleAPIKeyAdmin(admin.ModelAdmin):
         diff = now - obj.last_used
 
         if diff.days == 0:
-            if diff.seconds < 3600:  # Less than 1 hour
+            if diff.seconds < 3600:
                 return format_html(
                     '<span style="color: #28a745;">{}m ago</span>', diff.seconds // 60
                 )
-            else:  # Less than 1 day
+            else:
                 return format_html(
                     '<span style="color: #28a745;">{}h ago</span>', diff.seconds // 3600
                 )

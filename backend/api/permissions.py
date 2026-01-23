@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 from django.http import HttpRequest
 from ninja.security import APIKeyHeader
@@ -18,7 +18,7 @@ class RoleBasedAPIKeyAuth(APIKeyHeader):
         """
         Initialize with required role.
 
-        Args:
+        Arguments:
             required_role: Minimum role required ('read_only', 'contributor', 'moderator', 'admin')
         """
         self.required_role: str = required_role
@@ -28,10 +28,10 @@ class RoleBasedAPIKeyAuth(APIKeyHeader):
         self,
         request: HttpRequest,
         key: str,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Validate API key and check role permissions.
 
-        Args:
+        Arguments:
             request: HTTP request object
             key: API key from X-API-Key header
 
@@ -39,7 +39,7 @@ class RoleBasedAPIKeyAuth(APIKeyHeader):
             Dict with API key info if authorized, None if unauthorized
         """
         try:
-            api_key_obj: Optional[RoleAPIKey] = RoleAPIKey.objects.get_from_key(key)
+            api_key_obj: RoleAPIKey | None = RoleAPIKey.objects.get_from_key(key)
             if not api_key_obj:
                 return None
 
@@ -70,7 +70,7 @@ class PublicOrRoleAuth:
         """
         Initialize with required role for non-GET requests.
 
-        Args:
+        Arguments:
             required_role: Minimum role required for non-GET requests
         """
         self.required_role: str = required_role
@@ -79,10 +79,10 @@ class PublicOrRoleAuth:
     def __call__(
         self,
         request: HttpRequest,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Authenticate based on HTTP method.
 
-        Args:
+        Arguments:
             request: HTTP request object
 
         Returns:
@@ -91,7 +91,7 @@ class PublicOrRoleAuth:
         if request.method == "GET":
             return {"role": "public", "authenticated": False, "public_access": True}
 
-        api_key_header: Optional[str] = request.headers.get("X-API-Key")
+        api_key_header: str | None = request.headers.get("X-API-Key")
         if not api_key_header:
             return None
 

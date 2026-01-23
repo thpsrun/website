@@ -1,10 +1,11 @@
 import logging
-from typing import Any, Dict
+from textwrap import dedent
+from typing import Any
 
 import sentry_sdk
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
-from ninja import NinjaAPI
+from ninja import NinjaAPI, Redoc
 from ninja.errors import ValidationError
 
 from api.routers.aggregations.website import router as website_router
@@ -24,9 +25,15 @@ from .schemas.base import ErrorResponse, ValidationErrorResponse
 logger = logging.getLogger(__name__)
 
 ninja_api: NinjaAPI = NinjaAPI(
+    docs=Redoc(
+        settings={
+            "persistentAuthorization": False,
+        }
+    ),
     title="thps.run API",
     version="1.0.0",
-    description="""
+    description=dedent(
+        """
     This API provides access to the thps.run API and documents its functionality.
 
     AUTHENTICATION:
@@ -60,7 +67,8 @@ ninja_api: NinjaAPI = NinjaAPI(
     This section details the normal responses you will receive. Specific endpoints may have more
     response codes. Normal response codes (e.g. 2XX, 4XX, 500, etc.) are used. If more are added,
     then they will appear in this documentation.
-    """,
+    """
+    ),
     docs_url="/docs",
     openapi_url="/openapi.json",
     openapi_extra={
@@ -109,10 +117,6 @@ ninja_api: NinjaAPI = NinjaAPI(
                 "name": "Website",
                 "description": "Specific endpoints related to how the frontend operates.",
             },
-            {
-                "name": "Privileged",
-                "description": "These endpoints require a higher-level API key to access.",
-            },
         ],
     },
 )
@@ -127,7 +131,7 @@ def validation_exception_handler(
 
     This provides consistent validation error responses across all endpoints.
 
-    Args:
+    Arguments:
         request: The HTTP request that caused the error.
         exc: The validation exception from Pydantic.
 
@@ -138,8 +142,7 @@ def validation_exception_handler(
         request,
         ValidationErrorResponse(
             error="Request validation failed",
-            validation_errors=exc.errors,
-            code=422,
+            validation_errors={"error": "exc.errors"},
         ).model_dump(),
         status=422,
     )
@@ -154,7 +157,7 @@ def global_exception_handler(
 
     Provides a consistent error response for unexpected exceptions and logs them to Sentry.
 
-    Args:
+    Arguments:
         request: The HTTP request that caused the error.
         exc: The unexpected exception (e.g. server errors).
 
@@ -198,13 +201,11 @@ def global_exception_handler(
                 "exception": str(exc),
                 "type": type(exc).__name__,
             },
-            code=500,
         ).model_dump()
     else:
         error_data = ErrorResponse(
             error="An unexpected error occurred",
             details=None,
-            code=500,
         ).model_dump()
 
     return ninja_api.create_response(
@@ -216,27 +217,19 @@ def global_exception_handler(
 
 @ninja_api.get(
     "/health",
-    response=Dict[str, Any],
+    response=dict[str, Any],
     summary="API Health Check",
-)
-def health_check(
-    request: HttpRequest,
-) -> Dict[str, Any]:
-    """A simple API endpoint that returns health information.
+    description=dedent(
+        """A simple API endpoint that returns health information.
 
     This endpoint returns basic API status and versioning information. This is useful for
     monitoring and ensuring the API is accessible and is responding to requests.
-
-    Returns:
-        dict: Returns API health and metadata related to it.
-
-    Example:
-        {
-            "status": "healthy",
-            "version": "1.0.0",
-            "message": "Generic health message",
-        }
     """
+    ),
+)
+def health_check(
+    request: HttpRequest,
+) -> dict[str, Any]:
     return {
         "status": "healthy",
         "version": ninja_api.version,

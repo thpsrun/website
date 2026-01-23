@@ -10,8 +10,9 @@
     *   Upgraded the API to Django Ninja to better support async operations in the future.
     *   GET endpoints are now publicly accessible! All other methods will require authentication.
         *   Roles system has also been added to API keys to manage scope.
+    *   Documentation is also publicly accessible via `/api/v1/docs`.
 *   Rebuilt the Guides system to be within the API instead of GitHub.
-*   (Planned) Consolidated the SRC -> thps.run pipeline from two different chains into one.
+*   Consolidated the SRC -> thps.run pipeline from two different chains into one.
 *   Migrated the entire API to Django Ninja, to include role-based API keys to better limit access to endpoints and provide some rate-limiting capabilities.
 
 ### Added
@@ -33,7 +34,7 @@
 
 ### Fixed
 *   Fixed the type checking for API responses to be `JsonResponse` and not `HttpResponse`.
-*   (Planned) Fixed the logic calculating a run's `points` and `place` fields.
+*   Fixed the logic calculating a run's `points` and `place` fields so they are more consistent.
 
 ### Changed
 *   Changed the Guides system so it can be accessible via the Django Admin interface (for super admins of the project), the API via GET request, and the new portal.
@@ -48,7 +49,7 @@
     *   `Archive` will mimic what you see from archived variables or categories. They are excluded from searches, as well, but will help ensure runs do not get orphaned.
 
 ### Removed
-*   (Planned) Removed the `subcategory` field from the `Runs` model.
-    *   This was a remnant from v2 code, before it was more understood how to link variable-value pairs to an individual run.
+*   
 
 ### Misc.
+*   

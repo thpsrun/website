@@ -36,7 +36,7 @@ def normalize_src(
     ID. This also sets up a chain of functions to import this data into all related models within
     the database, including creating new objects as needed.
 
-    Args:
+    Arguments:
         id (str): Unique Speedrun.com identifier for a specific speedrun. This ID is what you see
             at the end of a URL for a game (e.g. `12345678` at the end of
             `https://speedrun.com/game/run/<ID>`)
@@ -196,7 +196,7 @@ def add_run(
     Continues normalization of SRC API data from `normalize_src`, this is used to normalize the data
     for a single run before forwarding it to `invoke_single_run`.
 
-    Args:
+    Arguments:
         game (dict): Speedrun.com information on a specific game.
         run (dict): Speedrun.com information on a specific run.
         category (dict): Speedrun.com information on a specific category.
@@ -231,14 +231,13 @@ def add_run(
 
     if category["type"] == "per-level":
         level_cat_count = Categories.objects.filter(
-            game=game["id"],
-            type="per-level"
+            game=game["id"], type="per-level"
         ).count()
 
         if level_cat_count > 1:
             base_name = f"{level['name']} ({category['name']})"
         else:
-            base_name = level['name']
+            base_name = level["name"]
     else:
         base_name = category["name"]
 
@@ -269,7 +268,7 @@ def invoke_single_run(
 ) -> None:
     """Creates or updates a `Runs` object with Speedrun.com API information.
 
-    Args:
+    Arguments:
         game (dict): Speedrun.com information on a specific game.
         run (dict): Speedrun.com information on a specific run.
         category (dict): Speedrun.com information on a specific category.
@@ -468,9 +467,13 @@ def invoke_single_run(
             for order, player_id in enumerate(player_ids, start=1):
                 try:
                     player_obj = Players.objects.only("id").get(id=player_id)
-                    RunPlayers.objects.create(run=run_obj, player=player_obj, order=order)
+                    RunPlayers.objects.create(
+                        run=run_obj, player=player_obj, order=order
+                    )
                 except Players.DoesNotExist:
-                    logger.warning(f"Player {player_id} not found when creating RunPlayers")
+                    logger.warning(
+                        f"Player {player_id} not found when creating RunPlayers"
+                    )
 
         if len(run["run"]["values"]) > 0:
             for var_id, val_id in run["run"]["values"].items():
@@ -500,7 +503,7 @@ def update_points(
     Retrieves all speedruns within a game's subcateogyr and resets the `place` field for that run,
     and updates their point totals whenever a new world record is achieved.
 
-    Args:
+    Arguments:
         game_id (str): Speedrun.com ID for the game that `subcategory` belongs to.
         subcategory (str): Full category and subcategory name (e.g. `Any% (Beginner)` or `Any% No
             Warp Normal`).
@@ -607,7 +610,7 @@ def remove_obsolete(
     Retrieves all current runs by the player (depending on `game_id`, `subcategory`, and `run_type`)
     and marks all slower runs as obsolete.
 
-    Args:
+    Arguments:
         game_id (str): Speedrun.com ID for the game that `subcategory` belongs to.
         subcategory (str): Full category and subcategory name (e.g. `Any% (Beginner)` or `Any% No
             Warp Normal`).

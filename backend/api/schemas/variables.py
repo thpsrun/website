@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any
 
 from pydantic import Field, field_validator
 
@@ -13,8 +13,8 @@ class VariableValueSchema(BaseEmbedSchema):
         name (str): Human-readable name (e.g., "Hard Mode").
         slug (str): URL-friendly version.
         archive (bool): Whether this value is archived/hidden.
-        rules (Optional[str]): Specific rules for this value choice.
-        variable (Optional[dict]): Variable this value belongs to - included with ?embed=variable.
+        rules (str | None): Specific rules for this value choice.
+        variable (dict | None): Variable this value belongs to - included with ?embed=variable.
     """
 
     value: str = Field(..., max_length=10, description="Speedrun.com variable value ID")
@@ -23,14 +23,14 @@ class VariableValueSchema(BaseEmbedSchema):
     archive: bool = Field(
         default=False, description="Whether this value is archived/hidden from listings"
     )
-    rules: Optional[str] = Field(
+    rules: str | None = Field(
         default=None, max_length=1000, description="Rules specific to this value choice"
     )
-    variable: Optional[dict] = Field(None, description="Variable this value belongs to")
+    variable: dict | None = Field(None, description="Variable this value belongs to")
 
     @field_validator("variable", mode="before")
     @classmethod
-    def convert_model_to_none(cls, v: Any) -> Optional[dict]:
+    def convert_model_to_none(cls, v: Any) -> dict | None:
         """Convert Django model instance to None if not explicitly embedded."""
         if v is None:
             return None
@@ -67,21 +67,21 @@ class VariableSchema(VariableBaseSchema):
     """Variable schema without embedded values.
 
     Attributes:
-        game (Optional[dict]): Game this variable belongs to - included with ?embed=game.
-        category (Optional[dict]): Specific category - included with ?embed=category.
-        level (Optional[dict]): Specific level (if scope=single-level) - included with
+        game (dict | None): Game this variable belongs to - included with ?embed=game.
+        category (dict | None): Specific category - included with ?embed=category.
+        level (dict | None): Specific level (if scope=single-level) - included with
             ?embed=level.
     """
 
-    game: Optional[dict] = Field(None, description="Game this variable belongs to")
-    category: Optional[dict] = Field(None, description="Specific category")
-    level: Optional[dict] = Field(
+    game: dict | None = Field(None, description="Game this variable belongs to")
+    category: dict | None = Field(None, description="Specific category")
+    level: dict | None = Field(
         None, description="Specific level (if scope=single-level)"
     )
 
     @field_validator("game", "category", "level", mode="before")
     @classmethod
-    def convert_model_to_none(cls, v: Any) -> Optional[dict]:
+    def convert_model_to_none(cls, v: Any) -> dict | None:
         """Convert Django model instance to None if not explicitly embedded."""
         if v is None:
             return None
@@ -98,7 +98,7 @@ class VariableWithValuesSchema(VariableSchema):
         values (List[VariableValueSchema]): Possible values/choices for this variable.
     """
 
-    values: List[VariableValueSchema] = Field(
+    values: list[VariableValueSchema] = Field(
         ..., description="Possible values/choices for this variable"
     )
 
@@ -107,17 +107,17 @@ class VariableCreateSchema(BaseEmbedSchema):
     """Schema for creating variables.
 
     Attributes:
-        id (Optional[str]): The variable ID; if one is not given, it will auto-generate.
+        id (str | None): The variable ID; if one is not given, it will auto-generate.
         game_id (str): Game ID this variable belongs to.
         name (str): Variable name.
         slug (str): URL-friendly version.
         scope (str): Where this variable applies.
         archive (bool): Whether variable is archived/hidden.
-        category_id (Optional[str]): Specific category ID (if not all_cats).
-        level_id (Optional[str]): Specific level ID (if scope=single-level).
+        category_id (str | None): Specific category ID (if not all_cats).
+        level_id (str | None): Specific level ID (if scope=single-level).
     """
 
-    id: Optional[str] = Field(
+    id: str | None = Field(
         default=None,
         max_length=12,
         description="The variable ID; if one is not given, it will auto-generate.",
@@ -127,10 +127,10 @@ class VariableCreateSchema(BaseEmbedSchema):
     slug: str = Field(..., max_length=50, description="URL-friendly variable slug")
     scope: str = Field(..., pattern="^(global|full-game|all-levels|single-level)$")
     archive: bool = Field(default=False)
-    category_id: Optional[str] = Field(
+    category_id: str | None = Field(
         None, description="Specific category ID (if not all_cats)"
     )
-    level_id: Optional[str] = Field(
+    level_id: str | None = Field(
         None, description="Specific level ID (if scope=single-level)"
     )
 
@@ -139,65 +139,65 @@ class VariableUpdateSchema(BaseEmbedSchema):
     """Schema for updating variables.
 
     Attributes:
-        game_id (Optional[str]): Updated game ID.
-        name (Optional[str]): Updated variable name.
-        scope (Optional[str]): Updated scope.
-        archive (Optional[bool]): Updated archive status.
-        category_id (Optional[str]): Updated category ID.
-        level_id (Optional[str]): Updated level ID.
+        game_id (str | None): Updated game ID.
+        name (str | None): Updated variable name.
+        scope (str | None): Updated scope.
+        archive (bool | None): Updated archive status.
+        category_id (str | None): Updated category ID.
+        level_id (str | None): Updated level ID.
     """
 
-    game_id: Optional[str] = Field(default=None)
-    name: Optional[str] = Field(default=None, max_length=50)
-    scope: Optional[str] = Field(
+    game_id: str | None = Field(default=None)
+    name: str | None = Field(default=None, max_length=50)
+    scope: str | None = Field(
         None, pattern="^(global|full-game|all-levels|single-level)$"
     )
-    archive: Optional[bool] = Field(default=None)
-    category_id: Optional[str] = Field(default=None)
-    level_id: Optional[str] = Field(default=None)
+    archive: bool | None = Field(default=None)
+    category_id: str | None = Field(default=None)
+    level_id: str | None = Field(default=None)
 
 
 class VariableValueCreateSchema(BaseEmbedSchema):
     """Schema for creating variable values.
 
     Attributes:
-        value (Optional[str]): The value ID; if one is not given, it will auto-generate.
+        value (str | None): The value ID; if one is not given, it will auto-generate.
         variable_id (str): Variable ID this value belongs to.
         name (str): Value name.
-        slug (Optional[str]): URL-friendly version; auto-generated from name if not provided.
+        slug (str | None): URL-friendly version; auto-generated from name if not provided.
         archive (bool): Whether value is archived/hidden.
-        rules (Optional[str]): Rules specific to this value choice.
+        rules (str | None): Rules specific to this value choice.
     """
 
-    value: Optional[str] = Field(
+    value: str | None = Field(
         default=None,
         max_length=10,
         description="The value ID; if one is not given, it will auto-generate.",
     )
     variable_id: str = Field(..., description="Variable ID this value belongs to")
     name: str = Field(..., max_length=50)
-    slug: Optional[str] = Field(
+    slug: str | None = Field(
         default=None,
         max_length=50,
         description="URL-friendly slug; auto-generated from name if not provided",
     )
     archive: bool = Field(default=False)
-    rules: Optional[str] = Field(default=None, max_length=1000)
+    rules: str | None = Field(default=None, max_length=1000)
 
 
 class VariableValueUpdateSchema(BaseEmbedSchema):
     """Schema for updating variable values.
 
     Attributes:
-        variable_id (Optional[str]): Updated variable ID.
-        name (Optional[str]): Updated value name.
-        slug (Optional[str]): Updated URL-friendly slug.
-        archive (Optional[bool]): Updated archive status.
-        rules (Optional[str]): Updated rules.
+        variable_id (str | None): Updated variable ID.
+        name (str | None): Updated value name.
+        slug (str | None): Updated URL-friendly slug.
+        archive (bool | None): Updated archive status.
+        rules (str | None): Updated rules.
     """
 
-    variable_id: Optional[str] = Field(default=None)
-    name: Optional[str] = Field(default=None, max_length=50)
-    slug: Optional[str] = Field(default=None, max_length=50)
-    archive: Optional[bool] = Field(default=None)
-    rules: Optional[str] = Field(default=None, max_length=1000)
+    variable_id: str | None = Field(default=None)
+    name: str | None = Field(default=None, max_length=50)
+    slug: str | None = Field(default=None, max_length=50)
+    archive: bool | None = Field(default=None)
+    rules: str | None = Field(default=None, max_length=1000)

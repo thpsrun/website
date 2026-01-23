@@ -1,9 +1,11 @@
-from typing import Dict, List, Optional, Tuple, Union
+from textwrap import dedent
+from typing import Annotated
 
 from django.http import HttpRequest
 from django.utils.text import slugify
 from ninja import Query, Router
 from ninja.responses import codes_4xx
+from pydantic import Field
 from srl.models import Categories, Games, Levels, Variables, VariableValues
 
 from api.docs.variables import (
@@ -35,7 +37,7 @@ router = Router(tags=["Variables"])
 
 def apply_variable_embeds(
     variable: Variables,
-    embed_fields: List[str],
+    embed_fields: list[str],
 ) -> dict:
     """Apply requested embeds to a variable instance."""
     embeds = {}
@@ -83,7 +85,7 @@ def apply_variable_embeds(
 
 def apply_value_embeds(
     value: VariableValues,
-    embed_fields: List[str],
+    embed_fields: list[str],
 ) -> dict:
     """Apply requested embeds to a variable value instance."""
     embeds = {}
@@ -101,17 +103,13 @@ def apply_value_embeds(
     return embeds
 
 
-# ============================================================================
-# Variables Endpoints - Static routes first
-# ============================================================================
-
-
 @router.get(
     "/all",
-    response={200: List[VariableSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: list[VariableSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get All Variables",
-    description="""
-    Retrieve all variables within the `Variables` object, including optional embedding and filtering
+    description=dedent(
+        """Retrieve all variables within the `Variables` object, including optional embedding and
+    filtering
 
     **Supported Embeds:**
     - `game`: Include metadata of the game the variable belongs to
@@ -132,43 +130,38 @@ def apply_value_embeds(
     - `/variables/all?game_id=thps4` - Get all variables for THPS4
     - `/variables/all?scope=full-game` - Get all full-game variables
     - `/variables/all?game_id=thps4&embed=game,category` - Get THPS4 variables with embeds
-    """,
+    """
+    ),
     auth=public_auth,
 )
 def get_all_variables(
     request: HttpRequest,
-    game_id: Optional[str] = Query(
-        None,
-        description="Filter by game ID",
-    ),
-    category_id: Optional[str] = Query(
-        None,
-        description="Filter by category ID",
-    ),
-    level_id: Optional[str] = Query(
-        None,
-        description="Filter by level ID",
-    ),
-    scope: Optional[VariableScopeType] = Query(
-        None,
-        description="Filter by scope",
-    ),
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-    limit: int = Query(
-        50,
-        ge=1,
-        le=100,
-        description="Maximum number of returned objects (default 50, less than 100)",
-    ),
-    offset: int = Query(
-        0,
-        ge=0,
-        description="Offset from 0",
-    ),
-) -> Tuple[int, Union[List[VariableSchema], ErrorResponse]]:
+    game_id: Annotated[
+        str | None, Query, Field(description="Filter by game ID")
+    ] = None,
+    category_id: Annotated[
+        str | None, Query, Field(description="Filter by category ID")
+    ] = None,
+    level_id: Annotated[
+        str | None, Query, Field(description="Filter by level ID")
+    ] = None,
+    scope: Annotated[
+        VariableScopeType | None, Query, Field(description="Filter by scope")
+    ] = None,
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds")
+    ] = None,
+    limit: Annotated[
+        int,
+        Query,
+        Field(
+            ge=1,
+            le=100,
+            description="Maximum number of returned objects (default 50, less than 100)",
+        ),
+    ] = 50,
+    offset: Annotated[int, Query, Field(ge=0, description="Offset from 0")] = 0,
+) -> tuple[int, list[VariableSchema] | ErrorResponse]:
     # Checks to see what embeds are being used versus what is allowed
     # via this endpoint. It will return an error to the client if they
     # have an embed type not supported.
@@ -222,17 +215,16 @@ def get_all_variables(
         )
 
 
-# ============================================================================
-# Variable Values Endpoints - MUST come before /{id} routes
-# ============================================================================
-
-
 @router.get(
     "/values/all",
-    response={200: List[VariableValueSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={
+        200: list[VariableValueSchema],
+        codes_4xx: ErrorResponse,
+        500: ErrorResponse,
+    },
     summary="Get All Variable Values",
-    description="""
-    Retrieve all values for a specific variable.
+    description=dedent(
+        """Retrieve all values for a specific variable.
 
     **Supported Embeds:**
     - `variable`: Include metadata of the variable this value belongs to
@@ -246,32 +238,30 @@ def get_all_variables(
     **Examples:**
     - `/variables/values/all?variable_id=5lygdn8q` - Get all values for a variable
     - `/variables/values/all?variable_id=5lygdn8q&embed=variable` - With embeds
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=VALUES_ALL,
 )
 def get_all_values(
     request: HttpRequest,
-    variable_id: Optional[str] = Query(
-        None,
-        description="Filter by variable ID (required)",
-    ),
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-    limit: int = Query(
-        50,
-        ge=1,
-        le=100,
-        description="Maximum number of returned objects (default 50, less than 100)",
-    ),
-    offset: int = Query(
-        0,
-        ge=0,
-        description="Offset from 0",
-    ),
-) -> Tuple[int, Union[List[VariableValueSchema], ErrorResponse]]:
+    variable_id: Annotated[
+        str | None, Query, Field(description="Filter by variable ID (required)")
+    ] = None,
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds")
+    ] = None,
+    limit: Annotated[
+        int,
+        Query,
+        Field(
+            ge=1,
+            le=100,
+            description="Maximum number of returned objects (default 50, less than 100)",
+        ),
+    ] = 50,
+    offset: Annotated[int, Query, Field(ge=0, description="Offset from 0")] = 0,
+) -> tuple[int, list[VariableValueSchema] | ErrorResponse]:
     if not variable_id:
         return 400, ErrorResponse(
             error="Please provide the variable's unique ID.",
@@ -324,26 +314,27 @@ def get_all_values(
     "/values/",
     response={200: VariableValueSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Variable Value",
-    description="""
-    Creates a brand new variable value.
+    description=dedent(
+        """Creates a brand new variable value.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
     **Request Body:**
     - `variable_id` (str): Variable ID this value belongs to.
     - `name` (str): Value name.
-    - `value` (Optional[str]): Value ID; if not provided, one will be auto-generated.
-    - `slug` (Optional[str]): URL-friendly slug; auto-generated from name if not provided.
+    - `value` (str | None): Value ID; if not provided, one will be auto-generated.
+    - `slug` (str | None): URL-friendly slug; auto-generated from name if not provided.
     - `archive` (bool): Whether value is archived/hidden.
-    - `rules` (Optional[str]): Rules specific to this value choice.
-    """,
+    - `rules` (str | None): Rules specific to this value choice.
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=VALUES_POST,
 )
 def create_value(
     request: HttpRequest,
     value_data: VariableValueCreateSchema,
-) -> Tuple[int, Union[VariableValueSchema, ErrorResponse]]:
+) -> tuple[int, VariableValueSchema | ErrorResponse]:
     try:
         variable = Variables.objects.filter(id__iexact=value_data.variable_id).first()
         if not variable:
@@ -387,8 +378,8 @@ def create_value(
     "/values/{value_id}",
     response={200: VariableValueSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Variable Value by ID",
-    description="""
-    Retrieve a single variable value by its ID.
+    description=dedent(
+        """Retrieve a single variable value by its ID.
 
     **Supported Embeds:**
     - `variable`: Include metadata of the variable this value belongs to
@@ -396,18 +387,18 @@ def create_value(
     **Examples:**
     - `/variables/values/pc` - Get value by ID
     - `/variables/values/pc?embed=variable` - Get value with variable data
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=VALUES_GET,
 )
 def get_value(
     request: HttpRequest,
     value_id: str,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-) -> Tuple[int, Union[VariableValueSchema, ErrorResponse]]:
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds")
+    ] = None,
+) -> tuple[int, VariableValueSchema | ErrorResponse]:
     if len(value_id) > 10:
         return 400, ErrorResponse(
             error="Value ID must be 10 characters or less",
@@ -426,9 +417,11 @@ def get_value(
             )
 
     try:
-        value = VariableValues.objects.select_related("var").filter(
-            value__iexact=value_id
-        ).first()
+        value = (
+            VariableValues.objects.select_related("var")
+            .filter(value__iexact=value_id)
+            .first()
+        )
         if not value:
             return 404, ErrorResponse(
                 error="Variable value does not exist",
@@ -455,8 +448,8 @@ def get_value(
     "/values/{value_id}",
     response={200: VariableValueSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Variable Value",
-    description="""
-    Updates the variable value based on its unique ID.
+    description=dedent(
+        """Updates the variable value based on its unique ID.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
@@ -464,12 +457,13 @@ def get_value(
     - `value_id` (str): Unique ID of the value being updated.
 
     **Request Body:**
-    - `variable_id` (Optional[str]): Updated variable ID.
-    - `name` (Optional[str]): Updated value name.
-    - `slug` (Optional[str]): Updated URL-friendly slug.
-    - `archive` (Optional[bool]): Updated archive status.
-    - `rules` (Optional[str]): Updated rules.
-    """,
+    - `variable_id` (str | None): Updated variable ID.
+    - `name` (str | None): Updated value name.
+    - `slug` (str | None): Updated URL-friendly slug.
+    - `archive` (bool | None): Updated archive status.
+    - `rules` (str | None): Updated rules.
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=VALUES_PUT,
 )
@@ -477,7 +471,7 @@ def update_value(
     request: HttpRequest,
     value_id: str,
     value_data: VariableValueUpdateSchema,
-) -> Tuple[int, Union[VariableValueSchema, ErrorResponse]]:
+) -> tuple[int, VariableValueSchema | ErrorResponse]:
     try:
         value = VariableValues.objects.filter(value__iexact=value_id).first()
         if not value:
@@ -516,23 +510,24 @@ def update_value(
 
 @router.delete(
     "/values/{value_id}",
-    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Variable Value",
-    description="""
-    Deletes the selected variable value by its ID.
+    description=dedent(
+        """Deletes the selected variable value by its ID.
 
     **REQUIRES ADMIN ACCESS.**
 
     **Supported Parameters:**
     - `value_id` (str): Unique ID of the value being deleted.
-    """,
+    """
+    ),
     auth=admin_auth,
     openapi_extra=VALUES_DELETE,
 )
 def delete_value(
     request: HttpRequest,
     value_id: str,
-) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
+) -> tuple[int, dict[str, str] | ErrorResponse]:
     try:
         value = VariableValues.objects.filter(value__iexact=value_id).first()
         if not value:
@@ -552,17 +547,16 @@ def delete_value(
         )
 
 
-# ============================================================================
-# Variables Dynamic Routes - /{id} routes come AFTER static routes
-# ============================================================================
-
-
 @router.get(
     "/{id}",
-    response={200: VariableWithValuesSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={
+        200: VariableWithValuesSchema,
+        codes_4xx: ErrorResponse,
+        500: ErrorResponse,
+    },
     summary="Get Variable by ID",
-    description="""
-    Retrieve a single variable by its ID, including optional embedding.
+    description=dedent(
+        """Retrieve a single variable by its ID, including optional embedding.
 
     **Supported Embeds:**
     - `game`: Include metadata related to the game
@@ -573,18 +567,18 @@ def delete_value(
     - `/variables/5lygdn8q` - Get variable by ID
     - `/variables/5lygdn8q?embed=game` - Get variable with game data
     - `/variables/5lygdn8q?embed=game,category,level` - Get variable with all embeds
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=VARIABLES_GET,
 )
 def get_variable(
     request: HttpRequest,
     id: str,
-    embed: Optional[str] = Query(
-        None,
-        description="Comma-separated embeds",
-    ),
-) -> Tuple[int, Union[VariableWithValuesSchema, ErrorResponse]]:
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds")
+    ] = None,
+) -> tuple[int, VariableWithValuesSchema | ErrorResponse]:
     if len(id) > 15:
         return 400, ErrorResponse(
             error="ID must be 15 characters or less",
@@ -650,8 +644,8 @@ def get_variable(
     "/",
     response={200: VariableSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Variable",
-    description="""
-    Creates a brand new variable with validation for scope and relationship constraints.
+    description=dedent(
+        """Creates a brand new variable with validation for scope and relationship constraints.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
@@ -660,16 +654,17 @@ def get_variable(
     - `name` (str): Variable name.
     - `scope` (str): Where variable applies (`global`, `full-game`, `all-levels`, `single-level`).
     - `archive` (bool): Whether variable is archived/hidden from listings.
-    - `category_id` (Optional[str]): Specific category ID (if not all_cats).
-    - `level_id` (Optional[str]): Specific level ID (required if scope is `single-level`).
-    """,
+    - `category_id` (str | None): Specific category ID (if not all_cats).
+    - `level_id` (str | None): Specific level ID (required if scope is `single-level`).
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=VARIABLES_POST,
 )
 def create_variable(
     request: HttpRequest,
     variable_data: VariableCreateSchema,
-) -> Tuple[int, Union[VariableSchema, ErrorResponse]]:
+) -> tuple[int, VariableSchema | ErrorResponse]:
     try:
         game = Games.objects.filter(id=variable_data.game_id).first()
         if not game:
@@ -738,8 +733,8 @@ def create_variable(
     "/{id}",
     response={200: VariableSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Variable",
-    description="""
-    Updates the variable based on its unique ID.
+    description=dedent(
+        """Updates the variable based on its unique ID.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
@@ -747,14 +742,15 @@ def create_variable(
     - `id` (str): Unique ID of the variable being updated.
 
     **Request Body:**
-    - `game_id` (Optional[str]): Updated game ID.
-    - `name` (Optional[str]): Updated variable name.
-    - `scope` (Optional[str]): Updated scope (`global`, `full-game`, `all-levels`, `single-level`).
-    - `all_cats` (Optional[bool]): Updated all_cats flag.
-    - `archive` (Optional[bool]): Updated archive status.
-    - `category_id` (Optional[str]): Updated category ID.
-    - `level_id` (Optional[str]): Updated level ID.
-    """,
+    - `game_id` (str | None): Updated game ID.
+    - `name` (str | None): Updated variable name.
+    - `scope` (str | None): Updated scope (`global`, `full-game`, `all-levels`, `single-level`).
+    - `all_cats` (bool | None): Updated all_cats flag.
+    - `archive` (bool | None): Updated archive status.
+    - `category_id` (str | None): Updated category ID.
+    - `level_id` (str | None): Updated level ID.
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=VARIABLES_PUT,
 )
@@ -762,7 +758,7 @@ def update_variable(
     request: HttpRequest,
     id: str,
     variable_data: VariableUpdateSchema,
-) -> Tuple[int, Union[VariableSchema, ErrorResponse]]:
+) -> tuple[int, VariableSchema | ErrorResponse]:
     try:
         variable = Variables.objects.filter(id__iexact=id).first()
         if not variable:
@@ -835,23 +831,24 @@ def update_variable(
 
 @router.delete(
     "/{id}",
-    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Variable",
-    description="""
-    Deletes the selected variable by its ID. **Also deletes associated values.**
+    description=dedent(
+        """Deletes the selected variable by its ID. **Also deletes associated values.**
 
     **REQUIRES ADMIN ACCESS.**
 
     **Supported Parameters:**
     - `id` (str): Unique ID of the variable being deleted.
-    """,
+    """
+    ),
     auth=admin_auth,
     openapi_extra=VARIABLES_DELETE,
 )
 def delete_variable(
     request: HttpRequest,
     id: str,
-) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
+) -> tuple[int, dict[str, str] | ErrorResponse]:
     try:
         variable = Variables.objects.filter(id__iexact=id).first()
         if not variable:
@@ -862,7 +859,9 @@ def delete_variable(
 
         name = variable.name
         variable.delete()
-        return 200, {"message": f"Variable '{name}' and its values deleted successfully"}
+        return 200, {
+            "message": f"Variable '{name}' and its values deleted successfully"
+        }
 
     except Exception as e:
         return 500, ErrorResponse(

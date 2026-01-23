@@ -30,7 +30,7 @@ def update_game(
 ) -> None:
     """Creates or updates a `Games` model object based on the `src_game` argument.
 
-    Args:
+    Arguments:
         src_game (dict): Usually from Speedrun.com's API. This includes information about a specific
             game that will be imported in to the `Games` model.
     """
@@ -84,7 +84,7 @@ def update_game_runs(
 ) -> None:
     """Beginning of a function chain that updates (or resets) a specific game based upon its ID.
 
-    Args:
+    Arguments:
         game_id (str): The game ID (presented through other functions) that will can
             (optionally) reset `Categories`, `Levels`, `Variables`, `VariableValues`,
             `RunVariableValues`, and `Runs`; get a lot of information from the Speedrun.com API;
@@ -163,7 +163,7 @@ def update_category(
 ) -> None:
     """Creates or updates a `Categories` model object based on the `category` argument.
 
-    Args:
+    Arguments:
         category (dict): Usually from Speedrun.com's API. Includes information about a specific
             category that will be imported into the `Categories` model.
 
@@ -188,7 +188,7 @@ def update_platform(
 ) -> None:
     """Creates or updates a `Platforms` model object based on the `platform` argument.
 
-    Args:
+    Arguments:
         platform (dict): Usually from Speedrun.com's API. Includes information about a specific
             platform that will be imported into the `Platforms` model.
     """
@@ -205,7 +205,7 @@ def update_level(
 ) -> None:
     """Creates or updates a `Levels` model object based on the `level` argument.
 
-    Args:
+    Arguments:
         level (dict): Usually from Speedrun.com's API. Includes information about a specific level
             that will be imported into the `Levels` model.
 
@@ -230,7 +230,7 @@ def update_variable(
 ) -> None:
     """Creates or updates a `Variables` model object based on the `variable` argument.
 
-    Args:
+    Arguments:
         gameid (str): Used to call the specific `Games` object for the category.
         variable (dict): Usually from Speedrun.com's API. Includes information about a specific
             variable that will be imported into the `Variables` model.
@@ -268,7 +268,7 @@ def update_variable_value(
 ) -> None:
     """Creates or updates a `VariableValues` model object based on the `value` argument.
 
-    Args:
+    Arguments:
         variable (dict): Usually from Speedrun.com's API. Includes information about a specific
             variable.
         value (str): Used to specify the exact value ID of the value to link to `Variables`.
@@ -297,7 +297,7 @@ def update_category_runs(
     will process the `subcategory` field that will eventually be imported into the `Runs` model, as
     well as setting up the variables necessary to access the category's specific leaderboard.
 
-    Args:
+    Arguments:
         game_id (str): Game ID that is used to lookup `Variables` and `Categories`.
         category (dict): Usually from Speedrun.com's API. Includes information about a specific
             category to pass into `invoke_runs`.
@@ -444,7 +444,7 @@ def update_player(
     This is used from the admin panel to update a SPECIFIC player. `invoke_players` should be used
     if iterating an array.
 
-    Args:
+    Arguments:
         player (str): The exact name or ID of a player to process into the Speedrun.com API.
         download_pfp (bool): True by default. When True, the profile picture of the player is
             downloaded and saved to local disk for caching.
@@ -551,7 +551,7 @@ def invoke_runs(
     Processes the `leaderboard (dict)` argument to determine what the world record speedrun is,
     all of the subsequent speedruns, and places them into the `Runs` model.
 
-    Args:
+    Arguments:
         game_id (str): Game ID that is used to lookup a variety of objects from various models.
         category (dict): Usually from Speedrun.com's API. Includes information about a specific
             category.
@@ -929,7 +929,7 @@ def invoke_players(
     Processes all of the metadata from a specific player, iterated through the `players_data`
     argument. This information is used to create or update a `Players` model object.
 
-    Args:
+    Arguments:
         players_data (dict): The complete list of players usually imported from a Speedrun.com
             API "players" embed.
         player (str): None by default. This is the Speedrun.com ID of a specific player.
@@ -1045,7 +1045,7 @@ def import_obsolete(
     include orphans (speedruns that no longer belongs to a category and subcategory). Once this is
     determined, these are then processed through `add_run` to place it into the `Runs` model.
 
-    Args:
+    Arguments:
         player (str): The Speedrun.com username or ID of the player who has their obsolete runs
             being imported.
         download_pfp (bool): False by default. When set to True, this value will eventually enable

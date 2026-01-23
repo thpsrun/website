@@ -1,22 +1,23 @@
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple, Union
+from textwrap import dedent
+from typing import Annotated, Any
 
 from django.http import HttpRequest
 from ninja import Query, Router
 from ninja.responses import codes_4xx
+from pydantic import Field
 from srl.models import Games, NowStreaming, Players
 
 from api.docs.streams import STREAMS_DELETE, STREAMS_LIVE, STREAMS_POST, STREAMS_PUT
-from api.permissions import admin_auth, moderator_auth, public_auth
+from api.permissions import moderator_auth, public_auth
 from api.schemas.base import ErrorResponse
 from api.schemas.streams import StreamCreateSchema, StreamSchema, StreamUpdateSchema
 
 router = Router()
 
 
-def get_mock_streaming_data() -> List[Dict[str, Any]]:
-    """
-    Mock streaming data for demonstration.
+def get_mock_streaming_data() -> list[dict[str, Any]]:
+    """Mock streaming data for demonstration.
 
     In production, this would integrate with actual streaming APIs
     like Twitch, YouTube, etc. to get real-time streaming data.
@@ -47,9 +48,10 @@ def get_mock_streaming_data() -> List[Dict[str, Any]]:
 
 @router.get(
     "/live",
-    response={200: List[StreamSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: list[StreamSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Live Streamers",
-    description="""
+    description=dedent(
+        """
     Get list of currently live streamers playing speedrun games.
 
     **Supported Parameters:**
@@ -65,23 +67,16 @@ def get_mock_streaming_data() -> List[Dict[str, Any]]:
 
     **Note:** This endpoint provides mock data for demonstration.
     In production, integrate with actual streaming platform APIs.
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=STREAMS_LIVE,
 )
 def get_live_streams(
     request: HttpRequest,
-    game_id: Optional[str] = Query(
-        None,
-        description="Filter by game",
-    ),
-    limit: int = Query(
-        20,
-        ge=1,
-        le=50,
-        description="Max results",
-    ),
-) -> Tuple[int, Union[List[StreamSchema], ErrorResponse]]:
+    game_id: Annotated[str | None, Query, Field(description="Filter by game")] = None,
+    limit: Annotated[int, Query, Field(ge=1, le=50, description="Max results")] = 20,
+) -> tuple[int, list[StreamSchema] | ErrorResponse]:
     try:
         # TODO: DELETE BEFORE PROD.
         streams_data = get_mock_streaming_data()
@@ -114,25 +109,26 @@ def get_live_streams(
     "/",
     response={200: StreamSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Stream",
-    description="""
-    Creates a new stream record for a player.
+    description=dedent(
+        """Creates a new stream record for a player.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
     **Request Body:**
     - `player_id` (str): Player ID who is streaming.
-    - `game_id` (Optional[str]): Game ID being played.
+    - `game_id` (str | None): Game ID being played.
     - `title` (str): Stream title.
     - `offline_ct` (int): Offline counter (minutes since last seen).
-    - `stream_time` (Optional[datetime]): Stream start time (ISO format).
-    """,
+    - `stream_time` (datetime | None): Stream start time (ISO format).
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=STREAMS_POST,
 )
 def create_stream(
     request: HttpRequest,
     stream_data: StreamCreateSchema,
-) -> Tuple[int, Union[StreamSchema, ErrorResponse]]:
+) -> tuple[int, StreamSchema | ErrorResponse]:
     """Create a new stream for a player."""
     try:
         player = Players.objects.filter(id=stream_data.player_id).first()
@@ -179,8 +175,8 @@ def create_stream(
     "/{player_id}",
     response={200: StreamSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Stream",
-    description="""
-    Updates the stream for a specific player.
+    description=dedent(
+        """Updates the stream for a specific player.
 
     **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
@@ -188,11 +184,12 @@ def create_stream(
     - `player_id` (str): Unique ID of the player whose stream is being updated.
 
     **Request Body:**
-    - `game_id` (Optional[str]): Updated game ID being played.
-    - `title` (Optional[str]): Updated stream title.
-    - `offline_ct` (Optional[int]): Updated offline counter (minutes since last seen).
-    - `stream_time` (Optional[datetime]): Updated stream start time (ISO format).
-    """,
+    - `game_id` (str | None): Updated game ID being played.
+    - `title` (str | None): Updated stream title.
+    - `offline_ct` (int | None): Updated offline counter (minutes since last seen).
+    - `stream_time` (datetime | None): Updated stream start time (ISO format).
+    """
+    ),
     auth=moderator_auth,
     openapi_extra=STREAMS_PUT,
 )
@@ -200,7 +197,7 @@ def update_stream(
     request: HttpRequest,
     player_id: str,
     stream_data: StreamUpdateSchema,
-) -> Tuple[int, Union[StreamSchema, ErrorResponse]]:
+) -> tuple[int, StreamSchema | ErrorResponse]:
     try:
         player = Players.objects.filter(id=player_id).first()
         if not player:
@@ -247,23 +244,24 @@ def update_stream(
 
 @router.delete(
     "/{player_id}",
-    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Stream",
-    description="""
-    Deletes the stream for a specific player.
+    description=dedent(
+        """Deletes the stream for a specific player.
 
-    **REQUIRES ADMIN ACCESS.**
+    **REQUIRES MODERATOR ACCESS OR HIGHER.**
 
     **Supported Parameters:**
     - `player_id` (str): Unique ID of the player whose stream is being deleted.
-    """,
-    auth=admin_auth,
+    """
+    ),
+    auth=moderator_auth,
     openapi_extra=STREAMS_DELETE,
 )
 def delete_stream(
     request: HttpRequest,
     player_id: str,
-) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
+) -> tuple[int, dict[str, str] | ErrorResponse]:
     try:
         player = Players.objects.filter(id=player_id).first()
         if not player:
@@ -282,7 +280,9 @@ def delete_stream(
         player_name = player.nickname if player.nickname else player.name
         stream.delete()
 
-        return 200, {"message": f"Stream for player '{player_name}' deleted successfully"}
+        return 200, {
+            "message": f"Stream for player '{player_name}' deleted successfully"
+        }
 
     except Exception as e:
         return 500, ErrorResponse(

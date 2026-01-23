@@ -1,10 +1,12 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from textwrap import dedent
+from typing import TYPE_CHECKING, Annotated, Any
 
 from django.db.models import Case, IntegerField, Prefetch, Q, QuerySet, Value, When
 from django.db.models.functions import TruncDate
 from django.http import HttpRequest
 from ninja import Path, Query, Router
 from ninja.responses import codes_4xx
+from pydantic import Field
 from srl.models import Categories, Games, Levels, Runs, Variables
 
 from api.docs.website import GAME_CATEGORIES_GET, GAME_LEVELS_GET, MAIN_PAGE_GET
@@ -19,9 +21,10 @@ router = Router()
 
 @router.get(
     "/main",
-    response={200: Dict[str, Any], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: dict[str, Any], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Main Page Data",
-    description="""
+    description=dedent(
+        """
     Get aggregated data for the website main page including latest world records,
     personal bests, and current records for featured categories.
 
@@ -39,14 +42,17 @@ router = Router()
     - `/website/main?data=latest-wrs,latest-pbs,records` - All data
 
     **Note:** This is an aggregation endpoint optimized for the React frontend homepage.
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=MAIN_PAGE_GET,
 )
 def get_main_page_data(
     request: HttpRequest,
-    data: Optional[str] = Query(None, description="Comma-separated data types"),
-) -> Tuple[int, Union[Dict[str, Any], ErrorResponse]]:
+    data: Annotated[
+        str | None, Query, Field(description="Comma-separated data types")
+    ] = None,
+) -> tuple[int, dict[str, Any] | ErrorResponse]:
     """Get main page data with flexible data selection."""
     if not data:
         return 400, ErrorResponse(
@@ -293,9 +299,10 @@ def get_main_page_data(
 
 @router.get(
     "/game/{game_id}/categories",
-    response={200: List[Dict[str, Any]], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: list[dict[str, Any]], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Game Categories with Variables",
-    description="""
+    description=dedent(
+        """
     Get all categories for a game with their variables and values.
     Optimized for the category selection interface.
 
@@ -310,17 +317,21 @@ def get_main_page_data(
 
     **Note:** This is an aggregation endpoint optimized for the React frontend game page.
     Returns categories with embedded variables and values in a single request.
-    """,
+    """
+    ),
     auth=read_only_auth,
     openapi_extra=GAME_CATEGORIES_GET,
 )
 def get_game_categories(
     request: HttpRequest,
-    game_id: str = Path(
-        ...,
-        description="Game ID or slug",
-    ),
-) -> Tuple[int, Union[List[Dict[str, Any]], ErrorResponse]]:
+    game_id: Annotated[
+        str,
+        Path(
+            ...,
+            description="Game ID or slug",
+        ),
+    ],
+) -> tuple[int, list[dict[str, Any]] | ErrorResponse]:
     """Get categories for a game with variables."""
     if len(game_id) > 15:
         return 400, ErrorResponse(
@@ -417,9 +428,10 @@ def get_game_categories(
 
 @router.get(
     "/game/{game_id}/levels",
-    response={200: List[Dict[str, Any]], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: list[dict[str, Any]], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Game Levels with Variables",
-    description="""
+    description=dedent(
+        """
     Get all levels for a game with their variables and values.
     Used for Individual Level (IL) speedrun interfaces.
 
@@ -434,13 +446,14 @@ def get_game_categories(
 
     **Note:** This is an aggregation endpoint optimized for the React frontend IL page.
     Returns levels with embedded variables and values in a single request.
-    """,
+    """
+    ),
     auth=read_only_auth,
     openapi_extra=GAME_LEVELS_GET,
 )
 def get_game_levels(
     request: HttpRequest, game_id: str = Path(..., description="Game ID or slug")
-) -> Tuple[int, Union[List[Dict[str, Any]], ErrorResponse]]:
+) -> tuple[int, list[dict[str, Any]] | ErrorResponse]:
     """Get levels for a game with variables (converted from Web_Levels.py)."""
     if len(game_id) > 15:
         return 400, ErrorResponse(

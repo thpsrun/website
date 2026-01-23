@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -20,7 +20,7 @@ class SrcGamesNames(BaseModel):
     """Embedded model to show a game's name and Twitch name."""
 
     international: str
-    twitch: Optional[str] = None
+    twitch: str | None = None
 
 
 class SrcGamesRuleset(BaseModel):
@@ -79,7 +79,7 @@ class SrcCategoriesModel(BaseModel):
     type: str
     scope: SrcCategoriesLevelsScope
     weblink: str
-    rules: Optional[str] = None
+    rules: str | None = None
     game: SrcGamesModel
 
     @field_validator("game", mode="before")
@@ -98,11 +98,11 @@ class SrcLevelsModel(BaseModel):
     id: str
     name: str
     weblink: str
-    rules: Optional[str] = None
+    rules: str | None = None
     links: List[SrcCategoriesLevelsLinks]
 
     @property
-    def game(self) -> Optional[str]:
+    def game(self) -> str | None:
         for link in self.links:
             if link.rel == "game":
                 return link.uri.rstrip("/").split("/")[-1]
@@ -113,14 +113,14 @@ class SrcVariableValuesValue(BaseModel):
     """Embedded model to show a VariableValue's information."""
 
     label: str
-    rules: Optional[str] = None
+    rules: str | None = None
 
 
 class SrcVariableValuesModel(BaseModel):
     """Base model for SRC Values within a Variable."""
 
     values: Dict[str, SrcVariableValuesValue]
-    default: Optional[str] = None
+    default: str | None = None
 
 
 # VARIABLES SCHEMA #
@@ -128,7 +128,7 @@ class SrcVariableScope(BaseModel):
     """Embedded model for scope type of an SRC Variable."""
 
     type: str
-    level: Optional[str] = None
+    level: str | None = None
 
 
 class SrcVariablesModel(BaseModel):
@@ -137,7 +137,7 @@ class SrcVariablesModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     id: str
     name: str
-    category: Optional[str] = None
+    category: str | None = None
     scope: SrcVariableScope
     mandatory: bool = False
     obsoletes: bool = False
@@ -146,23 +146,19 @@ class SrcVariablesModel(BaseModel):
     links: List[SrcCategoriesLevelsLinks]
 
     @property
-    def game(self) -> Optional[str]:
+    def game(self) -> str | None:
         for link in self.links:
             if link.rel == "game":
                 return link.uri.rstrip("/").split("/")[-1]
 
 
 # RUNS SCHEMA #
-class SrcRunsLinks(BaseModel):
-    links: Optional[List[str]]
-
-
 class SrcRunsSystem(BaseModel):
     """Embedded model for system information for an SRC Run."""
 
     platform: str
     emulated: bool
-    region: Optional[str]
+    region: str | None
 
 
 class SrcRunsStatus(BaseModel):
@@ -171,15 +167,15 @@ class SrcRunsStatus(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     status: str
     examiner: str
-    verify_date: Optional[datetime] = Field(default=None, alias="verify-date")
+    verify_date: datetime | None = Field(default=None, alias="verify-date")
 
 
 class SrcRunsPlayers(BaseModel):
     """Embedded model for player information for an SRC Run."""
 
     rel: str
-    id: Optional[str]
-    uri: Optional[str]
+    id: str | None
+    uri: str | None
 
 
 class SrcRunsTimes(BaseModel):
@@ -191,51 +187,75 @@ class SrcRunsTimes(BaseModel):
     ingame_t: float = 0
 
 
+class SrcVideoLink(BaseModel):
+    """Embedded model for returning video links for an SRC Run."""
+
+    # For some reason the SRC API has both sometimes.
+    uri: str | None
+    text: str | None
+
+
+class SrcVideos(BaseModel):
+    """Embedded model for returning the list of video links for an SRC Run."""
+
+    links: list[SrcVideoLink]
+
+
 class SrcRunsModel(BaseModel):
-    """Base Model for SRC Runs with embedded Values."""
+    """Base Model for SRC Runs with embedded Values and Videos."""
 
     id: str
     weblink: str
     game: str
-    level: Optional[str]
-    category: Optional[str]
-    videos: List[SrcRunsLinks]
-    comment: Optional[str]
+    level: str | None
+    category: str | None
+    videos: SrcVideos | None
+    comment: str | None
     status: SrcRunsStatus
     players: List[SrcRunsPlayers]
-    date: Optional[datetime]
-    submitted: Optional[datetime]
+    date: datetime | None
+    submitted: datetime | None
     times: SrcRunsTimes
     system: SrcRunsSystem
     values: Dict[str, str]
 
+    @property
+    def video_uri(self) -> str | None:
+        if self.videos and self.videos.links:
+            return self.videos.links[0].uri
+        return None
+
 
 # PLAYERS SCHEMA #
 class SrcPlayersNames(BaseModel):
+    """Embedded model for SRC Players with naming data."""
+
     international: str
-    japanese: Optional[str]
+    japanese: str | None
 
 
 class SrcPlayersModel(BaseModel):
     """Base Model for SRC Players with embedded Values."""
 
     id: str
+    rel: str | None = None
     names: SrcPlayersNames
-    pronouns: Optional[str] = None
+    name: str | None = None
+    pronouns: str | None = None
     weblink: str
-    location: Optional[dict] = None
-    twitch: Optional[dict] = None
-    youtube: Optional[dict] = None
-    assets: Optional[dict] = None
+    location: dict | None = None
+    twitch: dict | None = None
+    youtube: dict | None = None
+    assets: dict | None = None
 
     @property
-    def country_code(self) -> Optional[str]:
+    def country_code(self) -> str | None:
         if self.location and self.location.get("country"):
             return self.location["country"].get("code")
         return None
 
     @property
-    def country_name(self) -> Optional[str]:
+    def country_name(self) -> str | None:
         if self.location and self.location.get("country"):
             names = self.location["country"].get("names")
             if names:
@@ -243,19 +263,46 @@ class SrcPlayersModel(BaseModel):
         return None
 
     @property
-    def twitch_url(self) -> Optional[str]:
+    def twitch_url(self) -> str | None:
         if self.twitch:
             return self.twitch.get("uri")
         return None
 
     @property
-    def youtube_url(self) -> Optional[str]:
+    def youtube_url(self) -> str | None:
         if self.youtube:
             return self.youtube.get("uri")
         return None
 
     @property
-    def pfp(self) -> Optional[str]:
+    def pfp(self) -> str | None:
         if self.assets and self.assets.get("image"):
             return self.assets["image"].get("uri")
         return None
+
+
+# LEADERBOARD SCHEMA #
+class SrcLeaderboardRun(BaseModel):
+    """Embedded model for SRC Leaderboard data to show placement and run data."""
+
+    place: int
+    run: SrcRunsModel
+
+
+class SrcLeaderboardPlayers(BaseModel):
+    """Embedded model for SRC Leaderboards to show player metadata to board."""
+
+    data: List[SrcPlayersModel]
+
+
+class SrcLeaderboardModel(BaseModel):
+    """Base model for SRC Leaderboards data with embedded metadata."""
+
+    weblink: str
+    game: str
+    category: str | None
+    level: str | None
+    timing: str
+    values: dict | None
+    runs: List[SrcLeaderboardRun]
+    players: SrcLeaderboardPlayers | None = None

@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import Field
 
@@ -27,10 +26,10 @@ class GuideSchema(SlugMixin, TimestampMixin, BaseEmbedSchema):
         slug (str): URL-friendly version of title.
         short_description (str): Brief description of guide content.
         content (str): Full guide content (Markdown supported).
-        created_at (Optional[datetime]): When guide was created.
-        updated_at (Optional[datetime]): When guide was last updated.
-        game (Optional[GameSchema]): Associated game - included with ?embed=game.
-        tags (Optional[List[TagSchema]]): Associated tags - included with ?embed=tags.
+        created_at (datetime | None): When guide was created.
+        updated_at (datetime | None): When guide was last updated.
+        game (GameSchema | None): Associated game - included with ?embed=game.
+        tags (list[TagSchema] | None): Associated tags - included with ?embed=tags.
     """
 
     title: str = Field(..., description="Guide title")
@@ -39,12 +38,8 @@ class GuideSchema(SlugMixin, TimestampMixin, BaseEmbedSchema):
     )
     content: str = Field(..., description="Full guide content (supports Markdown)")
 
-    game: Optional[GameSchema] = Field(
-        default=None, description="Associated game"
-    )
-    tags: Optional[List[TagSchema]] = Field(
-        default=None, description="Guide tags"
-    )
+    game: GameSchema | None = Field(default=None, description="Associated game")
+    tags: list[TagSchema] | None = Field(default=None, description="Guide tags")
 
 
 class GuideCreateSchema(BaseEmbedSchema):
@@ -53,14 +48,14 @@ class GuideCreateSchema(BaseEmbedSchema):
     Attributes:
         title (str): Guide title.
         game_id (str): Associated game ID.
-        tag_ids (Optional[List[int]]): List of tag IDs to associate with guide.
+        tag_ids (list[TagSchema] | None): List of tag IDs to associate with guide.
         short_description (str): Brief description.
         content (str): Full guide content.
     """
 
     title: str = Field(..., min_length=1, max_length=200, description="Guide title")
     game_id: str = Field(..., description="Associated game ID")
-    tag_ids: Optional[List[int]] = Field(
+    tag_ids: list[int] | None = Field(
         default=[], description="List of tag IDs to associate with guide"
     )
     short_description: str = Field(
@@ -78,36 +73,34 @@ class GuideUpdateSchema(BaseEmbedSchema):
     """Schema for updating existing guides.
 
     Attributes:
-        title (Optional[str]): Updated guide title.
-        slug (Optional[str]): Updated URL-friendly slug.
-        game_id (Optional[str]): Updated associated game ID.
-        tag_ids (Optional[List[int]]): Updated list of tag IDs.
-        short_description (Optional[str]): Updated brief description.
-        content (Optional[str]): Updated full content.
+        title (str | None): Updated guide title.
+        slug (str | None): Updated URL-friendly slug.
+        game_id (str | None): Updated associated game ID.
+        tag_ids (list[str] | None): Updated list of tag IDs.
+        short_description (str | None): Updated brief description.
+        content (str | None): Updated full content.
     """
 
-    title: Optional[str] = Field(
+    title: str | None = Field(
         default=None, min_length=1, max_length=200, description="Updated guide title"
     )
-    slug: Optional[str] = Field(
+    slug: str | None = Field(
         default=None,
         min_length=1,
         max_length=200,
         description="Updated URL-friendly slug",
     )
-    game_id: Optional[str] = Field(
-        default=None, description="Updated associated game ID"
-    )
-    tag_ids: Optional[List[int]] = Field(
+    game_id: str | None = Field(default=None, description="Updated associated game ID")
+    tag_ids: list[str] | None = Field(
         default=None, description="Updated list of tag IDs"
     )
-    short_description: Optional[str] = Field(
+    short_description: str | None = Field(
         default=None,
         min_length=1,
         max_length=500,
         description="Updated brief description",
     )
-    content: Optional[str] = Field(
+    content: str | None = Field(
         default=None, min_length=1, description="Updated guide content"
     )
 
@@ -130,21 +123,21 @@ class TagUpdateSchema(BaseEmbedSchema):
     """Schema for updating existing tags.
 
     Attributes:
-        name (Optional[str]): Updated tag name.
-        slug (Optional[str]): Updated URL-friendly slug.
-        description (Optional[str]): Updated tag description.
+        name (str | None): Updated tag name.
+        slug (str | None): Updated URL-friendly slug.
+        description (str | None): Updated tag description.
     """
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         default=None, min_length=1, max_length=100, description="Updated tag name"
     )
-    slug: Optional[str] = Field(
+    slug: str | None = Field(
         default=None,
         min_length=1,
         max_length=200,
         description="Updated URL-friendly slug",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         min_length=1,
         max_length=500,
@@ -159,23 +152,21 @@ class GuideListSchema(BaseEmbedSchema):
         title (str): Guide title.
         slug (str): URL-friendly slug.
         short_description (str): Brief description.
-        created_at (Optional[datetime]): When guide was created.
-        updated_at (Optional[datetime]): When guide was last updated.
-        game (Optional[GameSchema]): Associated game.
-        tags (Optional[List[TagSchema]]): Associated tags.
+        created_at (datetime | None): When guide was created.
+        updated_at (datetime | None): When guide was last updated.
+        game (GameSchema | None): Associated game.
+        tags (list[TagSchema] | None): Associated tags.
     """
 
     title: str = Field(..., description="Guide title")
     slug: str = Field(..., description="URL-friendly slug")
     short_description: str = Field(..., description="Brief description")
-    created_at: Optional[datetime] = Field(
-        default=None, description="Creation timestamp"
-    )
-    updated_at: Optional[datetime] = Field(
+    created_at: datetime | None = Field(default=None, description="Creation timestamp")
+    updated_at: datetime | None = Field(
         default=None, description="Last update timestamp"
     )
-    game: Optional[GameSchema] = Field(default=None, description="Associated game")
-    tags: Optional[List[TagSchema]] = Field(default=None, description="Associated tags")
+    game: GameSchema | None = Field(default=None, description="Associated game")
+    tags: list[TagSchema] | None = Field(default=None, description="Associated tags")
 
 
 class TagListSchema(BaseEmbedSchema):

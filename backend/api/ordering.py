@@ -1,9 +1,6 @@
-import logging
 from typing import Dict, List
 
-logger = logging.getLogger(__name__)
-
-LEVEL_PRIORITIES: Dict[str, List[str]] = {
+LEVEL_PRIORITIES: dict[str, list[str]] = {
     "thps1": [
         "Warehouse",
         "School",
@@ -268,8 +265,9 @@ LEVEL_PRIORITIES: Dict[str, List[str]] = {
 }
 
 
-def get_ordered_level_names(game_slug: str) -> List[str]:
+def get_ordered_level_names(game_slug: str) -> list[str]:
     """Get the ordered list of level names for a game to export to Django."""
+
     if game_slug not in LEVEL_PRIORITIES:
-        logger.warning(f"No level ordering defined for game: {game_slug}")
+        raise ValueError(f"No level ordering defined for game: {game_slug}")
     return LEVEL_PRIORITIES.get(game_slug, [])

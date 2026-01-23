@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Union
+from textwrap import dedent
 
 from django.db import transaction
 from django.db.models import Q
@@ -22,20 +22,21 @@ router = Router()
 
 @router.get(
     "/all",
-    response={200: List[TagListSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: list[TagListSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="List All Tags",
-    description="""
-    Returns a list of all available tags to categorize guides.
+    description=dedent(
+        """Returns a list of all available tags to categorize guides.
 
     **Examples:**
     - `/tags/all` - Get all tags
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=TAGS_ALL,
 )
 def list_tags(
     request: HttpRequest,
-) -> Tuple[int, List[TagListSchema]]:
+) -> tuple[int, list[TagListSchema]]:
     tags = Tags.objects.all().order_by("name")
     return 200, [TagListSchema.model_validate(tag) for tag in tags]
 
@@ -44,8 +45,8 @@ def list_tags(
     "/{slug}",
     response={200: TagSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Tag by Slug",
-    description="""
-    Get a specific tag by its slug.
+    description=dedent(
+        """Get a specific tag by its slug.
 
     **Supported Parameters:**
     - `slug` (str): URL-friendly tag identifier
@@ -53,14 +54,15 @@ def list_tags(
     **Examples:**
     - `/tags/tricks` - Get the "Tricks" tag
     - `/tags/glitches` - Get the "Glitches" tag
-    """,
+    """
+    ),
     auth=public_auth,
     openapi_extra=TAGS_GET,
 )
 def get_tag(
     request: HttpRequest,
     slug: str,
-) -> Tuple[int, Union[TagSchema, ErrorResponse]]:
+) -> tuple[int, TagSchema | ErrorResponse]:
     tag = Tags.objects.filter(slug__iexact=slug).first()
     if not tag:
         return 404, ErrorResponse(
@@ -75,22 +77,23 @@ def get_tag(
     "/",
     response={200: TagSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Create Tag",
-    description="""
-    Creates a brand new tag for categorizing guides.
+    description=dedent(
+        """Creates a brand new tag for categorizing guides.
 
     **REQUIRES CONTRIBUTOR ACCESS OR HIGHER.**
 
     **Request Body:**
     - `name` (str): Name of the tag
     - `description` (str): Description of what this tag represents
-    """,
+    """
+    ),
     auth=contributor_auth,
     openapi_extra=TAGS_POST,
 )
 def create_tag(
     request: HttpRequest,
     data: TagCreateSchema,
-) -> Tuple[int, Union[TagSchema, ErrorResponse]]:
+) -> tuple[int, TagSchema | ErrorResponse]:
     existing_tag = Tags.objects.filter(name__iexact=data.name).first()
     if existing_tag:
         return 400, ErrorResponse(
@@ -115,8 +118,8 @@ def create_tag(
     "/{slug}",
     response={200: TagSchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Update Tag",
-    description="""
-    Update an existing tag.
+    description=dedent(
+        """Update an existing tag.
 
     **REQUIRES CONTRIBUTOR ACCESS OR HIGHER.**
 
@@ -124,10 +127,11 @@ def create_tag(
     - `slug` (str): Tag slug to update
 
     **Request Body:**
-    - `name` (Optional[str]): Updated tag name
-    - `slug` (Optional[str]): Updated URL-friendly slug
-    - `description` (Optional[str]): Updated tag description
-    """,
+    - `name` (str | None): Updated tag name
+    - `slug` (str | None): Updated URL-friendly slug
+    - `description` (str | None): Updated tag description
+    """
+    ),
     auth=contributor_auth,
     openapi_extra=TAGS_PUT,
 )
@@ -135,7 +139,7 @@ def update_tag(
     request: HttpRequest,
     slug: str,
     data: TagUpdateSchema,
-) -> Tuple[int, Union[TagSchema, ErrorResponse]]:
+) -> tuple[int, TagSchema | ErrorResponse]:
     tag = Tags.objects.filter(slug__iexact=slug).first()
     if not tag:
         return 404, ErrorResponse(
@@ -179,23 +183,24 @@ def update_tag(
 
 @router.delete(
     "/{slug}",
-    response={200: Dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Delete Tag",
-    description="""
-    Delete a tag.
+    description=dedent(
+        """Delete a tag.
 
     **REQUIRES CONTRIBUTOR ACCESS OR HIGHER.**
 
     **Supported Parameters:**
     - `slug` (str): Unique ID or the slug of the tag to remove.
-    """,
+    """
+    ),
     auth=contributor_auth,
     openapi_extra=TAGS_DELETE,
 )
 def delete_tag(
     request: HttpRequest,
     slug: str,
-) -> Tuple[int, Union[Dict[str, str], ErrorResponse]]:
+) -> tuple[int, dict[str, str] | ErrorResponse]:
     tag = Tags.objects.filter(Q(slug__iexact=slug) | Q(pk__iexact=slug)).first()
     if not tag:
         return 404, ErrorResponse(

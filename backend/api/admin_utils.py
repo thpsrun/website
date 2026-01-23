@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry
 from django.http import HttpRequest
@@ -60,14 +58,14 @@ class APIActivityLogEntryAdmin(admin.ModelAdmin):
     def has_change_permission(
         self,
         request: HttpRequest,
-        obj: Optional[LogEntry] = None,
+        obj: LogEntry | None = None,
     ) -> bool:
         return False
 
     def has_delete_permission(
         self,
         request: HttpRequest,
-        obj: Optional[LogEntry] = None,
+        obj: LogEntry | None = None,
     ) -> bool:
         return getattr(request.user, "is_superuser", False)
 

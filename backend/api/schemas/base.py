@@ -1,10 +1,8 @@
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Set, Tuple
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_serializer
 
-
-# Literal types for model choices - these match the Django model choices exactly
 RunTypeType = Literal["main", "il"]
 RunStatusType = Literal["verified", "new", "rejected"]
 CategoryTypeType = Literal["per-level", "per-game"]
@@ -19,11 +17,11 @@ class ErrorResponse(BaseModel):
 
     Attributes:
         error (str): Error message sent to the client.
-        details (Optional[Dict[str, Any]]): Additional details related to the error.
+        details (dict[str, Any] | None): Additional details related to the error.
     """
 
     error: str = Field(..., description="Error message")
-    details: Optional[Dict[str, Any]] = Field(
+    details: dict[str, Any] | None = Field(
         default=None, description="Additional error details"
     )
 
@@ -35,11 +33,11 @@ class ValidationErrorResponse(BaseModel):
 
     Attributes:
         error (str): Error message sent to the client.
-        validation_errors (Dict[str, List[str]]): Field-specific validation errors.
+        validation_errors (dict[str, Any]): Field-specific validation errors.
     """
 
     error: str = Field(default="Validation failed")
-    validation_errors: Dict[str, List[str]] = Field(
+    validation_errors: dict[str, list[str]] = Field(
         ..., description="Field validation errors"
     )
 
@@ -49,15 +47,15 @@ class PaginatedResponse(BaseModel):
 
     Attributes:
         count (int): Total number of items being returned.
-        next (Optional[str]): URL for the next page.
-        previous (Optional[str]): URL for previous page.
+        next (str | None): URL for the next page.
+        previous (str | None): URL for previous page.
         results (List[Dict[str, Any]]): Actual data being returned.
     """
 
     count: int = Field(..., description="Total number of items")
-    next: Optional[str] = Field(default=None, description="URL for next page")
-    previous: Optional[str] = Field(default=None, description="URL for previous page")
-    results: List[Dict[str, Any]] = Field(..., description="Page data")
+    next: str | None = Field(default=None, description="URL for next page")
+    previous: str | None = Field(default=None, description="URL for previous page")
+    results: list[dict[str, Any]] = Field(..., description="Page data")
 
 
 class BaseEmbedSchema(BaseModel):
@@ -78,16 +76,16 @@ class TimestampMixin(BaseModel):
     Standardizes timestamp handling and ensures ISO format serialization.
 
     Attributes:
-        created_at (Optional[datetime]): When the object was created.
-        updated_at (Optional[datetime]): When the object was last updated.
+        created_at (datetime | None): When the object was created.
+        updated_at (datetime | None): When the object was last updated.
     """
 
-    created_at: Optional[datetime] = Field(default=None, description="Created")
-    updated_at: Optional[datetime] = Field(default=None, description="Last Updated")
+    created_at: datetime | None = Field(default=None, description="Created")
+    updated_at: datetime | None = Field(default=None, description="Last Updated")
 
     @field_serializer("created_at", "updated_at")
     @classmethod
-    def serialize_datetime(cls, value: Optional[datetime]) -> Optional[str]:
+    def serialize_datetime(cls, value: datetime | None) -> str | None:
         """Serialize datetime fields to ISO format."""
         return value.isoformat() if value else None
 
@@ -104,7 +102,7 @@ class SlugMixin(BaseModel):
     slug: str = Field(..., description="URL-friendly slug")
 
 
-VALID_EMBEDS: Dict[str, Set[str]] = {
+VALID_EMBEDS: dict[str, set[str]] = {
     "games": {"categories", "levels", "platforms"},
     "categories": {"game", "variables", "values"},
     "levels": {"game", "variables", "values"},
@@ -118,16 +116,16 @@ VALID_EMBEDS: Dict[str, Set[str]] = {
 
 def validate_embeds(
     endpoint: str,
-    embeds: List[str],
-) -> List[str]:
+    embeds: list[str],
+) -> list[str]:
     """Validation to ensure requested embeds are allowed on the endpoint.
 
-    Args:
+    Arguments:
         endpoint (str): API endpoint name.
         embeds (List[str]): List of requested embed fields.
 
     Returns:
         List[str]: List of invalid embeds; empty if all valid.
     """
-    valid_for_endpoint: Set[str] = VALID_EMBEDS.get(endpoint, set())
+    valid_for_endpoint: set[str] = VALID_EMBEDS.get(endpoint, set())
     return [embed for embed in embeds if embed not in valid_for_endpoint]
