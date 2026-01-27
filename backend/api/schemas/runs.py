@@ -3,7 +3,18 @@ from typing import Any
 
 from pydantic import Field, field_validator
 
-from api.schemas.base import BaseEmbedSchema
+from api.schemas.base import BaseEmbedSchema, BaseModel
+
+
+class RunBaseSchemaTimes(BaseModel):
+    """Base schema that handles the time"""
+
+    time: str | None = None
+    time_secs: float | None = None
+    timenl: str | None = None
+    timenl_secs: float | None = None
+    timeigt: str | None = None
+    timeigt_secs: float | None = None
 
 
 class RunBaseSchema(BaseEmbedSchema):
@@ -44,54 +55,82 @@ class RunSchema(RunBaseSchema):
     """Complete run schema with optional embedded data.
 
     Attributes:
-        game (dict | None): Game information - included with ?embed=game.
-        category (dict | None): Category information - included with ?embed=category.
-        level (dict | None): Level information - included with ?embed=level.
+        game (str | dict | None): Game ID (default) or full game info with ?embed=game.
+        category (str | dict | None): Category ID (default) or full category info with
+            ?embed=category.
+        level (str | dict | None): Level ID (default) or full level info with ?embed=level.
         players (List[dict]): All players who participated in this run (always included).
-        variables (List[dict] | None): Variable selections - included with ?embed=variables.
+        variables (dict[str, str] | list[dict]): Variable ID:Value ID mapping (default) or
+            full variable info with ?embed=variables.
     """
 
-    game: dict | None = Field(None, description="Game information")
-    category: dict | None = Field(None, description="Category information")
-    level: dict | None = Field(None, description="Level information")
-    players: list[dict] = Field(
-        default_factory=list, description="Players who participated"
+    game: str | dict | None = Field(
+        None, description="Game ID or embedded game information"
     )
-    variables: list[dict] | None = Field(None, description="Variable selections")
+    category: str | dict | None = Field(
+        None,
+        description="Category ID or embedded category information",
+    )
+    level: str | dict | None = Field(
+        None, description="Level ID or embedded level information"
+    )
+    players: list[dict] = Field(
+        default_factory=list,
+        description="Players who participated",
+    )
+    variables: dict[str, str] | list[dict] = Field(
+        default_factory=dict,
+        description="Variable ID:Value ID mapping or embedded variable information",
+    )
 
     @field_validator("game", "category", "level", mode="before")
     @classmethod
-    def convert_model_to_none(cls, v: Any) -> dict | None:
-        """Convert Django model instance to None if not explicitly embedded."""
+    def convert_model_to_id(
+        cls,
+        v: Any,
+    ) -> str | dict | None:
+        """Convert Django model instance to its ID string."""
         if v is None:
             return None
         if isinstance(v, dict):
             return v
-        # If it's a Django model, return None (embeds will be applied separately)
+        if isinstance(v, str):
+            return v
+        if hasattr(v, "id"):
+            return v.id
         return None
 
     @field_validator("variables", mode="before")
     @classmethod
-    def convert_variables_manager_to_none(cls, v: Any) -> list[dict] | None:
-        """Convert Django ManyRelatedManager to None if not explicitly embedded."""
+    def convert_variables_to_mapping(
+        cls,
+        v: Any,
+    ) -> dict[str, str] | list[dict]:
+        """Convert Django ManyRelatedManager to variable_id:value_id mapping.
+
+        Access the through table (RunVariableValues) to get the variable/value pairs.
+        """
         if v is None:
-            return None
+            return {}
+        if isinstance(v, dict):
+            return v
         if isinstance(v, list):
             return v
-        # If it's a Django manager, return None (embeds will be applied separately)
         if hasattr(v, "all"):
-            return None
-        return v
+            return {}
+        return {}
 
     @field_validator("players", mode="before")
     @classmethod
-    def convert_players_manager_to_list(cls, v: Any) -> list[dict]:
+    def convert_players_manager_to_list(
+        cls,
+        v: Any,
+    ) -> list[dict]:
         """Convert Django ManyRelatedManager to empty list."""
         if v is None:
             return []
         if isinstance(v, list):
             return v
-        # If it's a Django manager, return empty list (will be populated by router)
         if hasattr(v, "all"):
             return []
         return []

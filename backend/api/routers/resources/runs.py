@@ -59,6 +59,28 @@ def get_run_players(
     return players_list
 
 
+def get_run_variables(
+    run: Runs,
+) -> dict[str, str]:
+    """Get variable_id:value_id mapping for a run.
+
+    This is always included in run responses (not an embed).
+    Returns the through table data as {variable_id: value_id} pairs.
+    """
+    variable_mapping: dict[str, str] = {}
+
+    # Query the through table directly
+    run_variable_values = RunVariableValues.objects.filter(
+        run=run,
+    ).select_related("variable", "value")
+
+    for rvv in run_variable_values:
+        if rvv.variable and rvv.value:
+            variable_mapping[rvv.variable.id] = rvv.value.value
+
+    return variable_mapping
+
+
 def apply_run_embeds(
     run: Runs,
     embed_fields: list[str],
@@ -248,6 +270,7 @@ def get_all_runs(
             run_data = RunSchema.model_validate(run)
 
             run_data.players = get_run_players(run)
+            run_data.variables = get_run_variables(run)
 
             if embed_fields:
                 embed_data = apply_run_embeds(run, embed_fields)
@@ -348,6 +371,7 @@ def get_run(
         run_data = RunSchema.model_validate(run)
 
         run_data.players = get_run_players(run)
+        run_data.variables = get_run_variables(run)
 
         if embed_fields:
             embed_data = apply_run_embeds(run, embed_fields)
@@ -529,6 +553,7 @@ def create_run(
             )
         response = RunSchema.model_validate(refetched_run)
         response.players = get_run_players(refetched_run)
+        response.variables = get_run_variables(refetched_run)
         return 200, response
 
     except Exception as e:
@@ -690,6 +715,7 @@ def update_run(
             )
         response = RunSchema.model_validate(refetched_run)
         response.players = get_run_players(refetched_run)
+        response.variables = get_run_variables(refetched_run)
         return 200, response
 
     except Exception as e:

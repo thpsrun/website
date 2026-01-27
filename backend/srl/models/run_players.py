@@ -29,7 +29,9 @@ class RunPlayers(models.Model):
         auto_now_add=True,
         null=True,
         blank=True,
-        help_text="Timestamp when this player-run association was created.",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
     )
 
     def __str__(self) -> str:

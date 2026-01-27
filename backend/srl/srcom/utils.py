@@ -208,7 +208,7 @@ def update_obsolete(
             "timeigt_secs",
         )
         .filter(
-            run_type=run_type, game_id=game_id, subcategory=subcategory, obsolete=False
+            runtype=run_type, game_id=game_id, subcategory=subcategory, obsolete=False
         )
     )
 

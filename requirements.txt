@@ -9,9 +9,10 @@ Django==6.0.*
 django-bootstrap5==26.*
 django-classy-tags==4.1.*
 django-cors-headers==4.8.*
-django-debug-toolbar==6.1.*
+django-debug-toolbar==6.2.*
 django-environ==0.12.*
 django-ratelimit==4.1.*
+django-redis==6.*
 django-resized==1.0.*
 django-sekizai==4.1.*
 django-ninja==1.5.*
@@ -33,6 +34,6 @@ rsa==4.9.*
 tzdata==2025.*
 uritemplate==4.2.*
 urllib3>=2.5.0
-wheel==0.45.*
+wheel==0.46.*
 whitenoise==6.11.*
 yarl==1.22.*

@@ -67,18 +67,18 @@ MAIN_PAGE_GET = {
                 }
             },
         },
-        400: {"description": "Invalid data types requested or missing data parameter."},
+        400: {"description": "Invalid embed types requested or missing embed parameter."},
         429: {"description": "Rate limit exceeded, calm your horses."},
         500: {"description": "Server Error. Error is logged."},
     },
     "parameters": [
         {
-            "name": "data",
+            "name": "embed",
             "in": "query",
             "required": True,
             "example": "latest-wrs,latest-pbs,records",
             "schema": {"type": "string"},
-            "description": "Comma-separated data types: latest-wrs, latest-pbs, records",
+            "description": "Comma-separated embed types: latest-wrs, latest-pbs, records",
         },
     ],
 }

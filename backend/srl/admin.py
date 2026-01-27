@@ -25,7 +25,6 @@ from srl.models import (
     VariableValues,
 )
 from srl.views import (
-    ImportObsoleteView,
     RefreshGameRunsView,
     UpdateGameRunsView,
     UpdateGameView,
@@ -295,15 +294,15 @@ class PlayersAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(UpdatePlayerView.as_view()),
                 name="update_player",
             ),
-            path(
-                "import-obsolete/",
-                self.admin_site.admin_view(ImportObsoleteView.as_view()),
-                name="import_obsolete",
-            ),
         ]
         return custom_urls + urls
 
 
+""" path(
+    "import-obsolete/",
+    self.admin_site.admin_view(ImportObsoleteView.as_view()),
+    name="import_obsolete",
+), """
 admin.site.register(Series, SeriesAdmin)
 admin.site.register(Games, GameAdmin)
 admin.site.register(Awards, DefaultAdmin)

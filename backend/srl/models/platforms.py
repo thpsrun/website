@@ -21,6 +21,12 @@ class Platforms(models.Model):
         verbose_name="Slug",
         blank=True,
     )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     def save(self, *args, **kwargs):
         if not self.slug:

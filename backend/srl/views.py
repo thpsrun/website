@@ -1,5 +1,4 @@
 import asyncio
-import time
 
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
@@ -7,7 +6,7 @@ from django.views.generic import ListView, View
 
 from srl.init_series import init_series
 
-from .tasks import import_obsolete, update_game, update_game_runs, update_player
+from .tasks import update_game, update_game_runs, update_player
 
 
 class UpdateSeriesView(View):
@@ -80,9 +79,7 @@ class UpdatePlayerView(ListView):
         return redirect("/illiad/srl/players/")
 
 
-class ImportObsoleteView(ListView):
-    """Crawls all selected users to discover all speedruns within the Series to import obsolete."""
-
+""" class ImportObsoleteView(ListView):
     def get(
         self,
         request: HttpRequest,
@@ -94,3 +91,4 @@ class ImportObsoleteView(ListView):
             time.sleep(10)
 
         return redirect("/illiad/srl/players/")
+ """

@@ -69,6 +69,12 @@ class Variables(models.Model):
         verbose_name="Archive Variable",
         default=False,
     )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     def save(self, *args, **kwargs):
         if not self.slug:

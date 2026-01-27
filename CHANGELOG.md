@@ -6,23 +6,25 @@
     *   New main page!
     *   New game screen!
     *   New login system! (Packle)
-*   Versioned the API endpoints for future-proofing and upgrading and testing and stuff. (Packle)
-    *   Upgraded the API to Django Ninja to better support async operations in the future.
+*   Migrated the entire API to Django Ninja.
+    *   Versioned the API endpoints for future-proofing and upgrading and testing and stuff. (Packle)
     *   GET endpoints are now publicly accessible! All other methods will require authentication.
-        *   Roles system has also been added to API keys to manage scope.
+        *   Roles system has also been added to API keys to manage scope and rate-limiting.
     *   Documentation is also publicly accessible via `/api/v1/docs`.
 *   Rebuilt the Guides system to be within the API instead of GitHub.
 *   Consolidated the SRC -> thps.run pipeline from two different chains into one.
-*   Migrated the entire API to Django Ninja, to include role-based API keys to better limit access to endpoints and provide some rate-limiting capabilities.
+*   Caching has been added to all API endpoints.
+    *   Cached responses last ~7 days.
+        *   Upon a run, category, or player account being updated, then this will also update the cached
 
 ### Added
-*   (Planned) Added new login system that allows you to create an account on thps.run and associate your account with SRC.
-    *   (Planned) Logins can be created through the new login interface or through OAuth with Discord.
-    *   (Planned) Added support for token-based one-time passwords (TOTP) to use with your favorite authenticator app or the use of Passkeys.
-        *   (Planned) Contributors and higher are required to have this enabled.
-*   (Planned) Added new user system and profile editing system.
+*   Added new login system that allows you to create an account on thps.run and associate your account with SRC.
+    *   Logins can be created through the new login interface or through OAuth with Discord.
+    *   Added support for token-based one-time passwords (TOTP) to use with your favorite authenticator app or the use of Passkeys.
+        *   Contributors and higher are required to have this enabled.
+*   Added new user system and profile editing system.
     *   NOTE: When a login is created and associated to your SRC account, thps.run/THPSBot will NOT update your fields automatically anymore. You can edit them inyour new profile page!
-*   (Planned) Added new revision to accomodate addition of storing user credentials/OAuth tokens to the Privacy Policy.
+*   Added new revision to accomodate addition of storing user credentials/OAuth tokens to the Privacy Policy.
 *   Added `appear_on_main` field to `Categories` field that will allow for querying only categories that, well, we only want to appear on the main page.
 *   Added `archived` field to `Variables`, `VariableValues`, `Categories`, and `Levels`.
 *   Added a `Categories`-specific override that lets you force change the default timing method of the category.
@@ -53,3 +55,24 @@
 
 ### Misc.
 *   
+
+### TODO
+*   Caching
+*   [LOW] Fix `Categories` `defaulttime` logic to override the main game when they are different.
+*   Fix `init_series.py` to accomodate newly refactored SRC logic.
+*   Add new login system and upgrade `Users` model to accept OAuth tokens from Discord, allow for new signups, and require an SRC account.
+    *   When synced, SRC account should be crawled to see if the user has any runs in the database; if no, then they are restricted.
+    *   TOTP-based tokens and Passkeys should also be added.
+    *   Revise Privacy Policy on new guidelines.
+*   Upgrade the `website` endpoint with custom APIs for:
+    *   Main Page
+    *   Player Profile
+        *   Run History
+    *   Overall Points Leaderboard
+    *   IL Leaderboard Per Game
+        *   Special version for THPS4 and THPS12CE(?)
+    *   Single-game IL Leaderboard
+    *   Full-game leaderboard
+        *   With pagination?
+*   Research caching for website endpoint (~5m?)
+    *   Other endpoints would be exempted

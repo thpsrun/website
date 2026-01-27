@@ -39,6 +39,12 @@ class VariableValues(models.Model):
         blank=True,
         null=True,
     )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -46,4 +52,4 @@ class VariableValues(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.var.game.name}: {self.var.name} - {self.name}"
+        return f"{self.var.game.name}: {self.var.name} - {self.name}"  # type: ignore

@@ -8,9 +8,9 @@ from django.http import HttpRequest, HttpResponse
 from ninja import NinjaAPI, Redoc
 from ninja.errors import ValidationError
 
-from api.routers.aggregations.website import router as website_router
 from api.routers.guides.guides import router as guides_router
 from api.routers.guides.tags import router as tags_router
+from api.routers.public.website import router as website_router
 from api.routers.resources.categories import router as categories_router
 from api.routers.resources.games import router as games_router
 from api.routers.resources.levels import router as levels_router

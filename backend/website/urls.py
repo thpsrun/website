@@ -1,4 +1,5 @@
 import environ
+from api.api import ninja_api
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -13,8 +14,7 @@ admin.site.index_title = "Admin Panel"
 
 urlpatterns = [
     path("illiad/", admin.site.urls),
-    # Django Ninja API
-    path("api/v1/", include("api.urls")),
+    path("api/v1/", ninja_api.urls),
     path("docs/", include("guides.urls")),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 

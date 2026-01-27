@@ -1,5 +1,9 @@
 # syntax=docker/dockerfile:1
 FROM python:3.14.2-bookworm
+
+ARG UID=1002
+ARG GID=1002
+
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV DEBIAN_FRONTEND=noninteractive
@@ -15,8 +19,8 @@ COPY docker/start.sh /app/start.sh
 
 RUN pip install --no-cache-dir -r /tmp/requirements.txt \
   && rm -rf /tmp/requirements.txt \
-  && groupadd -g 1002 app_user \
-  && useradd -u 1002 -g 1002 app_user \
+  && groupadd -g ${GID} app_user \
+  && useradd -u ${UID} -g ${GID} app_user \
   && install -d -m 0755 -o app_user -g app_user /app
 
 WORKDIR /app

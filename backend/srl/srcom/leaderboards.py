@@ -43,20 +43,38 @@ def sync_leaderboards(
         "pointsmax",
     ).get(id=src_lb.game)
 
-    category_info = Categories.objects.only("id", "name").get(id=src_lb.category)
+    category_info = Categories.objects.only(
+        "id",
+        "name",
+        "defaulttime",
+    ).get(id=src_lb.category)
 
     level_info = None
     if src_lb.level:
-        level_info = Levels.objects.only("id", "name").get(id=src_lb.level)
+        level_info = Levels.objects.only(
+            "id",
+            "name",
+        ).get(id=src_lb.level)
 
-    if src_lb.level is None:
-        max_points = game_info.pointsmax
-        if game_info.defaulttime == "realtime_noloads":
-            lrt_fix_check = True
-    else:
         max_points = game_info.ipointsmax
+        base_name = level_info.name
         if game_info.idefaulttime == "realtime_noloads":
             lrt_fix_check = True
+    else:
+        max_points = game_info.pointsmax
+        base_name = category_info.name
+        if game_info.defaulttime == "realtime_noloads":
+            lrt_fix_check = True
+
+    run_variables = src_lb.runs[0].run.values
+
+    if run_variables:
+        subcat_name = build_var_name(
+            base_name=base_name,
+            run_variables=run_variables,
+        )
+    else:
+        subcat_name = ""
 
     base_context = RunSyncContext(
         game_id=game_info.id,
@@ -68,7 +86,7 @@ def sync_leaderboards(
         wr_time_secs=0.0,
         max_points=max_points,
         default_time_type=src_lb.timing,
-        subcategory_name="",
+        subcategory_name=subcat_name,
         download_pfp=False,
         lrt_fix=lrt_fix_check,
         players_data=src_lb.players.data if src_lb.players else [],

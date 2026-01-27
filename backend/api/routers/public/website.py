@@ -10,13 +10,66 @@ from pydantic import Field
 from srl.models import Categories, Games, Levels, Runs, Variables
 
 from api.docs.website import GAME_CATEGORIES_GET, GAME_LEVELS_GET, MAIN_PAGE_GET
-from api.permissions import public_auth, read_only_auth
+from api.ordering import get_ordered_level_names
+from api.permissions import public_auth
 from api.schemas.base import ErrorResponse
 
 if TYPE_CHECKING:
     from srl.models import RunPlayers
 
 router = Router()
+
+
+def player_data_export(
+    run_players: "QuerySet[RunPlayers]",
+) -> list[dict[str, str | None]]:
+    """Build basic player data list from run_players queryset.
+
+    Returns a list of dicts with 'name' and 'country' keys.
+    Falls back to Anonymous if no players exist.
+    """
+    players = [
+        {
+            "name": rp.player.nickname if rp.player.nickname else rp.player.name,
+            "country": rp.player.countrycode.name if rp.player.countrycode else None,
+        }
+        for rp in run_players
+    ]
+    return players if players else [{"name": "Anonymous", "country": None}]
+
+
+def record_player_data_export(
+    run_players: "QuerySet[RunPlayers]",
+    run_url: str,
+    run_date: str | None,
+) -> list[dict[str, Any]]:
+    """Build player data for records with run URL and date.
+
+    Returns a list of dicts with nested 'player' object plus 'url' and 'date'.
+    Falls back to Anonymous if no players exist.
+    """
+    players = [
+        {
+            "player": {
+                "name": rp.player.nickname if rp.player.nickname else rp.player.name,
+                "country": (
+                    rp.player.countrycode.name if rp.player.countrycode else None
+                ),
+            },
+            "url": run_url,
+            "date": run_date,
+        }
+        for rp in run_players
+    ]
+    if not players:
+        players = [
+            {
+                "player": {"name": "Anonymous", "country": None},
+                "url": run_url,
+                "date": run_date,
+            }
+        ]
+    return players
 
 
 @router.get(
@@ -34,12 +87,12 @@ router = Router()
     - `records`: Current WRs for featured categories
 
     **Supported Parameters:**
-    - `data`: Comma-separated list of data types to include (required)
+    - `embed`: Comma-separated list of data types to include (required)
 
     **Examples:**
-    - `/website/main?data=latest-wrs,latest-pbs` - Recent activity
-    - `/website/main?data=records` - Current world records
-    - `/website/main?data=latest-wrs,latest-pbs,records` - All data
+    - `/website/main?embed=latest-wrs,latest-pbs` - Recent activity
+    - `/website/main?embed=records` - Current world records
+    - `/website/main?embed=latest-wrs,latest-pbs,records` - All data
 
     **Note:** This is an aggregation endpoint optimized for the React frontend homepage.
     """
@@ -49,31 +102,33 @@ router = Router()
 )
 def get_main_page_data(
     request: HttpRequest,
-    data: Annotated[
-        str | None, Query, Field(description="Comma-separated data types")
+    embed: Annotated[
+        str | None,
+        Query,
+        Field(description="Comma-separated embed types"),
     ] = None,
 ) -> tuple[int, dict[str, Any] | ErrorResponse]:
-    """Get main page data with flexible data selection."""
-    if not data:
+    """Get main page data with flexible embed selection."""
+    if not embed:
         return 400, ErrorResponse(
-            error="Must specify data types to retrieve",
-            details={"valid_data_types": ["latest-wrs", "latest-pbs", "records"]},
+            error="Must specify embed types to retrieve",
+            details={"valid_embed_types": ["latest-wrs", "latest-pbs", "records"]},
         )
 
-    data_fields = [field.strip() for field in data.split(",") if field.strip()]
-    valid_data_types = {"latest-wrs", "latest-pbs", "records"}
-    invalid_data = [field for field in data_fields if field not in valid_data_types]
+    embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
+    valid_embed_types = {"latest-wrs", "latest-pbs", "records"}
+    invalid_embeds = [field for field in embed_fields if field not in valid_embed_types]
 
-    if invalid_data:
+    if invalid_embeds:
         return 400, ErrorResponse(
-            error=f"Invalid data type(s): {', '.join(invalid_data)}",
-            details={"valid_data_types": list(valid_data_types)},
+            error=f"Invalid embed type(s): {', '.join(invalid_embeds)}",
+            details={"valid_embed_types": list(valid_embed_types)},
         )
 
     try:
         response_data = {}
 
-        if "latest-wrs" in data_fields:
+        if "latest-wrs" in embed_fields:
             wrs: QuerySet[Runs] = (
                 Runs.objects.exclude(vid_status__in=["new", "rejected"])
                 .select_related("game", "category")
@@ -84,26 +139,7 @@ def get_main_page_data(
 
             response_data["latest_wrs"] = []
             for run in wrs:
-                run_players: "QuerySet[RunPlayers]" = run.run_players.select_related(
-                    "player__countrycode"
-                ).order_by("order")
-
-                players_data = []
-                for rp in run_players:
-                    players_data.append(
-                        {
-                            "name": (
-                                rp.player.nickname
-                                if rp.player.nickname
-                                else rp.player.name
-                            ),
-                            "country": (
-                                rp.player.countrycode.name
-                                if rp.player.countrycode
-                                else None
-                            ),
-                        }
-                    )
+                players_data = player_data_export(run.run_players.all())
 
                 response_data["latest_wrs"].append(
                     {
@@ -113,11 +149,7 @@ def get_main_page_data(
                             {"name": run.category.name} if run.category else None
                         ),
                         "subcategory": run.subcategory,
-                        "players": (
-                            players_data
-                            if players_data
-                            else [{"name": "Anonymous", "country": None}]
-                        ),
+                        "players": players_data,
                         "time": run.time,
                         "date": run.v_date.isoformat() if run.v_date else None,
                         "video": run.video,
@@ -125,7 +157,7 @@ def get_main_page_data(
                     }
                 )
 
-        if "latest-pbs" in data_fields:
+        if "latest-pbs" in embed_fields:
             pbs: QuerySet[Runs] = (
                 Runs.objects.exclude(vid_status__in=["new", "rejected"])
                 .select_related("game", "category")
@@ -136,26 +168,7 @@ def get_main_page_data(
 
             response_data["latest_pbs"] = []
             for run in pbs:
-                run_players: "QuerySet[RunPlayers]" = run.run_players.select_related(
-                    "player__countrycode"
-                ).order_by("order")
-
-                players_data = []
-                for rp in run_players:
-                    players_data.append(
-                        {
-                            "name": (
-                                rp.player.nickname
-                                if rp.player.nickname
-                                else rp.player.name
-                            ),
-                            "country": (
-                                rp.player.countrycode.name
-                                if rp.player.countrycode
-                                else None
-                            ),
-                        }
-                    )
+                players_data = player_data_export(run.run_players.all())
 
                 response_data["latest_pbs"].append(
                     {
@@ -165,11 +178,7 @@ def get_main_page_data(
                             {"name": run.category.name} if run.category else None
                         ),
                         "subcategory": run.subcategory,
-                        "players": (
-                            players_data
-                            if players_data
-                            else [{"name": "Anonymous", "country": None}]
-                        ),
+                        "players": players_data,
                         "time": run.time,
                         "place": run.place,
                         "date": run.v_date.isoformat() if run.v_date else None,
@@ -178,7 +187,7 @@ def get_main_page_data(
                     }
                 )
 
-        if "records" in data_fields:
+        if "records" in embed_fields:
             runs = list(
                 Runs.objects.exclude(
                     Q(vid_status__in=["new", "rejected"]) | Q(obsolete=True)
@@ -238,50 +247,16 @@ def get_main_page_data(
                         and record["subcategory"] == run.subcategory
                         and record["time"] == run.time
                     ):
-                        run_players: "QuerySet[RunPlayers]" = (
-                            run.run_players.select_related(
-                                "player__countrycode"
-                            ).order_by("order")
+                        run_date = (
+                            run.o_date.isoformat()
+                            if hasattr(run, "o_date") and run.o_date
+                            else None
                         )
-
-                        players_data = []
-                        for rp in run_players:
-                            players_data.append(
-                                {
-                                    "player": {
-                                        "name": (
-                                            rp.player.nickname
-                                            if rp.player.nickname
-                                            else rp.player.name
-                                        ),
-                                        "country": (
-                                            rp.player.countrycode.name
-                                            if rp.player.countrycode
-                                            else None
-                                        ),
-                                    },
-                                    "url": run.url,
-                                    "date": (
-                                        run.o_date.isoformat()
-                                        if hasattr(run, "o_date") and run.o_date
-                                        else None
-                                    ),
-                                }
-                            )
-
-                        if not players_data:
-                            players_data = [
-                                {
-                                    "player": {"name": "Anonymous", "country": None},
-                                    "url": run.url,
-                                    "date": (
-                                        run.o_date.isoformat()
-                                        if hasattr(run, "o_date") and run.o_date
-                                        else None
-                                    ),
-                                }
-                            ]
-
+                        players_data = record_player_data_export(
+                            run.run_players.all(),
+                            run.url,
+                            run_date,
+                        )
                         record["players"].extend(players_data)
 
             response_data["records"] = sorted(
@@ -319,7 +294,7 @@ def get_main_page_data(
     Returns categories with embedded variables and values in a single request.
     """
     ),
-    auth=read_only_auth,
+    auth=public_auth,
     openapi_extra=GAME_CATEGORIES_GET,
 )
 def get_game_categories(
@@ -448,11 +423,18 @@ def get_game_categories(
     Returns levels with embedded variables and values in a single request.
     """
     ),
-    auth=read_only_auth,
+    auth=public_auth,
     openapi_extra=GAME_LEVELS_GET,
 )
 def get_game_levels(
-    request: HttpRequest, game_id: str = Path(..., description="Game ID or slug")
+    request: HttpRequest,
+    game_id: Annotated[
+        str,
+        Path(
+            ...,
+            description="Game ID or slug",
+        ),
+    ],
 ) -> tuple[int, list[dict[str, Any]] | ErrorResponse]:
     """Get levels for a game with variables (converted from Web_Levels.py)."""
     if len(game_id) > 15:
@@ -474,8 +456,6 @@ def get_game_levels(
         # Orders levels using a game-specific ordering system. The `get_ordered_level_names`
         # function returns levels in the canonical order for each game (e.g., story order
         # or difficulty progression), falling back to alphabetical if no custom order exists.
-        from api.ordering import get_ordered_level_names
-
         get_order = get_ordered_level_names(game.slug)
         level_order = Case(
             *(When(name=name, then=position) for position, name in enumerate(get_order))

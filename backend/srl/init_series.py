@@ -1,15 +1,15 @@
-from srcom import (
+from srl.srcom import (
     sync_categories,
     sync_game,
     sync_levels,
+    sync_obsolete_runs,
     sync_platforms,
-    sync_run,
     sync_variables,
 )
-from srcom.schema.src import SrcGamesModel
+from srl.srcom.schema.src import SrcGamesModel
 
 from .models import Players
-from .tasks import import_obsolete, src_api
+from .tasks import src_api
 
 
 def init_series(
@@ -70,10 +70,9 @@ def init_series(
     # This may take a while...
     redo = 0
     while redo < 2:
-        for player in Players.objects.only("id").values_list("id", flat=True):
-            sync_run()  # <---- TODO
-            import_obsolete.delay(player)
-
+        players = Players.objects.only("id").all()
+        for player in players:
+            sync_obsolete_runs(player.id)
             redo = redo + 1
 
 
