@@ -1,0 +1,430 @@
+from textwrap import dedent
+from typing import Annotated
+
+from django.db.models import Q
+from django.http import HttpRequest
+from ninja import Query, Router
+from ninja.responses import codes_4xx
+from pydantic import Field
+from srl.models import Categories, Games, Variables, VariableValues
+
+from api.v1.docs.categories import (
+    CATEGORIES_ALL,
+    CATEGORIES_DELETE,
+    CATEGORIES_GET,
+    CATEGORIES_POST,
+    CATEGORIES_PUT,
+)
+from api.v1.permissions import admin_auth, moderator_auth, public_auth
+from api.v1.schemas.base import CategoryTypeType, ErrorResponse, validate_embeds
+from api.v1.schemas.categories import (
+    CategoryCreateSchema,
+    CategorySchema,
+    CategoryUpdateSchema,
+)
+from api.v1.utils import get_or_generate_id
+
+router = Router()
+
+
+def category_embeds(
+    category: Categories,
+    embed_fields: list[str],
+) -> dict:
+    """When requested in the `embed_fields` of a category instance, this will apply the embeds."""
+    embeds = {}
+
+    if "game" in embed_fields:
+        if category.game:
+            embeds["game"] = {
+                "id": category.game.id,
+                "name": category.game.name,
+                "slug": category.game.slug,
+                "release": category.game.release.isoformat(),
+                "boxart": category.game.boxart,
+                "twitch": category.game.twitch,
+                "defaulttime": category.game.defaulttime,
+                "idefaulttime": category.game.idefaulttime,
+                "pointsmax": category.game.pointsmax,
+                "ipointsmax": category.game.ipointsmax,
+            }
+
+    # If variables or values are declared, and depending on which is,
+    # additional context and metadata is added to the query.
+    if "variables" in embed_fields or "values" in embed_fields:
+        variables = Variables.objects.filter(
+            game=category.game,
+            cat=category,
+        ).order_by("name")
+
+        variables_data = []
+        for var in variables:
+            var_data = {
+                "id": var.id,
+                "name": var.name,
+                "slug": var.slug,
+                "scope": var.scope,
+                "archive": var.archive,
+            }
+
+            if "values" in embed_fields:
+                values = VariableValues.objects.filter(var=var).order_by("name")
+                var_data["values"] = [
+                    {
+                        "value": val.value,
+                        "name": val.name,
+                        "slug": val.slug,
+                        "archive": val.archive,
+                        "rules": val.rules,
+                    }
+                    for val in values
+                ]
+
+            variables_data.append(var_data)
+
+        # If values are specified in the embed field, then it will embed
+        # the values' metadata to the request. Otherwise, it will return
+        # only basic IDs.
+        embed_key = "values" if "values" in embed_fields else "variables"
+        embeds[embed_key] = variables_data
+
+    return embeds
+
+
+@router.get(
+    "/all",
+    response={200: list[CategorySchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Get All Categories",
+    description=dedent(
+        """Retrieves all categories within a `Games` object, including optional embedding and
+    querying.
+
+    **Supported Parameters:**
+    - `game` (str | None): Filter by specific game ID or its slug.
+    - `type` (str | None): Filter by category type (`per-game` or `per-level`).
+    - `limit` (int | None): Results per page (default 50, max 100).
+    - `offset` (int | None): Results to skip (default 0).
+    - `embed` (list | None): Comma-separated list of resources to embed.
+
+    **Supported Embeds:**
+    - `variables`: Include metadata of the variables belonging to this category.
+    - `values`: Include all metadata for each variable and its values.
+
+    **Examples:**
+    - `/categories/all` - Get all categories
+    - `/categories/all?game=thps4` - Get all categories for THPS4.
+    - `/categories/all?type=per-game&limit=20` - Get first 20 full-game categories.
+    - `/categories/all?game=thps4&embed=variables` - Get THPS4 categories with variables.
+    """
+    ),
+    auth=public_auth,
+    openapi_extra=CATEGORIES_ALL,
+)
+def get_all_categories(
+    request: HttpRequest,
+    game: Annotated[
+        str | None, Query, Field(description="Filter by game ID or slug")
+    ] = None,
+    type: Annotated[
+        CategoryTypeType | None, Query, Field(description="Filter by type")
+    ] = None,
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds")
+    ] = None,
+    limit: Annotated[
+        int,
+        Query,
+        Field(
+            ge=1,
+            le=100,
+            description="Maximum number of returned objects (default 50, less than 100)",
+        ),
+    ] = 50,
+    offset: Annotated[int, Query, Field(ge=0, description="Offset from 0")] = 0,
+) -> tuple[int, list[CategorySchema] | ErrorResponse]:
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
+    embed_fields = []
+    if embed:
+        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
+        invalid_embeds = validate_embeds("categories", embed_fields)
+        if invalid_embeds:
+            return 400, ErrorResponse(
+                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
+                details=None,
+            )
+
+    try:
+        if game:
+            queryset = Categories.objects.filter(
+                Q(game__id__iexact=game) | Q(game__slug__iexact=game)
+            ).order_by("name")
+        else:
+            return 400, ErrorResponse(
+                error="Please provide the game's unique ID or slug.",
+                details=None,
+            )
+
+        if type:
+            queryset = queryset.filter(type=type)
+
+        categories = queryset[offset : offset + limit]
+
+        # For each of the categories, it will go through and add additional context
+        # if the embed option is provided. If not, it will provide basic information
+        # (e.g. the ID of the value), with additional information provided if declared.
+        category_schemas = []
+        for category in categories:
+            category_data = CategorySchema.model_validate(category)
+
+            if embed_fields:
+                embed_data = category_embeds(category, embed_fields)
+                for field, data in embed_data.items():
+                    setattr(category_data, field, data)
+
+            category_schemas.append(category_data)
+
+        return 200, category_schemas
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Category Retrieval Failed",
+            details={"exception": str(e)},
+        )
+
+
+@router.get(
+    "/{id}",
+    response={200: CategorySchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Get Category by ID",
+    description=dedent(
+        """Retrieves a single category based upon its ID, including optional embedding.
+
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the category being queried.
+    - `embed` (list | None): Comma-separated list of resources to embed.
+
+    **Supported Embeds:**
+    - `game`: Includes the metadata of the game the category belongs to.
+    - `variables`: Include metadata of the variables belonging to this category.
+    - `values`: Include all metadata for each variable and its values.
+
+    **Examples:**
+    - `/categories/rklge08d` - Get category by ID.
+    - `/categories/rklge08d?embed=game` - Get category with game info.
+    - `/categories/rklge08d?embed=variables,values` - Get category with variables and values.
+    """
+    ),
+    auth=public_auth,
+    openapi_extra=CATEGORIES_GET,
+)
+def get_category(
+    request: HttpRequest,
+    id: str,
+    embed: Annotated[
+        str | None, Query, Field(description="Comma-separated embeds")
+    ] = None,
+) -> tuple[int, CategorySchema | ErrorResponse]:
+    if len(id) > 15:
+        return 400, ErrorResponse(
+            error="ID must be 15 characters or less",
+            details=None,
+        )
+
+    # Checks to see what embeds are being used versus what is allowed
+    # via this endpoint. It will return an error to the client if they
+    # have an embed type not supported.
+    embed_fields = []
+    if embed:
+        embed_fields = [field.strip() for field in embed.split(",") if field.strip()]
+        invalid_embeds = validate_embeds("categories", embed_fields)
+        if invalid_embeds:
+            return 400, ErrorResponse(
+                error=f"Invalid embed(s): {', '.join(invalid_embeds)}",
+                details={"valid_embeds": ["game", "variables", "values"]},
+            )
+
+    try:
+        category = Categories.objects.filter(id__iexact=id).first()
+        if not category:
+            return 404, ErrorResponse(
+                error="Category ID Doesn't Exist",
+                details=None,
+            )
+
+        category_data = CategorySchema.model_validate(category)
+
+        if embed_fields:
+            embed_data = category_embeds(category, embed_fields)
+            for field, data in embed_data.items():
+                setattr(category_data, field, data)
+
+        return 200, category_data
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Category Retrieval Failure",
+            details={"exception": str(e)},
+        )
+
+
+@router.post(
+    "/",
+    response={200: CategorySchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Create Category",
+    description=dedent(
+        """Creates a brand new category.
+
+    **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Request Body:**
+    - `id` (str): Unique ID (usually based on SRC) of the category.
+    - `name` (str): Category name (e.g., "Any%", "100%").
+    - `slug` (str): URL-friendly version.
+    - `type` (str): Whether this is per-game or per-level category.
+    - `url` (str): Link to category on Speedrun.com.
+    - `rules` (str | None): Category-specific rules text.
+    - `appear_on_main` (bool): Whether to show on main page.
+    - `archive` (bool): Whether category is hidden from listings.
+    - `game` (str): Game this category belongs to.
+    - `variables` (list[dict]): Associated variables to the category.
+    - `values` (list[dict]): Associated values to the category.
+    """
+    ),
+    auth=moderator_auth,
+    openapi_extra=CATEGORIES_POST,
+)
+def create_category(
+    request: HttpRequest,
+    category_data: CategoryCreateSchema,
+) -> tuple[int, CategorySchema | ErrorResponse]:
+    try:
+        game = Games.objects.filter(id=category_data.game_id).first()
+        if not game:
+            return 404, ErrorResponse(
+                error="Game Doesn't Exist",
+                details=None,
+            )
+
+        try:
+            category_id = get_or_generate_id(
+                category_data.id,
+                lambda id: Categories.objects.filter(id=id).exists(),
+            )
+        except ValueError as e:
+            return 400, ErrorResponse(
+                error="ID Already Exists",
+                details={"exception": str(e)},
+            )
+
+        create_data = category_data.model_dump(exclude={"game_id"})
+        create_data["id"] = category_id
+        category = Categories.objects.create(game=game, **create_data)
+
+        return 200, CategorySchema.model_validate(category)
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to create category",
+            details={"exception": str(e)},
+        )
+
+
+@router.put(
+    "/{id}",
+    response={200: CategorySchema, codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Update Category",
+    description=dedent(
+        """Updates the category based on its unique ID.
+
+    **REQUIRES MODERATOR ACCESS OR HIGHER.**
+
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the category being edited.
+
+    **Request Body:**
+    - `name` (str | None): Category name (e.g., "Any%", "100%").
+    - `slug` (str | None): URL-friendly version.
+    - `type` (str | None): Whether this is per-game or per-level category.
+    - `url` (str | None): Link to category on Speedrun.com.
+    - `rules` (str | None): Category-specific rules text.
+    - `appear_on_main` (bool | None): Whether to show on main page.
+    - `archive` (bool | None): Whether category is hidden from listings.
+    - `game` (str | None): Game this category belongs to.
+    - `variables` (list[dict] | None): Associated variables to the category.
+    - `values` (list[dict] | None): Associated values to the category.
+    """
+    ),
+    auth=moderator_auth,
+    openapi_extra=CATEGORIES_PUT,
+)
+def update_category(
+    request: HttpRequest,
+    id: str,
+    category_data: CategoryUpdateSchema,
+) -> tuple[int, CategorySchema | ErrorResponse]:
+    try:
+        category = Categories.objects.filter(id__iexact=id).first()
+        if not category:
+            return 404, ErrorResponse(
+                error="Category does not exist",
+                details=None,
+            )
+
+        update_data = category_data.model_dump(exclude_unset=True)
+        if "game_id" in update_data:
+            game = Games.objects.filter(id=update_data["game_id"]).first()
+            if not game:
+                return 400, ErrorResponse(
+                    error="Game does not exist",
+                    details=None,
+                )
+            category.game = game
+            del update_data["game_id"]
+
+        for field, value in update_data.items():
+            setattr(category, field, value)
+
+        category.save()
+        return 200, CategorySchema.model_validate(category)
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to update category",
+            details={"exception": str(e)},
+        )
+
+
+@router.delete(
+    "/{id}",
+    response={200: dict[str, str], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    summary="Delete Category",
+    description=dedent(
+        """Deletes the selected category based on its ID.
+
+    **REQUIRES ADMIN ACCESS.**
+
+    **Supported Parameters:**
+    - `id` (str): Unique ID of the category being deleted.
+    """
+    ),
+    auth=admin_auth,
+    openapi_extra=CATEGORIES_DELETE,
+)
+def delete_category(
+    request: HttpRequest,
+    id: str,
+) -> tuple[int, dict[str, str] | ErrorResponse]:
+    try:
+        category = Categories.objects.filter(id__iexact=id).first()
+        if not category:
+            return 404, ErrorResponse(
+                error="Category does not exist",
+                details=None,
+            )
+
+        name = category.name
+        category.delete()
+        return 200, {"message": f"Category '{name}' deleted successfully"}
+    except Exception as e:
+        return 500, ErrorResponse(
+            error="Failed to delete category",
+            details={"exception": str(e)},
+        )

@@ -1,5 +1,5 @@
 import environ
-from api.api import ninja_api
+from api.v1.api import ninja_api
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin

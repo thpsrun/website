@@ -1,0 +1,358 @@
+import argparse
+from typing import Any, Iterator
+
+from django.core.management.base import BaseCommand
+from django.db import transaction
+from django.db.models import F, QuerySet
+from django.db.models.functions import Coalesce
+
+from srl.m_tasks import points_formula
+from srl.models import Games, RunHistory, Runs
+from srl.models.run_history import RunHistoryEndReason
+
+
+class Command(BaseCommand):
+    help = "Build RunHistory entries by crawling all runs chronologically"
+
+    def add_arguments(
+        self,
+        parser: argparse.ArgumentParser,
+    ) -> None:
+        parser.add_argument(
+            "--game",
+            type=str,
+            help="Limit to a specific game ID (for testing/partial rebuilds)",
+        )
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Calculate but don't write to database",
+        )
+        parser.add_argument(
+            "--clear",
+            action="store_true",
+            help="Delete existing RunHistory before rebuilding",
+        )
+
+    def get_leaderboards(
+        self,
+        game_filter: str | None,
+    ) -> Iterator[dict]:
+        base_query = Runs.objects.filter(
+            vid_status="verified",
+        ).exclude(
+            v_date__isnull=True,
+            date__isnull=True,
+        )
+
+        if game_filter:
+            base_query = base_query.filter(game_id=game_filter)
+
+        leaderboards = base_query.values(
+            "game_id",
+            "category_id",
+            "level_id",
+            "subcategory",
+            "runtype",
+        ).distinct()
+
+        yield from leaderboards
+
+    def get_runs_for_leaderboard(
+        self,
+        leaderboard: dict,
+    ) -> QuerySet[Runs]:
+        """Get all verified runs for a speedrun leaderboard, sorted by effective date."""
+        return (
+            Runs.objects.filter(
+                game_id=leaderboard["game_id"],
+                category_id=leaderboard["category_id"],
+                level_id=leaderboard["level_id"],
+                subcategory=leaderboard["subcategory"],
+                runtype=leaderboard["runtype"],
+                vid_status="verified",
+            )
+            .exclude(
+                v_date__isnull=True,
+                date__isnull=True,
+            )
+            .annotate(
+                effective_date=Coalesce(F("v_date"), F("date")),
+            )
+            .order_by("effective_date")
+        )
+
+    def get_time_column(
+        self,
+        game_id: str,
+        runtype: str = "main",
+    ) -> str:
+        """Get the time column to use for a game based on its default timing method.
+
+        Args:
+            game_id: The game's ID
+            runtype: "main" for full-game runs, "il" for individual level runs
+        """
+        try:
+            game = Games.objects.only("defaulttime", "idefaulttime").get(id=game_id)
+            time_columns = {
+                "realtime": "time_secs",
+                "realtime_noloads": "timenl_secs",
+                "ingame": "timeigt_secs",
+            }
+            if runtype == "main":
+                return time_columns.get(game.defaulttime, "time_secs")
+            else:
+                return time_columns.get(game.idefaulttime, "time_secs")
+        except Games.DoesNotExist:
+            return "time_secs"
+
+    def process_leaderboard(
+        self,
+        leaderboard: dict,
+        dry_run: bool,
+        game_is_ce: dict[str, bool],
+        game_time_columns: dict[str, dict[str, str]],
+    ) -> tuple[int, int]:
+        """
+        Process a single leaderboard chronologically, creating RunHistory entries.
+
+        Returns:
+            tuple: (entries_created, runs_processed)
+        """
+        runs = list(
+            self.get_runs_for_leaderboard(leaderboard).prefetch_related("players")
+        )
+        if not runs:
+            return 0, 0
+
+        game_times = game_time_columns.get(leaderboard["game_id"], {})
+        if leaderboard["runtype"] == "main":
+            time_column = game_times.get("main", "time_secs")
+        else:
+            time_column = game_times.get("il", "time_secs")
+
+        is_ce = game_is_ce.get(leaderboard["game_id"], False)
+        if is_ce:
+            max_points = 25
+        elif leaderboard["runtype"] == "main":
+            max_points = 1000
+        else:
+            max_points = 100
+
+        current_wr_time: float | None = None
+        current_wr_run: Runs | None = None
+        active_entries: dict[str, tuple[RunHistory, float]] = {}
+        player_best_runs: dict[str, tuple[str, float]] = {}
+        entries_created_count = 0
+        entries_to_update: list[RunHistory] = []
+
+        for run in runs:
+            run_time = getattr(run, time_column) or 0
+            if run_time <= 0:
+                continue
+
+            effective_date = run.effective_date  # type: ignore
+
+            player_ids = [player.id for player in run.players.all()]
+
+            for player_id in player_ids:
+                if player_id in player_best_runs:
+                    old_run_id, old_time = player_best_runs[player_id]
+                    if run_time < old_time and old_run_id in active_entries:
+                        old_entry, _ = active_entries[old_run_id]
+                        old_entry.end_date = effective_date
+                        old_entry.end_reason = RunHistoryEndReason.OBSOLETED
+                        entries_to_update.append(old_entry)
+                        del active_entries[old_run_id]
+
+                if (
+                    player_id not in player_best_runs
+                    or run_time < player_best_runs[player_id][1]
+                ):
+                    player_best_runs[player_id] = (run.id, run_time)
+
+            is_new_wr = current_wr_time is None or run_time < current_wr_time
+
+            if is_new_wr:
+                old_wr_id = current_wr_run.id if current_wr_run else None
+
+                run_ids_to_update = list(active_entries.keys())
+
+                for run_id in run_ids_to_update:
+                    entry, old_run_time = active_entries[run_id]
+
+                    entry.end_date = effective_date
+                    if run_id == old_wr_id:
+                        entry.end_reason = RunHistoryEndReason.LOST_WR
+                    else:
+                        entry.end_reason = RunHistoryEndReason.RECALCULATION
+                    entries_to_update.append(entry)
+
+                    new_points = points_formula(
+                        wr=run_time,
+                        run=old_run_time,
+                        max_points=max_points,
+                    )
+
+                    new_entry = RunHistory(
+                        run_id=run_id,
+                        start_date=effective_date,
+                        end_date=None,
+                        points=new_points,
+                        end_reason=None,
+                    )
+                    if not dry_run:
+                        new_entry.save()
+                    entries_created_count += 1
+                    active_entries[run_id] = (new_entry, old_run_time)
+
+                current_wr_time = run_time
+                current_wr_run = run
+
+                new_wr_entry = RunHistory(
+                    run_id=run.id,
+                    start_date=effective_date,
+                    end_date=None,
+                    points=max_points,
+                    end_reason=None,
+                )
+                if not dry_run:
+                    new_wr_entry.save()
+                entries_created_count += 1
+                active_entries[run.id] = (new_wr_entry, run_time)
+
+            else:
+                points = points_formula(
+                    wr=current_wr_time,  # type: ignore
+                    run=run_time,
+                    max_points=max_points,
+                )
+
+                new_entry = RunHistory(
+                    run_id=run.id,
+                    start_date=effective_date,
+                    end_date=None,
+                    points=points,
+                    end_reason=None,
+                )
+                if not dry_run:
+                    new_entry.save()
+                entries_created_count += 1
+                active_entries[run.id] = (new_entry, run_time)
+
+        if not dry_run and entries_to_update:
+            RunHistory.objects.bulk_update(
+                entries_to_update,
+                ["end_date", "end_reason"],
+            )
+
+        return entries_created_count, len(runs)
+
+    def handle(
+        self,
+        *args: Any,
+        **options: Any,
+    ) -> None:
+        """
+        Execute the command to build RunHistory entries.
+
+        Processes all leaderboards chronologically, creating history entries
+        that track points over time as runs are submitted and WRs change.
+        """
+        game_filter = options.get("game")
+        dry_run = options.get("dry_run", False)
+        clear = options.get("clear", False)
+
+        if dry_run:
+            self.stdout.write(
+                self.style.NOTICE("DRY RUN MODE: No changes will be saved.")
+            )
+
+        if clear and not dry_run:
+            self.stdout.write(
+                self.style.WARNING("Clearing existing RunHistory entries...")
+            )
+            if game_filter:
+                deleted, _ = RunHistory.objects.filter(
+                    run__game_id=game_filter
+                ).delete()
+            else:
+                deleted, _ = RunHistory.objects.all().delete()
+            self.stdout.write(self.style.SUCCESS(f"Deleted {deleted} entries."))
+
+        leaderboards = list(self.get_leaderboards(game_filter))
+        total_leaderboards = len(leaderboards)
+        self.stdout.write(f"Found {total_leaderboards} leaderboards to process.\n")
+
+        game_ids = {lb["game_id"] for lb in leaderboards}
+        time_column_map = {
+            "realtime": "time_secs",
+            "realtime_noloads": "timenl_secs",
+            "ingame": "timeigt_secs",
+        }
+        game_time_columns: dict[str, dict[str, str]] = {}
+        game_is_ce: dict[str, bool] = {}
+        game_slugs: dict[str, str] = {}
+        for game in Games.objects.filter(id__in=game_ids).only(
+            "id",
+            "name",
+            "slug",
+            "defaulttime",
+            "idefaulttime",
+        ):
+            game_time_columns[game.id] = {
+                "main": time_column_map.get(game.defaulttime, "time_secs"),
+                "il": time_column_map.get(game.idefaulttime, "time_secs"),
+            }
+            game_is_ce[game.id] = "category extension" in game.name.lower()
+            game_slugs[game.id] = game.slug.upper() if game.slug else game.id
+
+        total_entries = 0
+        total_runs = 0
+        processed_count = 0
+        error_count = 0
+
+        for leaderboard in leaderboards:
+            processed_count += 1
+            progress = f"[{processed_count}/{total_leaderboards}]"
+            game_slug = game_slugs.get(leaderboard["game_id"], "???")
+
+            try:
+                with transaction.atomic():
+                    entries_created, runs_processed = self.process_leaderboard(
+                        leaderboard,
+                        dry_run,
+                        game_is_ce,
+                        game_time_columns,
+                    )
+
+                if runs_processed > 0:
+                    total_entries += entries_created
+                    total_runs += runs_processed
+                    self.stdout.write(
+                        f"{progress} [{game_slug}] {leaderboard['subcategory']}: "
+                        f"{runs_processed} runs, {entries_created} entries"
+                    )
+
+            except Exception as e:
+                error_count += 1
+                self.stdout.write(
+                    self.style.ERROR(
+                        f"{progress} [{game_slug}] ERROR in {leaderboard['subcategory']}: {str(e)}"
+                    )
+                )
+
+        self.stdout.write("")
+        self.stdout.write(self.style.SUCCESS("=" * 50))
+        self.stdout.write(self.style.SUCCESS("RUN HISTORY COMPLETE"))
+        self.stdout.write(self.style.SUCCESS("=" * 50))
+        self.stdout.write(f"Leaderboards processed: {processed_count}")
+        self.stdout.write(f"Errors: {error_count}")
+        self.stdout.write(f"Total runs: {total_runs}")
+        self.stdout.write(f"Total history entries created: {total_entries}")
+
+        if dry_run:
+            self.stdout.write(
+                self.style.NOTICE("\nThis was a dry run. No changes saved.")
+            )

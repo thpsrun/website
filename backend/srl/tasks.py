@@ -101,7 +101,7 @@ def update_game_runs(
         - `update_category_runs`
         - `normalize_src`
     """
-    from api.tasks import normalize_src  # Done to prevent issues with loops.
+    from api.v1.tasks import normalize_src  # Done to prevent issues with loops.
 
     # Within the Admin Panel, you will select "Reset Game Runs" if you want to reset all
     # non-obsolete runs. This essentially is a hard reset, and shouldn't be used often. When that

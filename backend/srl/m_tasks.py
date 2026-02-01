@@ -84,7 +84,7 @@ def src_api(
 
     if response.status_code != 200:
         raise ValueError(
-            f"SRC API request failed with statuscode {response.status_code}"
+            f"SRC API request failed with status code {response.status_code}"
         )
 
     if paginate is False:

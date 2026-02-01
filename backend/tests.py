@@ -1,5 +1,13 @@
 import datetime
 
+from api.v1.routers.resources.categories import router as categories_router
+from api.v1.routers.resources.games import router as games_router
+from api.v1.routers.resources.levels import router as levels_router
+from api.v1.routers.resources.platforms import router as platforms_router
+from api.v1.routers.resources.players import router as players_router
+from api.v1.routers.resources.runs import router as runs_router
+from api.v1.routers.resources.streams import router as streams_router
+from api.v1.routers.resources.variables import router as variables_router
 from django.test import Client, TestCase
 from django.utils import timezone
 from ninja.testing import TestClient
@@ -19,15 +27,6 @@ from srl.models import (
     Variables,
     VariableValues,
 )
-
-from api.routers.resources.categories import router as categories_router
-from api.routers.resources.games import router as games_router
-from api.routers.resources.levels import router as levels_router
-from api.routers.resources.platforms import router as platforms_router
-from api.routers.resources.players import router as players_router
-from api.routers.resources.runs import router as runs_router
-from api.routers.resources.streams import router as streams_router
-from api.routers.resources.variables import router as variables_router
 
 
 class HomepageTestCase(TestCase):
@@ -288,7 +287,9 @@ class APIGamesTestCase(TestCase):
     def test_get_game_not_found(self) -> None:
         """Test GET /games/{id} returns 404 for non-existent game."""
         response = self.client.get("/nonexistent")
-        self.assertEqual(response.status_code, 200)  # Returns ErrorResponse, not HTTP 404
+        self.assertEqual(
+            response.status_code, 200
+        )  # Returns ErrorResponse, not HTTP 404
         data = response.json()
         self.assertEqual(data["error"], "Game does not exist")
         self.assertEqual(data["code"], 404)
@@ -806,7 +807,7 @@ class APIStreamsTestCase(TestCase):
 # POST, PUT, DELETE Endpoint Tests (Require API Key Authentication)
 # =============================================================================
 
-from api.models import RoleAPIKey
+from api.v1.models import RoleAPIKey
 
 
 class AuthenticatedAPITestCase(TestCase):
@@ -928,14 +929,8 @@ class APIGamesWriteTestCase(AuthenticatedAPITestCase):
         self.assertEqual(data["code"], 400)
 
     def test_create_game_with_invalid_auth_fails(self) -> None:
-        """Test POST /games/ with invalid API key is rejected.
-
-        Note: Django Ninja's TestClient doesn't enforce authentication middleware
-        the same way as the full Django test client. This test verifies that the
-        endpoint requires authentication by checking the response when accessed
-        through the full API path with an invalid API key.
-        """
         from django.test import Client
+
         full_client = Client()
         response = full_client.post(
             "/api/v1/games/",

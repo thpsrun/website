@@ -6,6 +6,7 @@ from srl.models.games import Games
 from srl.models.levels import Levels
 from srl.models.platforms import Platforms
 from srl.models.players import Players
+from srl.models.run_history import RunHistory, RunHistoryEndReason
 from srl.models.run_players import RunPlayers
 from srl.models.runs import Runs, RunVariableValues
 from srl.models.series import Series
@@ -25,6 +26,8 @@ __all__ = [
     "CountryCodes",
     "Players",
     "Runs",
+    "RunHistory",
+    "RunHistoryEndReason",
     "RunPlayers",
     "RunVariableValues",
     "NowStreaming",
