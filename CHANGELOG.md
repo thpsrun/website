@@ -1,3 +1,10 @@
+### v3.4.8.2
+###### February 1, 2026
+*   Updated filters for the main page to reflect new THPS1 Console/Emulator split.
+*   Updated libraries to their latest releases.
+
+* * *
+
 ### v3.4.8.1
 ###### September 24, 2025
 *   Disabled auto-collection of profile pictures due to Cloudflare challenges breaking this functionality.
