@@ -737,6 +737,7 @@ def MainPage(
     """
     subcategories = [
         "Any%",
+        "Any% (Console)",
         "Any% (6th Gen)",
         "100%",
         "Any% (No Major Glitches)",
