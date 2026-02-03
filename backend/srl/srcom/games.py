@@ -1,9 +1,10 @@
 from celery import shared_task
+from django.conf import settings
 from django.db import transaction
 
-from srl.m_tasks import src_api
 from srl.models import Games
 from srl.srcom.schema.src import SrcGamesModel
+from srl.utils import src_api
 
 
 @shared_task
@@ -22,13 +23,15 @@ def sync_game(
     src_game = SrcGamesModel.model_validate(src_data)
 
     points_max = (
-        1000
+        settings.POINTS_MAX_FG
         if "category extensions" not in src_game.names.international.lower()
-        else 50
+        else settings.POINTS_MAX_CE
     )
 
     ipoints_max = (
-        200 if "category extensions" not in src_game.names.international.lower() else 50
+        settings.POINTS_MAX_IL
+        if "category extensions" not in src_game.names.international.lower()
+        else settings.POINTS_MAX_CE
     )
 
     with transaction.atomic():

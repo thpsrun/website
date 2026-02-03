@@ -3,7 +3,6 @@ from typing import Any
 from celery import shared_task
 from django.db import transaction
 
-from srl.m_tasks import points_formula
 from srl.models import Categories, Games, Levels, RunPlayers, Runs, RunVariableValues
 from srl.srcom.players import sync_players
 from srl.srcom.schema.internal import RunSyncContext, RunSyncTimesContext
@@ -20,6 +19,7 @@ from srl.srcom.utils import (
     update_obsolete,
     update_standings,
 )
+from srl.utils import points_formula
 
 
 @shared_task
@@ -248,6 +248,7 @@ def sync_run(
                     wr=wr,
                     run=run_data.times.primary_t,
                     max_points=context_data.max_points,
+                    short=True if wr < 60 else False,
                 )
         else:
             points = 0

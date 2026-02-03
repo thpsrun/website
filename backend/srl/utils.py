@@ -99,18 +99,24 @@ def points_formula(
     wr: float,
     run: float,
     max_points: int,
+    short: bool = False,
 ) -> int:
-    """Processes points based on algorithmic formula
+    """Processes points based on an algorithmic formula.
 
     Arguments:
         wr (float): The world record time (as a float).
         run (float): The personal best time (as a float).
         max_points (int): Maximum points of a speedrun
+        short (bool): If True, a more scaled formula is applied (usually for shorter speedruns).
 
     Returns:
         int: Points awarded to the speedrun in comparison to world record.
     """
-    return math.floor((0.008 * math.pow(math.e, (4.8284 * (wr / run)))) * max_points)
+    log = 4.8284
+    if short:
+        log = log * math.sqrt(wr / 60)
+
+    return math.floor(math.pow(math.e, log * ((wr / run) - 1)) * max_points)
 
 
 class TimeDict(TypedDict):

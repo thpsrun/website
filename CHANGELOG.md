@@ -2,6 +2,8 @@
 ###### ???
 
 ### Major Changes
+
+#### Overall
 *   Entire frontend of the website is redesigned. New UI, not basic HTML/JS, and much more!!? This is all hosted on the frontend repo, just to keep Django's complexities separate from React's. (Noami)
     *   New main page!
     *   New game screen!
@@ -15,16 +17,52 @@
 *   Consolidated the SRC -> thps.run pipeline from two different chains into one.
 *   Caching has been added to all API endpoints.
     *   Cached responses last ~7 days.
-        *   Upon a run, category, or player account being updated, then this will also update the cached
+        *   Upon a run, category, or player account being updated, then this will also update the cached.
+
+#### Points
+*   Points Algorithm Adjustments!
+    *   If an IL is under 60 seconds, then a different algorithm is used to reduce decay.
+    *   Current Formula: `P = e^(4.8284 * (WR/PB - 1)) * max_points`
+    *   New Formula: `P = e^(4.8284 * √(WR/60) * (WR/PB - 1)) * max_points`
+    *   10 Second IL Example:
+        | **Placement** | **Time (RTA)** | **Old Algorithm** | **New Algorithm** | **Differential** |
+        |---------------|----------------|-------------------|-------------------|------------------|
+        | 1             | 0:10           | 100               | 100               |      **--**      |
+        | 2             | 0:11           | 64                | 83                |      **+19**     |
+        | 3             | 0:12           | 44                | 71                |      **+27**     |
+        | 4             | 0:15           | 19                | 51                |      **+32**     |
+        | 5             | 0:17           | 13                | 44                |      **+31**     |
+        | 6             | 0:20           | 8                 | 37                |      **+29**     |
+    *   30 Second IL Example:
+        | **Placement** | **Time (RTA)** | **Old Algorithm** | **New Algorithm** | **Differential** |
+        |---------------|----------------|-------------------|-------------------|------------------|
+        | 1             | 0:30           | 100               | 100               |      **+0**      |
+        | 2             | 0:31           | 85                | 89                |      **+4**      |
+        | 3             | 0:34           | 56                | 66                |      **+10**     |
+        | 4             | 0:44           | 21                | 33                |      **+12**     |
+        | 5             | 0:50           | 14                | 25                |      **+11**     |
+        | 6             | 1:00           | 8                 | 18                |      **+10**     |
+*   Points Evaluation Adjustments!
+    *   ILs now give a maximum of 250 points.
+        *   The example above used the old system for simplicity.
+    *   CEs now give a maximum of 50 points.
+*   New Point Streaks System!
+    *   Bonus points awarded to world record holders to incentivize optimization.
+        *   It is player-based; meaning, if you beat your own world record, the streak stays! If someone beats you at any point, the streak is broken.
+    *   Awarded one the first day of the month after getting a world record.
+        *   Full Game Runs: WR holders will receive an extra 125 points each month for a maximum of 4 months (1000 for WR + 500 for streak max).
+        *   IL Runs: WR holders will receive an extra 31.25 points each month for a maximum of 4 months (250 for WR + 125 for streak max).
+        *   CE Runs: Unaffected by Streaks.
+
 
 ### Added
-*   Added new login system that allows you to create an account on thps.run and associate your account with SRC.
+*   TODO: Added new login system that allows you to create an account on thps.run and associate your account with SRC.
     *   Logins can be created through the new login interface or through OAuth with Discord.
     *   Added support for token-based one-time passwords (TOTP) to use with your favorite authenticator app or the use of Passkeys.
         *   Contributors and higher are required to have this enabled.
-*   Added new user system and profile editing system.
+*   TODO: Added new user system and profile editing system.
     *   NOTE: When a login is created and associated to your SRC account, thps.run/THPSBot will NOT update your fields automatically anymore. You can edit them inyour new profile page!
-*   Added new revision to accomodate addition of storing user credentials/OAuth tokens to the Privacy Policy.
+*   TODO: Added new revision to accomodate addition of storing user credentials/OAuth tokens to the Privacy Policy.
 *   Added `appear_on_main` field to `Categories` field that will allow for querying only categories that, well, we only want to appear on the main page.
 *   Added `archived` field to `Variables`, `VariableValues`, `Categories`, and `Levels`.
 *   Added a `Categories`-specific override that lets you force change the default timing method of the category.
@@ -37,6 +75,7 @@
 ### Fixed
 *   Fixed the type checking for API responses to be `JsonResponse` and not `HttpResponse`.
 *   Fixed the logic calculating a run's `points` and `place` fields so they are more consistent.
+*   Fixed an issue where the PostgreSQL database would revert database changes upon a restart.
 
 ### Changed
 *   Changed the Guides system so it can be accessible via the Django Admin interface (for super admins of the project), the API via GET request, and the new portal.
@@ -49,6 +88,7 @@
     *   When interacting with larger sets of data, especially when stats aren't required, it can cause slow down.
 *   Changed `hidden` to `archive` within `Variables`, `VariableValues`, and `Categories`.
     *   `Archive` will mimic what you see from archived variables or categories. They are excluded from searches, as well, but will help ensure runs do not get orphaned.
+    *   SRC's v1 API does not expose this, so it must be done manually (we don't have many that have this anyways).
 
 ### Removed
 *   

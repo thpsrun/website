@@ -7,7 +7,6 @@ from celery import chain, shared_task
 from django.db import transaction
 from langcodes import standardize_tag
 
-from srl.m_tasks import src_api
 from srl.models import (
     Categories,
     CountryCodes,
@@ -21,6 +20,7 @@ from srl.models import (
     Variables,
     VariableValues,
 )
+from srl.utils import src_api
 
 
 @shared_task
@@ -101,7 +101,7 @@ def update_game_runs(
         - `update_category_runs`
         - `normalize_src`
     """
-    from api.v1.tasks import normalize_src  # Done to prevent issues with loops.
+    from api.tasks import normalize_src  # Done to prevent issues with loops.
 
     # Within the Admin Panel, you will select "Reset Game Runs" if you want to reset all
     # non-obsolete runs. This essentially is a hard reset, and shouldn't be used often. When that

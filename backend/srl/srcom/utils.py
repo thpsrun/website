@@ -3,9 +3,9 @@ from typing import List
 from celery import shared_task
 from django.db.models import Count
 
-from srl.m_tasks import convert_time, points_formula, src_api, time_conversion
 from srl.models import Platforms, Players, Runs, VariableValues
 from srl.srcom.schema.src import SrcRunsPlayers
+from srl.utils import convert_time, points_formula, src_api, time_conversion
 
 
 def create_leaderboard_link(
@@ -147,6 +147,7 @@ def update_standings(
                     wr=wr_time,
                     run=run_time,
                     max_points=max_points,
+                    short=True if wr_time < 60 else False,
                 )
         else:
             points = run.points

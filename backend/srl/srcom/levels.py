@@ -1,9 +1,9 @@
 from celery import shared_task
 from django.db import transaction
 
-from srl.m_tasks import src_api
 from srl.models import Games, Levels
 from srl.srcom.schema.src import SrcLevelsModel
+from srl.utils import src_api
 
 
 @shared_task(pydantic=True)

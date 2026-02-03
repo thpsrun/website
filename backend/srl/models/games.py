@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 
@@ -62,7 +63,7 @@ class Games(models.Model):
     )
     pointsmax = models.IntegerField(
         verbose_name="Full Game WR Point Maximum",
-        default=1000,
+        default=settings.POINTS_MAX_FG,
         help_text=(
             'Default is 1000; 25 if this game contains the name "Category '
             'Extension". This is the maximum total of points a full-game speedrun '
@@ -74,9 +75,9 @@ class Games(models.Model):
     )
     ipointsmax = models.IntegerField(
         verbose_name="IL WR Point Maximum",
-        default=100,
+        default=settings.POINTS_MAX_CE,
         help_text=(
-            'Default is 100; 25 if this game contains the name "Category '
+            'Default is 250; 25 if this game contains the name "Category '
             'Extension". This is the maximum total of points an IL speedrun receives if '
             "it is the world record. All lower-ranked speedruns recieve less based upon an "
             "algorithmic formula.<br />NOTE: Changing this value will ONLY affect new "

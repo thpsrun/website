@@ -23,8 +23,11 @@ jobs:
           python-version: "3.13"
           cache: 'pip'
 
-      - name: Install Flake8
-        run: python -m pip install --upgrade flake8
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install flake8 mypy
+          pip install -r requirements.txt
 
       - name: Run Flake8
         run: |
@@ -32,6 +35,11 @@ jobs:
                  --extend-exclude=*/migrations/*.py \
                  --max-line-length=100 \
                  $(git ls-files | grep py$)
+
+      - name: "Run mypy for Type Checking"
+        continue-on-error: true
+        run: |
+          mypy thpsbot --ignore-missing-imports
 
   test-backend:
     runs-on: ubuntu-latest
@@ -122,7 +130,7 @@ jobs:
           ref: dev
 
       - name: SSH - Deploy to Dev
-        uses: appleboy/ssh-action@v1.2.4
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.DEV_SERVER_IP }}
           username: ${{ secrets.DEV_SERVER_USER }}
@@ -139,7 +147,7 @@ jobs:
             docker compose -f docker-compose.PROD.yml run --rm django python manage.py collectstatic --noinput
 
             echo "Restarting Docker containers..."
-            docker compose down
+            docker compose down -f docker-compose.PROD.yml
             docker compose -f docker-compose.PROD.yml up -d --build
 
             echo "Cleaning up Docker..."
@@ -191,7 +199,7 @@ jobs:
           echo "Deployment tag: $TAG"
 
       - name: SSH - Backup Database
-        uses: appleboy/ssh-action@v1.2.4
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
@@ -215,7 +223,7 @@ jobs:
             fi
 
       - name: SSH - Deploy to Production
-        uses: appleboy/ssh-action@v1.2.4
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
@@ -232,7 +240,7 @@ jobs:
             docker compose -f docker-compose.PROD.yml run --rm django python manage.py collectstatic --noinput
 
             echo "Restarting Docker containers..."
-            docker compose down
+            docker compose down -f docker-compose.PROD.yml
             docker compose -f docker-compose.PROD.yml up -d --build
 
             echo "Cleaning up Docker..."

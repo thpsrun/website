@@ -1,6 +1,7 @@
 from datetime import date
 from typing import Any
 
+from django.conf import settings
 from pydantic import Field, field_validator
 
 from api.v1.schemas.base import BaseEmbedSchema, SlugMixin
@@ -38,8 +39,12 @@ class GameBaseSchema(SlugMixin, BaseEmbedSchema):
         pattern="^(realtime|realtime_noloads|ingame)$",
         description="Timing for IL runs",
     )
-    pointsmax: int = Field(1000, ge=1, description="WR points for full-game runs")
-    ipointsmax: int = Field(100, ge=1, description="WR points for IL runs")
+    pointsmax: int = Field(
+        settings.POINTS_MAX_FG, ge=1, description="WR points for full-game runs"
+    )
+    ipointsmax: int = Field(
+        settings.POINTS_MAX_IL, ge=1, description="WR points for IL runs"
+    )
 
 
 class GameSchema(GameBaseSchema):

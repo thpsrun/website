@@ -1,10 +1,8 @@
 volumes:
-    static_files:
-      name: thpsrun_static_files
-    postgres_data:
-      name: thpsrun_postgres_data
-    node_modules:
-      name: node_modules
+  postgres_data:
+    name: thpsrun_postgres_data
+  static_files:
+    name: thpsrun_static_files
 
 services:
   postgres:

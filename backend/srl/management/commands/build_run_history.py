@@ -1,14 +1,15 @@
 import argparse
 from typing import Any, Iterator
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import F, QuerySet
 from django.db.models.functions import Coalesce
 
-from srl.m_tasks import points_formula
 from srl.models import Games, RunHistory, Runs
 from srl.models.run_history import RunHistoryEndReason
+from srl.utils import points_formula
 
 
 class Command(BaseCommand):
@@ -113,18 +114,18 @@ class Command(BaseCommand):
         dry_run: bool,
         game_is_ce: dict[str, bool],
         game_time_columns: dict[str, dict[str, str]],
-    ) -> tuple[int, int]:
+    ) -> tuple[int, int, int]:
         """
         Process a single leaderboard chronologically, creating RunHistory entries.
 
         Returns:
-            tuple: (entries_created, runs_processed)
+            tuple: (entries_created, runs_processed, runs_points_fixed)
         """
         runs = list(
             self.get_runs_for_leaderboard(leaderboard).prefetch_related("players")
         )
         if not runs:
-            return 0, 0
+            return 0, 0, 0
 
         game_times = game_time_columns.get(leaderboard["game_id"], {})
         if leaderboard["runtype"] == "main":
@@ -134,11 +135,11 @@ class Command(BaseCommand):
 
         is_ce = game_is_ce.get(leaderboard["game_id"], False)
         if is_ce:
-            max_points = 25
+            max_points = settings.POINTS_MAX_CE
         elif leaderboard["runtype"] == "main":
-            max_points = 1000
+            max_points = settings.POINTS_MAX_FG
         else:
-            max_points = 100
+            max_points = settings.POINTS_MAX_IL
 
         current_wr_time: float | None = None
         current_wr_run: Runs | None = None
@@ -193,6 +194,7 @@ class Command(BaseCommand):
                         wr=run_time,
                         run=old_run_time,
                         max_points=max_points,
+                        short=True if run_time < 60 else False,
                     )
 
                     new_entry = RunHistory(
@@ -227,6 +229,7 @@ class Command(BaseCommand):
                     wr=current_wr_time,  # type: ignore
                     run=run_time,
                     max_points=max_points,
+                    short=True if current_wr_time < 60 else False,
                 )
 
                 new_entry = RunHistory(
@@ -247,7 +250,20 @@ class Command(BaseCommand):
                 ["end_date", "end_reason"],
             )
 
-        return entries_created_count, len(runs)
+        current_points_map: dict[str, int] = {
+            run_id: entry.points for run_id, (entry, _) in active_entries.items()
+        }
+        runs_to_fix: list[Runs] = []
+        for run in runs:
+            expected_points = current_points_map.get(run.id)
+            if expected_points is not None and run.points != expected_points:
+                run.points = expected_points
+                runs_to_fix.append(run)
+
+        if not dry_run and runs_to_fix:
+            Runs.objects.bulk_update(runs_to_fix, ["points"])
+
+        return entries_created_count, len(runs), len(runs_to_fix)
 
     def handle(
         self,
@@ -310,6 +326,7 @@ class Command(BaseCommand):
 
         total_entries = 0
         total_runs = 0
+        total_points_fixed = 0
         processed_count = 0
         error_count = 0
 
@@ -320,20 +337,26 @@ class Command(BaseCommand):
 
             try:
                 with transaction.atomic():
-                    entries_created, runs_processed = self.process_leaderboard(
-                        leaderboard,
-                        dry_run,
-                        game_is_ce,
-                        game_time_columns,
+                    entries_created, runs_processed, points_fixed = (
+                        self.process_leaderboard(
+                            leaderboard,
+                            dry_run,
+                            game_is_ce,
+                            game_time_columns,
+                        )
                     )
 
                 if runs_processed > 0:
                     total_entries += entries_created
                     total_runs += runs_processed
-                    self.stdout.write(
+                    total_points_fixed += points_fixed
+                    msg = (
                         f"{progress} [{game_slug}] {leaderboard['subcategory']}: "
                         f"{runs_processed} runs, {entries_created} entries"
                     )
+                    if points_fixed > 0:
+                        msg += f", {points_fixed} points fixed"
+                    self.stdout.write(msg)
 
             except Exception as e:
                 error_count += 1
@@ -351,6 +374,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Errors: {error_count}")
         self.stdout.write(f"Total runs: {total_runs}")
         self.stdout.write(f"Total history entries created: {total_entries}")
+        self.stdout.write(f"Total run points fixed: {total_points_fixed}")
 
         if dry_run:
             self.stdout.write(

@@ -1,10 +1,8 @@
 volumes:
   postgres_data:
-    name: slrc_app_data
+    name: thpsrun_prod_postgres_data
   static_files:
     name: thpsrun_static_files
-  nginx_config:
-    name: thpsrun_nginx_config
 
 services:
   postgres:

@@ -6,9 +6,9 @@ from celery import shared_task
 from django.db import transaction
 from langcodes import standardize_tag
 
-from srl.m_tasks import src_api
 from srl.models import CountryCodes, Players
 from srl.srcom.schema.src import SrcPlayersModel
+from srl.utils import src_api
 
 
 @shared_task
