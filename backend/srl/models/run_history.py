@@ -35,7 +35,7 @@ class RunHistory(models.Model):
         null=True,
         blank=True,
     )
-    points = models.IntegerField(
+    points = models.PositiveSmallIntegerField(
         verbose_name="Points During Period",
     )
     end_reason = models.CharField(

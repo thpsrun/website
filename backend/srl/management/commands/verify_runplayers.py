@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import Count
 
 from srl.models import RunPlayers, Runs
 
@@ -39,13 +40,13 @@ class Command(BaseCommand):
         total_runs = runs_queryset.count()
 
         for run in runs_queryset:
-            run_players_count = run.run_players.count()
+            run_players_count = run.run_players.count()  # type: ignore
 
             if run_players_count > 0:
                 runs_with_players += 1
                 if verbose:
                     player_names = ", ".join(
-                        [rp.player.name for rp in run.run_players.all()]
+                        [rp.player.name for rp in run.run_players.all()]  # type: ignore
                     )
                     self.stdout.write(f"  Run {run.id}: {player_names}")
             else:
@@ -74,8 +75,6 @@ class Command(BaseCommand):
                     )
                 )
 
-        from django.db.models import Count
-
         duplicates = (
             RunPlayers.objects.values("run", "player")
             .annotate(count=Count("id"))
@@ -101,7 +100,7 @@ class Command(BaseCommand):
         self.stdout.write("\n" + "=" * 50)
         if not fix_mode:
             self.stdout.write(
-                self.style.NOTICE("This was a dry run. Use --fix to apply changes.")
+                self.style.NOTICE("This was a dry run. No changes saved.")
             )
         else:
             self.stdout.write(self.style.SUCCESS("Verification and fixes complete!"))

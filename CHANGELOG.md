@@ -49,7 +49,7 @@
 *   New Point Streaks System!
     *   Bonus points awarded to world record holders to incentivize optimization.
         *   It is player-based; meaning, if you beat your own world record, the streak stays! If someone beats you at any point, the streak is broken.
-    *   Awarded one the first day of the month after getting a world record.
+    *   Awarded on the month anniversary of the player gaining the record.
         *   Full Game Runs: WR holders will receive an extra 125 points each month for a maximum of 4 months (1000 for WR + 500 for streak max).
         *   IL Runs: WR holders will receive an extra 31.25 points each month for a maximum of 4 months (250 for WR + 125 for streak max).
         *   CE Runs: Unaffected by Streaks.
@@ -71,11 +71,14 @@
 *   Added a new `/website` endpoint that is more catered to interacting with React.
 *   Added Pydantic schema and models.
     *   About time tbh.
+*   Added "smart" caches that are generated and stored for 7 days unless data is modified.
+    *   This was mostly meant for the React endpoints, but has been extended to all endppoints to keep them consistent.
 
 ### Fixed
-*   Fixed the type checking for API responses to be `JsonResponse` and not `HttpResponse`.
+*   Fixed all sorts of type checking issues throughout the project.
 *   Fixed the logic calculating a run's `points` and `place` fields so they are more consistent.
 *   Fixed an issue where the PostgreSQL database would revert database changes upon a restart.
+*   Fixed an issue where the returned API request from POST or PUT would (most times) fail to provide a proper response due to a race condition.
 
 ### Changed
 *   Changed the Guides system so it can be accessible via the Django Admin interface (for super admins of the project), the API via GET request, and the new portal.

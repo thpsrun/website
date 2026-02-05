@@ -4,6 +4,7 @@ from itertools import product
 
 import requests
 from celery import chain, shared_task
+from django.core.management import call_command
 from django.db import transaction
 from langcodes import standardize_tag
 
@@ -537,3 +538,9 @@ def update_player(
             )
     else:
         raise AttributeError
+
+
+@shared_task
+def build_streaks_task() -> None:
+    """Daily task to check WR streak anniversaries and award bonus points."""
+    call_command("build_streaks")

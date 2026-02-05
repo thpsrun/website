@@ -73,7 +73,7 @@ class APIActivityLogMiddleware:
     ) -> None:
         """Log API activity to Django admin.
 
-        Args:
+        Arguments:
             request: The incoming HTTP request.
         """
         try:
@@ -124,7 +124,7 @@ class APIActivityLogMiddleware:
     ) -> RoleAPIKey | None:
         """Extract and validate the API key from the request headers.
 
-        Args:
+        Arguments:
             request: The incoming HTTP request.
 
         Returns:
@@ -149,7 +149,7 @@ class APIActivityLogMiddleware:
         Since API calls don't have traditional Django users, we create
         a special inactive user account for audit trail purposes.
 
-        Args:
+        Arguments:
             api_key: The validated RoleAPIKey object.
 
         Returns:
@@ -179,7 +179,7 @@ class APIActivityLogMiddleware:
     def _get_action_flag(self, method: str) -> int | None:
         """Convert HTTP method to Django admin action flag.
 
-        Args:
+        Arguments:
             method: The HTTP method (POST, PUT, PATCH, DELETE).
 
         Returns:
@@ -199,7 +199,7 @@ class APIActivityLogMiddleware:
     ) -> tuple[ContentType, str | None, str] | None:
         """Extract object information from the API request.
 
-        Args:
+        Arguments:
             request: The incoming HTTP request.
 
         Returns:
@@ -255,7 +255,7 @@ class APIActivityLogMiddleware:
     ) -> str:
         """Create a descriptive change message for the log entry.
 
-        Args:
+        Arguments:
             request: The incoming HTTP request.
             api_key: The validated RoleAPIKey object.
 
@@ -297,7 +297,7 @@ class APIActivityLogMiddleware:
 
         Filters out sensitive fields and truncates large payloads.
 
-        Args:
+        Arguments:
             request: The incoming HTTP request.
 
         Returns:

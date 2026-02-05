@@ -9,7 +9,7 @@ from django.db.models.functions import Coalesce
 
 from srl.models import Games, RunHistory, Runs
 from srl.models.run_history import RunHistoryEndReason
-from srl.utils import points_formula
+from srl.utils import calculate_bonus, points_formula, runs_share_player
 
 
 class Command(BaseCommand):
@@ -88,12 +88,7 @@ class Command(BaseCommand):
         game_id: str,
         runtype: str = "main",
     ) -> str:
-        """Get the time column to use for a game based on its default timing method.
-
-        Args:
-            game_id: The game's ID
-            runtype: "main" for full-game runs, "il" for individual level runs
-        """
+        """Get the time column to use for a game based on its default timing method."""
         try:
             game = Games.objects.only("defaulttime", "idefaulttime").get(id=game_id)
             time_columns = {
@@ -115,12 +110,6 @@ class Command(BaseCommand):
         game_is_ce: dict[str, bool],
         game_time_columns: dict[str, dict[str, str]],
     ) -> tuple[int, int, int]:
-        """
-        Process a single leaderboard chronologically, creating RunHistory entries.
-
-        Returns:
-            tuple: (entries_created, runs_processed, runs_points_fixed)
-        """
         runs = list(
             self.get_runs_for_leaderboard(leaderboard).prefetch_related("players")
         )
@@ -143,10 +132,12 @@ class Command(BaseCommand):
 
         current_wr_time: float | None = None
         current_wr_run: Runs | None = None
+        current_wr_player_ids: set[str] = set()
         active_entries: dict[str, tuple[RunHistory, float]] = {}
         player_best_runs: dict[str, tuple[str, float]] = {}
         entries_created_count = 0
         entries_to_update: list[RunHistory] = []
+        runs_streak_updates: dict[str, int] = {}
 
         for run in runs:
             run_time = getattr(run, time_column) or 0
@@ -177,6 +168,17 @@ class Command(BaseCommand):
 
             if is_new_wr:
                 old_wr_id = current_wr_run.id if current_wr_run else None
+                new_wr_player_ids = set(player_ids)
+
+                streak_continues = current_wr_run is not None and runs_share_player(
+                    current_wr_player_ids, new_wr_player_ids
+                )
+
+                old_bonus = 0
+                if streak_continues and old_wr_id:
+                    old_bonus = runs_streak_updates.get(old_wr_id, 0)
+                    if old_bonus == 0 and current_wr_run:
+                        old_bonus = current_wr_run.bonus
 
                 run_ids_to_update = list(active_entries.keys())
 
@@ -186,6 +188,9 @@ class Command(BaseCommand):
                     entry.end_date = effective_date
                     if run_id == old_wr_id:
                         entry.end_reason = RunHistoryEndReason.LOST_WR
+
+                        if not streak_continues:
+                            runs_streak_updates[run_id] = 0
                     else:
                         entry.end_reason = RunHistoryEndReason.RECALCULATION
                     entries_to_update.append(entry)
@@ -211,12 +216,23 @@ class Command(BaseCommand):
 
                 current_wr_time = run_time
                 current_wr_run = run
+                current_wr_player_ids = new_wr_player_ids
+
+                new_bonus = old_bonus if streak_continues else 0
+                runs_streak_updates[run.id] = new_bonus
+
+                streak_bonus = calculate_bonus(
+                    leaderboard["runtype"],
+                    new_bonus,
+                    is_ce,
+                )
+                new_wr_points = max_points + streak_bonus
 
                 new_wr_entry = RunHistory(
                     run_id=run.id,
                     start_date=effective_date,
                     end_date=None,
-                    points=max_points,
+                    points=new_wr_points,
                     end_reason=None,
                 )
                 if not dry_run:
@@ -253,15 +269,26 @@ class Command(BaseCommand):
         current_points_map: dict[str, int] = {
             run_id: entry.points for run_id, (entry, _) in active_entries.items()
         }
+
         runs_to_fix: list[Runs] = []
         for run in runs:
             expected_points = current_points_map.get(run.id)
+            expected_streak = runs_streak_updates.get(run.id)
+            needs_update = False
+
             if expected_points is not None and run.points != expected_points:
                 run.points = expected_points
+                needs_update = True
+
+            if expected_streak is not None and run.bonus != expected_streak:
+                run.bonus = expected_streak
+                needs_update = True
+
+            if needs_update:
                 runs_to_fix.append(run)
 
         if not dry_run and runs_to_fix:
-            Runs.objects.bulk_update(runs_to_fix, ["points"])
+            Runs.objects.bulk_update(runs_to_fix, ["points", "bonus"])
 
         return entries_created_count, len(runs), len(runs_to_fix)
 
@@ -270,12 +297,7 @@ class Command(BaseCommand):
         *args: Any,
         **options: Any,
     ) -> None:
-        """
-        Execute the command to build RunHistory entries.
-
-        Processes all leaderboards chronologically, creating history entries
-        that track points over time as runs are submitted and WRs change.
-        """
+        """Execute the command to build RunHistory entries."""
         game_filter = options.get("game")
         dry_run = options.get("dry_run", False)
         clear = options.get("clear", False)
@@ -287,7 +309,7 @@ class Command(BaseCommand):
 
         if clear and not dry_run:
             self.stdout.write(
-                self.style.WARNING("Clearing existing RunHistory entries...")
+                self.style.WARNING("Clearing existing history entries...")
             )
             if game_filter:
                 deleted, _ = RunHistory.objects.filter(
@@ -321,12 +343,11 @@ class Command(BaseCommand):
                 "main": time_column_map.get(game.defaulttime, "time_secs"),
                 "il": time_column_map.get(game.idefaulttime, "time_secs"),
             }
-            game_is_ce[game.id] = "category extension" in game.name.lower()
+            game_is_ce[game.id] = game.is_ce
             game_slugs[game.id] = game.slug.upper() if game.slug else game.id
 
         total_entries = 0
         total_runs = 0
-        total_points_fixed = 0
         processed_count = 0
         error_count = 0
 
@@ -349,7 +370,6 @@ class Command(BaseCommand):
                 if runs_processed > 0:
                     total_entries += entries_created
                     total_runs += runs_processed
-                    total_points_fixed += points_fixed
                     msg = (
                         f"{progress} [{game_slug}] {leaderboard['subcategory']}: "
                         f"{runs_processed} runs, {entries_created} entries"
@@ -374,7 +394,6 @@ class Command(BaseCommand):
         self.stdout.write(f"Errors: {error_count}")
         self.stdout.write(f"Total runs: {total_runs}")
         self.stdout.write(f"Total history entries created: {total_entries}")
-        self.stdout.write(f"Total run points fixed: {total_points_fixed}")
 
         if dry_run:
             self.stdout.write(

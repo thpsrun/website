@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import sentry_sdk
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -162,7 +163,20 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
+# CELERY BEAT SCHEDULE
+CELERY_BEAT_SCHEDULE = {
+    "build-streaks-daily": {
+        "task": "srl.tasks.build_streaks_task",
+        "schedule": crontab(hour=0, minute=0),
+    },
+}
+
 # POINTS CONSTANTS
 POINTS_MAX_FG = 1000
 POINTS_MAX_IL = 250
 POINTS_MAX_CE = 50
+
+# STREAK BONUS CONSTANTS
+STREAK_BONUS_FG = 125
+STREAK_BONUS_IL = 31.25
+STREAK_MAX_MONTHS = 4

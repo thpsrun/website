@@ -80,6 +80,7 @@ class RunSchema(RunBaseSchema):
         default_factory=dict,
         description="ID mapping or embedded with ?embed=variables",
     )
+    bonus: int = Field(exclude=True)
 
     @field_validator("game", "category", "level", mode="before")
     @classmethod

@@ -76,7 +76,7 @@ class Runs(models.Model):
             "the run will be displayed as Anonymous."
         ),
     )
-    place = models.IntegerField(
+    place = models.PositiveSmallIntegerField(
         verbose_name="Placing",
     )
     url = models.URLField(
@@ -130,9 +130,14 @@ class Runs(models.Model):
         blank=True,
         null=True,
     )
-    points = models.IntegerField(
+    points = models.PositiveSmallIntegerField(
         verbose_name="Packle Points",
         default=0,
+    )
+    bonus = models.PositiveSmallIntegerField(
+        verbose_name="Streak Bonus",
+        default=0,
+        help_text="Usually used to count the number of months (up to 4) a run has been the record.",
     )
     platform = models.ForeignKey(
         Platforms,

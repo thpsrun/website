@@ -61,7 +61,7 @@ class Games(models.Model):
         Platforms,
         verbose_name="Platforms",
     )
-    pointsmax = models.IntegerField(
+    pointsmax = models.PositiveSmallIntegerField(
         verbose_name="Full Game WR Point Maximum",
         default=settings.POINTS_MAX_FG,
         help_text=(
@@ -73,7 +73,7 @@ class Games(models.Model):
             "this game from the admin panel."
         ),
     )
-    ipointsmax = models.IntegerField(
+    ipointsmax = models.PositiveSmallIntegerField(
         verbose_name="IL WR Point Maximum",
         default=settings.POINTS_MAX_CE,
         help_text=(
@@ -91,6 +91,10 @@ class Games(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True,
     )
+
+    @property
+    def is_ce(self) -> bool:
+        return "category extension" in self.name.lower()
 
     def save(self, *args, **kwargs):
         if not self.slug:

@@ -1,10 +1,18 @@
+import calendar
 import math
 import time
-from typing import TypedDict
+from datetime import date
+from typing import TYPE_CHECKING, TypedDict
 
 import requests
+from dateutil.relativedelta import relativedelta
+from django.conf import settings
 
+from srl.models import RunHistory
 from srl.srcom.schema.src import SrcRunsTimes
+
+if TYPE_CHECKING:
+    from srl.models.runs import Runs
 
 
 def convert_time(
@@ -150,3 +158,141 @@ def time_conversion(
     igt = convert_time(time.ingame_t) if time.ingame_t > 0 else "0"
 
     return rta, noloads, igt
+
+
+def calculate_bonus(
+    runtype: str,
+    streak_months: int,
+    is_ce: bool,
+) -> int:
+    """Calculate streak bonus points using cumulative rounding.
+
+    Arguments:
+        runtype (str): The run type ("main" for full-game, "il" for individual level).
+        streak_months (int): Number of full months the WR has been held (0-4).
+        is_ce (bool): True if the game is a category extension (no streak bonus).
+
+    Returns:
+        int: The streak bonus points to add to the base WR points.
+    """
+    if is_ce or streak_months <= 0:
+        return 0
+
+    capped = min(streak_months, settings.STREAK_MAX_MONTHS)
+
+    if runtype == "main":
+        return int(capped * settings.STREAK_BONUS_FG)
+    else:  # IL
+        return int(capped * settings.STREAK_BONUS_IL)  # Cumulative floor
+
+
+def runs_share_player(
+    player_ids_a: set[str],
+    player_ids_b: set[str],
+) -> bool:
+    """Check if two runs share at least one player.
+
+    Arguments:
+        player_ids_a (set[str]): Set of player IDs from the first run.
+        player_ids_b (set[str]): Set of player IDs from the second run.
+
+    Returns:
+        bool: True if the runs share at least one player.
+    """
+    return bool(player_ids_a & player_ids_b)
+
+
+def get_streak_start_date(
+    run: "Runs",
+) -> date | None:
+    """Trace back through RunHistory to find when this player's WR streak began.
+
+    If a runner breaks their own record, the streak continues. If any other player beats them, then
+    the streak ends. The script will early exit after tracing up to 4 months (max of the streak).
+
+
+    Arguments:
+        run (Runs): The current WR run to trace the streak for.
+
+    Returns:
+        date | None: The date when the continuous WR streak began, or None if not a WR.
+    """
+
+    current_player_ids = {p.id for p in run.players.all()}
+    if not current_player_ids:
+        return None
+
+    leaderboard_filter = {
+        "run__game_id": run.game_id,
+        "run__category_id": run.category_id,
+        "run__level_id": run.level_id,
+        "run__subcategory": run.subcategory,
+        "run__runtype": run.runtype,
+    }
+
+    game = run.game
+    if game.is_ce:
+        max_points = settings.POINTS_MAX_CE
+    elif run.runtype == "main":
+        max_points = game.pointsmax
+    else:
+        max_points = game.ipointsmax
+
+    wr_history = (
+        RunHistory.objects.filter(
+            **leaderboard_filter,
+            points=max_points,
+        )
+        .select_related("run")
+        .prefetch_related("run__players")
+        .order_by("-start_date")
+    )
+
+    if not wr_history.exists():
+        return None
+
+    cutoff_date = date.today() - relativedelta(months=settings.STREAK_MAX_MONTHS)
+
+    streak_start: date | None = None
+    tracking_player_ids = current_player_ids.copy()
+
+    for entry in wr_history:
+        entry_player_ids = {p.id for p in entry.run.players.all()}
+        entry_start_date = entry.start_date.date()
+
+        if entry_start_date < cutoff_date:
+            if streak_start is None:
+                streak_start = entry_start_date
+            break
+
+        if runs_share_player(entry_player_ids, tracking_player_ids):
+            streak_start = entry_start_date
+            tracking_player_ids = entry_player_ids
+        else:
+            break
+
+    return streak_start
+
+
+def get_anniversary(
+    original_day: int,
+    target_year: int,
+    target_month: int,
+) -> int:
+    """Get the appropriate anniversary day for a given month.
+
+    This function will get the anniversary day of the previous month, while also dealing with
+    edge cases where the next month doesn't have the day in question (e.g. January 31 ->
+    February 28).
+
+    Arguments:
+        original_day (int): The day of month when the streak started.
+        target_year (int): The year of the target anniversary.
+        target_month (int): The month of the target anniversary.
+
+    Returns:
+        int: The day to use for the anniversary in the target month.
+    """
+
+    days_in_month = calendar.monthrange(target_year, target_month)[1]
+    return min(original_day, days_in_month)

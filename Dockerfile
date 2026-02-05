@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.14.2-bookworm
+FROM python:3.14.3-bookworm
 
 ARG UID=1002
 ARG GID=1002

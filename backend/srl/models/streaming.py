@@ -25,7 +25,7 @@ class NowStreaming(models.Model):
         max_length=100,
         verbose_name="Twitch Title",
     )
-    offline_ct = models.IntegerField(
+    offline_ct = models.PositiveSmallIntegerField(
         verbose_name="Offline Count",
         help_text=(
             "In some situations, bots or the Twitch API can mess up. To help users, "
