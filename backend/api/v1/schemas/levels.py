@@ -18,7 +18,7 @@ class LevelBaseSchema(SlugMixin, BaseEmbedSchema):
 
     id: str = Field(..., max_length=15)
     url: str
-    rules: str | None = Field(default=None, max_length=1000)
+    rules: str | None = Field(default=None, max_length=5000)
 
 
 class LevelSchema(LevelBaseSchema):

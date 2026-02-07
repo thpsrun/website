@@ -8,8 +8,8 @@ from ninja.responses import codes_4xx
 from pydantic import Field
 from srl.models import Games
 
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.docs.games import GAMES_ALL, GAMES_DELETE, GAMES_GET, GAMES_POST, GAMES_PUT
-from api.v1.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.schemas.base import ErrorResponse, validate_embeds
 from api.v1.schemas.games import GameCreateSchema, GameSchema, GameUpdateSchema
 from api.v1.utils import get_or_generate_id

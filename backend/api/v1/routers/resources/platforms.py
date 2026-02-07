@@ -8,6 +8,7 @@ from ninja.responses import codes_4xx
 from pydantic import Field
 from srl.models import Platforms
 
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.docs.platforms import (
     PLATFORMS_ALL,
     PLATFORMS_DELETE,
@@ -15,7 +16,6 @@ from api.v1.docs.platforms import (
     PLATFORMS_POST,
     PLATFORMS_PUT,
 )
-from api.v1.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.schemas.base import ErrorResponse
 from api.v1.schemas.platforms import (
     PlatformCreateSchema,

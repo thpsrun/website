@@ -7,8 +7,8 @@ from guides.models import Tags
 from ninja import Router
 from ninja.responses import codes_4xx
 
+from api.permissions import contributor_auth, public_auth
 from api.v1.docs.tags import TAGS_ALL, TAGS_DELETE, TAGS_GET, TAGS_POST, TAGS_PUT
-from api.v1.permissions import contributor_auth, public_auth
 from api.v1.schemas.base import ErrorResponse
 from api.v1.schemas.guides import (
     TagCreateSchema,

@@ -1,5 +1,6 @@
 import datetime
 
+from api.models import RoleAPIKey
 from api.v1.routers.resources.categories import router as categories_router
 from api.v1.routers.resources.games import router as games_router
 from api.v1.routers.resources.levels import router as levels_router
@@ -806,8 +807,6 @@ class APIStreamsTestCase(TestCase):
 # =============================================================================
 # POST, PUT, DELETE Endpoint Tests (Require API Key Authentication)
 # =============================================================================
-
-from api.v1.models import RoleAPIKey
 
 
 class AuthenticatedAPITestCase(TestCase):

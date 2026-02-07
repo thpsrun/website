@@ -8,6 +8,7 @@ from ninja.responses import codes_4xx
 from pydantic import Field
 from srl.models import Categories, Games, Variables, VariableValues
 
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.docs.categories import (
     CATEGORIES_ALL,
     CATEGORIES_DELETE,
@@ -15,7 +16,6 @@ from api.v1.docs.categories import (
     CATEGORIES_POST,
     CATEGORIES_PUT,
 )
-from api.v1.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.schemas.base import CategoryTypeType, ErrorResponse, validate_embeds
 from api.v1.schemas.categories import (
     CategoryCreateSchema,

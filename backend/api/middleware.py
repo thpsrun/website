@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 
-from api.v1.models import RoleAPIKey
+from api.models import RoleAPIKey
 
 logger = logging.getLogger(__name__)
 

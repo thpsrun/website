@@ -19,8 +19,7 @@ from api.v1.routers.resources.players import router as players_router
 from api.v1.routers.resources.runs import router as runs_router
 from api.v1.routers.resources.streams import router as streams_router
 from api.v1.routers.resources.variables import router as variables_router
-
-from .schemas.base import ErrorResponse, ValidationErrorResponse
+from api.v1.schemas.base import ErrorResponse, ValidationErrorResponse
 
 logger = logging.getLogger(__name__)
 

@@ -9,7 +9,7 @@ from typing import Any
 from django.core.cache import cache
 from django.http import HttpRequest, JsonResponse
 
-from api.v1.models import RoleAPIKey
+from api.models import RoleAPIKey
 
 
 @dataclass(frozen=True)

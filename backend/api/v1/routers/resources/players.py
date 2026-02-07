@@ -8,8 +8,8 @@ from ninja.responses import codes_4xx
 from pydantic import Field
 from srl.models import CountryCodes, Players, Runs
 
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.docs.players import PLAYERS_DELETE, PLAYERS_GET, PLAYERS_POST, PLAYERS_PUT
-from api.v1.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.schemas.base import ErrorResponse, validate_embeds
 from api.v1.schemas.players import PlayerCreateSchema, PlayerSchema, PlayerUpdateSchema
 from api.v1.utils import get_or_generate_id

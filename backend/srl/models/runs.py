@@ -186,7 +186,7 @@ class Runs(models.Model):
         ),
     )
     description = models.TextField(
-        max_length=1000,
+        max_length=5000,
         verbose_name="Description",
         blank=True,
         null=True,

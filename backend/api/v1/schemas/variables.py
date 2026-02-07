@@ -21,7 +21,7 @@ class VariableValueSchema(BaseEmbedSchema):
     name: str = Field(..., max_length=50)
     slug: str = Field(..., max_length=15, description="URL-friendly slug")
     archive: bool = Field(default=False, description="Hidden from listings")
-    rules: str | None = Field(default=None, max_length=1000)
+    rules: str | None = Field(default=None, max_length=5000)
     variable: dict | None = Field(None, description="Included with ?embed=variable")
 
     @field_validator("variable", mode="before")
@@ -163,7 +163,7 @@ class VariableValueCreateSchema(BaseEmbedSchema):
         description="URL-friendly; auto-generates from name",
     )
     archive: bool = Field(default=False, description="Hidden from listings")
-    rules: str | None = Field(default=None, max_length=1000)
+    rules: str | None = Field(default=None, max_length=5000)
 
 
 class VariableValueUpdateSchema(BaseEmbedSchema):
@@ -181,4 +181,4 @@ class VariableValueUpdateSchema(BaseEmbedSchema):
     name: str | None = Field(default=None, max_length=50)
     slug: str | None = Field(default=None, max_length=15)
     archive: bool | None = None
-    rules: str | None = Field(default=None, max_length=1000)
+    rules: str | None = Field(default=None, max_length=5000)

@@ -18,8 +18,8 @@ from srl.models import (
     VariableValues,
 )
 
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.docs.runs import RUNS_ALL, RUNS_DELETE, RUNS_GET, RUNS_POST, RUNS_PUT
-from api.v1.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.schemas.base import (
     ErrorResponse,
     RunStatusType,

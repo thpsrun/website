@@ -3,7 +3,7 @@ from typing import Any
 from django.http import HttpRequest
 from ninja.security import APIKeyHeader
 
-from api.v1.models import RoleAPIKey
+from api.models import RoleAPIKey
 
 
 class RoleBasedAPIKeyAuth(APIKeyHeader):

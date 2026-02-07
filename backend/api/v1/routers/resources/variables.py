@@ -8,6 +8,7 @@ from ninja.responses import codes_4xx
 from pydantic import Field
 from srl.models import Categories, Games, Levels, Variables, VariableValues
 
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.docs.variables import (
     VALUES_ALL,
     VALUES_DELETE,
@@ -19,7 +20,6 @@ from api.v1.docs.variables import (
     VARIABLES_POST,
     VARIABLES_PUT,
 )
-from api.v1.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.schemas.base import ErrorResponse, VariableScopeType
 from api.v1.schemas.variables import (
     VariableCreateSchema,

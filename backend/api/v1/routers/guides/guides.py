@@ -10,6 +10,7 @@ from ninja.responses import codes_4xx
 from pydantic import Field
 from srl.models.games import Games
 
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.docs.guides import (
     GUIDES_ALL,
     GUIDES_DELETE,
@@ -17,7 +18,6 @@ from api.v1.docs.guides import (
     GUIDES_POST,
     GUIDES_PUT,
 )
-from api.v1.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.schemas.base import ErrorResponse, validate_embeds
 from api.v1.schemas.games import GameSchema
 from api.v1.schemas.guides import (

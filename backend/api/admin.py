@@ -12,7 +12,7 @@ from django.utils.html import format_html
 from django.utils.safestring import SafeString, mark_safe
 from rest_framework_api_key.models import APIKey
 
-from api.v1.models import RoleAPIKey
+from api.models import RoleAPIKey
 
 admin.site.unregister(APIKey)
 

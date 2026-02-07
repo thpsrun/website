@@ -8,8 +8,8 @@ from ninja.responses import codes_4xx
 from pydantic import Field
 from srl.models import Games, NowStreaming, Players
 
+from api.permissions import moderator_auth, public_auth
 from api.v1.docs.streams import STREAMS_DELETE, STREAMS_LIVE, STREAMS_POST, STREAMS_PUT
-from api.v1.permissions import moderator_auth, public_auth
 from api.v1.schemas.base import ErrorResponse
 from api.v1.schemas.streams import StreamCreateSchema, StreamSchema, StreamUpdateSchema
 

@@ -7,6 +7,7 @@ from ninja.responses import codes_4xx
 from pydantic import Field
 from srl.models import Games, Levels, Variables, VariableValues
 
+from api.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.docs.levels import (
     LEVELS_ALL,
     LEVELS_DELETE,
@@ -14,7 +15,6 @@ from api.v1.docs.levels import (
     LEVELS_POST,
     LEVELS_PUT,
 )
-from api.v1.permissions import admin_auth, moderator_auth, public_auth
 from api.v1.schemas.base import ErrorResponse, validate_embeds
 from api.v1.schemas.levels import LevelCreateSchema, LevelSchema, LevelUpdateSchema
 from api.v1.utils import get_or_generate_id

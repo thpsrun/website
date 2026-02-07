@@ -8,9 +8,9 @@ from ninja.responses import codes_4xx
 from pydantic import Field
 from srl.models import Categories, Games, Levels, Variables
 
+from api.ordering import get_ordered_level_names
+from api.permissions import public_auth
 from api.v1.docs.website import GAME_CATEGORIES_GET, GAME_LEVELS_GET, MAIN_PAGE_GET
-from api.v1.ordering import get_ordered_level_names
-from api.v1.permissions import public_auth
 from api.v1.routers.utils import (
     cache_response,
     categories_adapter,

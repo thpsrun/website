@@ -22,7 +22,7 @@ class CategoryBaseSchema(SlugMixin, BaseEmbedSchema):
     id: str
     type: str = Field(..., pattern="^(per-level|per-game)$")
     url: str
-    rules: str | None = Field(default=None, max_length=1000)
+    rules: str | None = Field(default=None, max_length=5000)
     appear_on_main: bool = Field(
         default=False, description="Show on main leaderboard page"
     )

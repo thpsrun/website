@@ -1,5 +1,5 @@
-### v4 - The <Something> Update
-###### ???
+### v4 - The [[SOMETHING]] Update
+###### Date Unknown
 
 ### Major Changes
 
@@ -42,6 +42,10 @@
         | 4             | 0:44           | 21                | 33                |      **+12**     |
         | 5             | 0:50           | 14                | 25                |      **+11**     |
         | 6             | 1:00           | 8                 | 18                |      **+10**     |
+    >[!NOTE]
+    > Yeah, it isn't a HUGE difference, and in some cases it can be scaled weirdly, but the idea is to reign in the crazy curve the shorter ILs cause. Obvious examples are the THPS1 competition ILs, since they are super quick and go by IGT. But, because of that, the point differential is a lot crazier there than it is versus longer runs.
+    >
+    > Is it a perfect system? No. But, I am always up for suggestions since I am NOT a math geek. 
 *   Points Evaluation Adjustments!
     *   ILs now give a maximum of 250 points.
         *   The example above used the old system for simplicity.
@@ -73,6 +77,7 @@
     *   About time tbh.
 *   Added "smart" caches that are generated and stored for 7 days unless data is modified.
     *   This was mostly meant for the React endpoints, but has been extended to all endppoints to keep them consistent.
+*   Added new tests and vulnerability checks to the project's CI/CD pipeline to catch problems before they are pushed to production.
 
 ### Fixed
 *   Fixed all sorts of type checking issues throughout the project.
@@ -92,6 +97,7 @@
 *   Changed `hidden` to `archive` within `Variables`, `VariableValues`, and `Categories`.
     *   `Archive` will mimic what you see from archived variables or categories. They are excluded from searches, as well, but will help ensure runs do not get orphaned.
     *   SRC's v1 API does not expose this, so it must be done manually (we don't have many that have this anyways).
+*   Changed the amount of characters in the `Rules` field of `Categories`, `Variables`, and `VariableValue` to 5,000 (up from 1,000).
 
 ### Removed
 *   

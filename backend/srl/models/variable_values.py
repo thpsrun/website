@@ -34,7 +34,7 @@ class VariableValues(models.Model):
         default=False,
     )
     rules = models.TextField(
-        max_length=1000,
+        max_length=5000,
         verbose_name="Rules",
         blank=True,
         null=True,

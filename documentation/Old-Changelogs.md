@@ -1,3 +1,6 @@
+# NOTE
+This document is for historical purposes. After each major update (v3 -> v4 is a major update), a LOT of the code is refactored.
+
 ## Older Versions (v3 and back)
 
 ### v3.4.5
