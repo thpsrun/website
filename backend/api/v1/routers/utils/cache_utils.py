@@ -4,7 +4,7 @@ from typing import Any, Callable
 from django.core.cache import caches
 from django.db.models import Max, Q
 from guides.models import Guides
-from srl.models import Categories, Levels, Runs, Variables
+from srl.models import Categories, Levels, Runs, VariableValues, Variables
 
 
 def leaderboard_cache_key(
@@ -106,7 +106,7 @@ def main_pbs_cache_key() -> str:
 
 
 def main_records_cache_key() -> str:
-    latest = Runs.objects.filter(
+    run_latest = Runs.objects.filter(
         place=1,
         obsolete=False,
         runtype="main",
@@ -114,6 +114,16 @@ def main_records_cache_key() -> str:
         vid_status="verified",
     ).aggregate(latest=Max("updated_at"),)["latest"]
 
+    cat_latest = Categories.objects.filter(
+        appear_on_main=True,
+    ).aggregate(latest=Max("updated_at"),)["latest"]
+
+    vv_latest = VariableValues.objects.aggregate(
+        latest=Max("updated_at"),
+    )["latest"]
+
+    timestamps = [t for t in [run_latest, cat_latest, vv_latest] if t is not None]
+    latest = max(timestamps) if timestamps else None
     timestamp = latest.isoformat() if latest else "None"
 
     return f"main:records:{timestamp}"

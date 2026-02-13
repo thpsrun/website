@@ -66,11 +66,12 @@ def query_latest_runs(
         "obsolete": False,
         "v_date__isnull": False,
         "vid_status": "verified",
-        "place": 1,
     }
 
-    if not wr:
-        filters["place"] = ">1"
+    if wr:
+        filters["place"] = 1
+    else:
+        filters["place__gt"] = 1
 
     runs: QuerySet[Runs] = (
         Runs.objects.select_related("game", "category")
@@ -109,19 +110,23 @@ def query_records() -> list[dict[str, Any]]:
             vid_status="verified",
             category__appear_on_main=True,
         )
+        .exclude(
+            runvariablevalues__value__appear_on_main=False,
+        )
         .order_by("-subcategory")
         .annotate(o_date=TruncDate("date"))
     )
 
-    grouped_runs = []
-    seen_records = set()
+    grouped_runs: list[dict[str, Any]] = []
+    seen_records: set[tuple[str, str | None, float | None]] = set()
 
     for run in runs:
         key = (run.game.slug, run.subcategory, run.time)
         if key not in seen_records:
             grouped_runs.append(
                 {
-                    "game": run.game,
+                    "game": {"name": run.game.name, "slug": run.game.slug},
+                    "game_release": run.game.release,
                     "subcategory": run.subcategory,
                     "time": run.time,
                     "players": [],
@@ -131,19 +136,27 @@ def query_records() -> list[dict[str, Any]]:
 
         for record in grouped_runs:
             if (
-                record["game"].slug == run.game.slug
+                record["game"]["slug"] == run.game.slug
                 and record["subcategory"] == run.subcategory
                 and record["time"] == run.time
             ):
-                record["players"].append(
-                    {
-                        "player": run.run_players.all(),  # type: ignore
-                        "url": run.url,
-                        "date": run.o_date,  # type: ignore
-                    }
+                record["players"].extend(
+                    record_player_data_export(
+                        run.run_players.all(),  # type: ignore
+                        run.url,
+                        run.o_date.isoformat() if run.o_date else None,  # type: ignore
+                    )
                 )
 
-    run_list = sorted(grouped_runs, key=lambda x: x["game"].release, reverse=False)
+    run_list = sorted(
+        grouped_runs,
+        key=lambda x: x["game_release"],
+        reverse=False,
+    )
+
+    # Remove the sorting helper field before returning
+    for record in run_list:
+        del record["game_release"]
 
     return run_list
 
@@ -161,9 +174,9 @@ def get_cached_embed(
         "latest-pbs": main_pbs_cache_key,
         "records": main_records_cache_key,
     }
-    query_functions = {
-        "latest-wrs": query_latest_runs(wr=True),
-        "latest-pbs": query_latest_runs,
+    query_functions: dict[str, Any] = {
+        "latest-wrs": lambda: query_latest_runs(wr=True),
+        "latest-pbs": lambda: query_latest_runs(wr=False),
         "records": query_records,
     }
 

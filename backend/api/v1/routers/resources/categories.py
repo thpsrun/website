@@ -74,6 +74,7 @@ def category_embeds(
                         "value": val.value,
                         "name": val.name,
                         "slug": val.slug,
+                        "appear_on_main": val.appear_on_main,
                         "archive": val.archive,
                         "rules": val.rules,
                     }

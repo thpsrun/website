@@ -25,6 +25,7 @@ from srl.models import (
     VariableValues,
 )
 from srl.views import (
+    ManageMainVisibilityView,
     RefreshGameRunsView,
     UpdateGameRunsView,
     UpdateGameView,
@@ -95,7 +96,7 @@ class GameAdmin(admin.ModelAdmin):
     """
 
     list_display = ["name"]
-    actions = ["update_game", "update_game_runs", "refresh_game_runs"]
+    actions = ["update_game", "update_game_runs", "refresh_game_runs", "manage_main_visibility"]
     search_fields = ["name"]
 
     @admin.action(description="Update Game Metadata")
@@ -134,6 +135,20 @@ class GameAdmin(admin.ModelAdmin):
             reverse("admin:refresh_game_runs") + f"?game_ids={','.join(game_ids)}"
         )
 
+    @admin.action(description="Manage Main Page Visibility")
+    def manage_main_visibility(
+        self,
+        _: HttpRequest,
+        queryset: QuerySet["Games"],
+    ) -> HttpResponse:
+        """Opens the main page visibility editor for the selected game."""
+        game = queryset.first()
+        if game:
+            return redirect(
+                reverse("admin:manage_main_visibility", args=[game.id]),
+            )
+        return redirect(reverse("admin:srl_games_changelist"))
+
     def get_urls(
         self,
     ) -> list[URLPattern]:
@@ -154,6 +169,11 @@ class GameAdmin(admin.ModelAdmin):
                 "refresh-game-runs/",
                 self.admin_site.admin_view(RefreshGameRunsView.as_view()),
                 name="refresh_game_runs",
+            ),
+            path(
+                "<str:game_id>/manage-main-visibility/",
+                self.admin_site.admin_view(ManageMainVisibilityView.as_view()),
+                name="manage_main_visibility",
             ),
         ]
         return custom_urls + urls
@@ -181,9 +201,10 @@ class VariableValuesAdmin(admin.ModelAdmin):
         "name",
         "var",
         "var__game",
+        "appear_on_main",
     ]
     search_fields = ["name"]
-    list_filter = ["var__game", "var__scope"]
+    list_filter = ["var__game", "var__scope", "appear_on_main"]
 
 
 class RunVariableValuesInline(admin.TabularInline):

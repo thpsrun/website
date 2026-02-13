@@ -1,10 +1,13 @@
 import asyncio
+from typing import Any
 
+from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import ListView, View
 
 from srl.init_series import init_series
+from srl.models import Categories, Games, VariableValues, Variables
 
 from .tasks import update_game, update_game_runs, update_player
 
@@ -92,3 +95,101 @@ class UpdatePlayerView(ListView):
 
         return redirect("/illiad/srl/players/")
  """
+
+
+class ManageMainVisibilityView(View):
+    """Admin view to manage appear_on_main for categories and variable values per game."""
+
+    def _build_context(
+        self,
+        game: Games,
+    ) -> dict[str, Any]:
+        """Build the tree of categories and their variable values for a game."""
+        categories = (
+            Categories.objects.filter(game=game)
+            .order_by("name")
+            .prefetch_related(
+                "variables_set__variablevalues_set",
+            )
+        )
+
+        categories_data: list[dict[str, Any]] = []
+        for cat in categories:
+            variable_values: list[dict[str, Any]] = []
+            for var in cat.variables_set.all():
+                for vv in var.variablevalues_set.all():
+                    variable_values.append({
+                        "variable_name": var.name,
+                        "value": vv,
+                    })
+
+            # Also include global variables (cat=NULL) scoped to full-game
+            global_vars = Variables.objects.filter(
+                game=game,
+                cat__isnull=True,
+                scope__in=["global", "full-game"],
+            ).prefetch_related("variablevalues_set")
+
+            for var in global_vars:
+                for vv in var.variablevalues_set.all():
+                    # Avoid duplicates if already added
+                    if not any(
+                        existing["value"].value == vv.value
+                        for existing in variable_values
+                    ):
+                        variable_values.append({
+                            "variable_name": f"{var.name} (global)",
+                            "value": vv,
+                        })
+
+            categories_data.append({
+                "category": cat,
+                "variable_values": variable_values,
+            })
+
+        return {
+            "game": game,
+            "categories": categories_data,
+            "title": f"Main Page Visibility: {game.name}",
+            "opts": Games._meta,
+            "has_view_permission": True,
+        }
+
+    def get(
+        self,
+        request: HttpRequest,
+        game_id: str,
+    ) -> HttpResponse:
+        game = get_object_or_404(Games, id=game_id)
+        context = self._build_context(game)
+        return render(request, "admin/srl/manage_main_visibility.html", context)
+
+    def post(
+        self,
+        request: HttpRequest,
+        game_id: str,
+    ) -> HttpResponse:
+        game = get_object_or_404(Games, id=game_id)
+
+        # Update categories
+        categories = Categories.objects.filter(game=game)
+        for cat in categories:
+            new_value = f"cat_{cat.id}" in request.POST
+            if cat.appear_on_main != new_value:
+                cat.appear_on_main = new_value
+                cat.save(update_fields=["appear_on_main", "updated_at"])
+
+        # Update variable values for this game's variables
+        game_variable_values = VariableValues.objects.filter(
+            var__game=game,
+        )
+        for vv in game_variable_values:
+            new_value = f"vv_{vv.value}" in request.POST
+            if vv.appear_on_main != new_value:
+                vv.appear_on_main = new_value
+                vv.save(update_fields=["appear_on_main", "updated_at"])
+
+        messages.success(request, f"Main page visibility updated for {game.name}.")
+        return redirect(
+            request.path,
+        )

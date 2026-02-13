@@ -67,7 +67,9 @@
 *   TODO: Added new user system and profile editing system.
     *   NOTE: When a login is created and associated to your SRC account, thps.run/THPSBot will NOT update your fields automatically anymore. You can edit them inyour new profile page!
 *   TODO: Added new revision to accomodate addition of storing user credentials/OAuth tokens to the Privacy Policy.
-*   Added `appear_on_main` field to `Categories` field that will allow for querying only categories that, well, we only want to appear on the main page.
+*   Added `appear_on_main` field to `Categories` and `VariableValues` that will allow for querying only categories that, well, we only want to appear on the main page.
+    *   Also added a devoted `Manage Page Visibility` Django Action that will allow admins to easily mark the category + variable:value pairs to show on the main page.
+        *   Not the best system, will work to update this in the future maybe.
 *   Added `archived` field to `Variables`, `VariableValues`, `Categories`, and `Levels`.
 *   Added a `Categories`-specific override that lets you force change the default timing method of the category.
     *   THPS4 5th Gen, you're welcome.
@@ -106,7 +108,6 @@
 *   
 
 ### TODO
-*   Caching
 *   [LOW] Fix `Categories` `defaulttime` logic to override the main game when they are different.
 *   Fix `init_series.py` to accomodate newly refactored SRC logic.
 *   Add new login system and upgrade `Users` model to accept OAuth tokens from Discord, allow for new signups, and require an SRC account.

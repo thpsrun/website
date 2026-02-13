@@ -29,6 +29,14 @@ class VariableValues(models.Model):
         primary_key=True,
         verbose_name="Value ID",
     )
+    appear_on_main = models.BooleanField(
+        verbose_name="Appear on Main Page",
+        default=True,
+        help_text=(
+            "When unchecked, runs with this variable value will NOT appear "
+            "on the main page, even if the parent category is enabled."
+        ),
+    )
     archive = models.BooleanField(
         verbose_name="Archive Value",
         default=False,

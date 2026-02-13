@@ -181,6 +181,7 @@ def get_game_categories(
                         "value": val.value,
                         "name": val.name,
                         "slug": val.slug,
+                        "appear_on_main": val.appear_on_main,
                         "archive": val.archive,
                         "rules": val.rules,
                     }
@@ -298,6 +299,7 @@ def get_game_levels(
                         "value": val.value,
                         "name": val.name,
                         "slug": val.slug,
+                        "appear_on_main": val.appear_on_main,
                         "archive": val.archive,
                         "rules": val.rules,
                     }
