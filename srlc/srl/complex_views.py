@@ -740,6 +740,7 @@ def MainPage(
         "Any% (Console)",
         "Any% (6th Gen)",
         "100%",
+        "100% (Console)",
         "Any% (No Major Glitches)",
         "All Goals & Golds (No Major Glitches)",
         "All Goals & Golds (All Careers)",
