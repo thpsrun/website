@@ -1,3 +1,9 @@
+### v3.4.8.3
+###### February 13, 2026
+*   Added "100% (Console)" as an option to appear on the front page.
+
+* * *
+
 ### v3.4.8.2
 ###### February 1, 2026
 *   Updated filters for the main page to reflect new THPS1 Console/Emulator split.
