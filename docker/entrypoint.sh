@@ -1,8 +1,5 @@
 #!/bin/bash
-
-set -o errexit
-set -o pipefail
-set -o nounset
+set -euo pipefail
 
 postgres_ready() {
     python << END
@@ -24,24 +21,24 @@ END
 }
 
 until postgres_ready; do
-  >&2 echo "Waiting for PostgreSQL to become available..."
-  sleep 5
+    >&2 echo "Waiting for PostgreSQL to become available..."
+    sleep 5
 done
 >&2 echo "PostgreSQL is available"
 
-python3 manage.py collectstatic --noinput
-python3 manage.py makemigrations
 python manage.py migrate
+python manage.py collectstatic --no-input
 
-if [[ "$DEBUG" == "True" ]]; then
-  if [ -f "db.json" ]; then
-    echo "Loading dummy database..."
-    python3 manage.py loaddata db.json
-  else
-    echo "looks like there is no dummy database or fixture to load..."
-  fi
+if [ "${DEBUG_MODE:-false}" = "True" ]; then
+    echo "===============STARTING IN DEVELOPMENT MODE!===============" >&2
+    python manage.py runserver 0.0.0.0:${PORT:-8001} &
 else
-  echo "This is not a drill...."
+    echo "===============STARTING IN PRODUCTION MODE!===============" >&2
+    hypercorn --bind 0.0.0.0:${PORT:-8001} --workers 8 website.asgi:application &
 fi
 
-exec "$@"
+WEB_PID=$!
+celery -A website worker --loglevel=info -E &
+CELERY_PID=$!
+trap 'kill $WEB_PID $CELERY_PID' TERM INT
+wait $WEB_PID $CELERY_PID

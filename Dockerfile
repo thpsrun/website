@@ -10,18 +10,17 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV DEBCONF_NOWARNINGS="yes"
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends  build-essential libpq-dev \
-  && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends  build-essential libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp/requirements.txt
 COPY docker/entrypoint.sh /app/entrypoint.sh
-COPY docker/start.sh /app/start.sh
 
 RUN pip install --no-cache-dir -r /tmp/requirements.txt \
-  && rm -rf /tmp/requirements.txt \
-  && groupadd -g ${GID} app_user \
-  && useradd -u ${UID} -g ${GID} app_user \
-  && install -d -m 0755 -o app_user -g app_user /app
+    && rm -rf /tmp/requirements.txt \
+    && groupadd -g ${GID} app_user \
+    && useradd -u ${UID} -g ${GID} app_user \
+    && install -d -m 0755 -o app_user -g app_user /app
 
 WORKDIR /app
 USER app_user:app_user
@@ -32,4 +31,3 @@ COPY --chown=app_user:app_user . .
 RUN chmod +x docker/*.sh
 
 ENTRYPOINT [ "/app/entrypoint.sh" ]
-CMD [ "/app/start.sh", "server" ]

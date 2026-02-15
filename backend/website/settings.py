@@ -22,7 +22,6 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(",")  # type: ignore
 
 INSTALLED_APPS = [
     # PRE-INSTALLED
-    "whitenoise.runserver_nostatic",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -32,10 +31,6 @@ INSTALLED_APPS = [
     # THIRD-PARTY
     "corsheaders",
     "rest_framework_api_key",
-    "crispy_forms",
-    "crispy_bootstrap5",
-    "django_bootstrap5",
-    "sekizai",
     # LOCAL
     "srl",
     "api",
@@ -44,11 +39,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -58,9 +52,6 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = "website.urls"
-
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 TEMPLATES = [
     {
@@ -73,9 +64,6 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "website.context_processor.global_name",
-                "website.context_processor.global_social_media",
-                "website.context_processor.navbar_docs",
             ],
         },
     },
@@ -96,6 +84,8 @@ if os.getenv("DEBUG_MODE") == "True":
 else:
     DEBUG = False
     APPEND_SLASH = True
+    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
@@ -148,7 +138,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

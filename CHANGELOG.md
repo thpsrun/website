@@ -86,6 +86,7 @@
 *   Fixed the logic calculating a run's `points` and `place` fields so they are more consistent.
 *   Fixed an issue where the PostgreSQL database would revert database changes upon a restart.
 *   Fixed an issue where the returned API request from POST or PUT would (most times) fail to provide a proper response due to a race condition.
+*   Fixed an issue where development servers would fail to serve CSS and Static files on refresh.
 
 ### Changed
 *   Changed the Guides system so it can be accessible via the Django Admin interface (for super admins of the project), the API via GET request, and the new portal.

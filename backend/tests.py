@@ -42,9 +42,6 @@ class HomepageTestCase(TestCase):
 
 
 class ModelTestCase(TestCase):
-    def setUp(self) -> None:
-        self.client = Client()
-
     @classmethod
     def setUpTestData(cls) -> None:
         cls.series = Series.objects.create(
@@ -71,11 +68,11 @@ class ModelTestCase(TestCase):
             pointsmax=9999,
             ipointsmax=1000,
         )
-        cls.games.platforms.add("xbox")
+        cls.games.platforms.add(cls.platform)
 
         cls.categories = Categories.objects.create(
             id="category",
-            game=Games.objects.get(id="asdef"),
+            game=cls.games,
             name="Test Category 1",
             slug="test-category-1",
             type="per-game",
@@ -85,7 +82,7 @@ class ModelTestCase(TestCase):
 
         cls.levels = Levels.objects.create(
             id="level",
-            game=Games.objects.get(id="asdef"),
+            game=cls.games,
             name="Test Level 1",
             slug="test-level-1",
             url="https://speedrun.com/sm64",
@@ -95,14 +92,14 @@ class ModelTestCase(TestCase):
             id="var1",
             name="Variable Lariable",
             slug="variable-lariable",
-            game=Games.objects.get(id="asdef"),
-            cat=Categories.objects.get(id="category"),
+            game=cls.games,
+            cat=cls.categories,
             scope="global",
             archive=False,
         )
 
         cls.values = VariableValues.objects.create(
-            var=Variables.objects.get(id="var1"),
+            var=cls.variables,
             name="Valueeeeeeeeeee",
             slug="valueeeeeeeeeee",
             value="val1",
@@ -122,7 +119,7 @@ class ModelTestCase(TestCase):
             name="Bob",
             nickname="Bobby B",
             url="https://speedrun.com/",
-            countrycode=CountryCodes.objects.get(id="usa"),
+            countrycode=cls.countrycodes,
             pfp="https://google.com/",
             pronouns="He/Him/Them/They",
             twitch="Twitch",
@@ -131,14 +128,14 @@ class ModelTestCase(TestCase):
             bluesky="Bluesky",
             ex_stream=True,
         )
-        cls.player1.awards.add(1)
+        cls.player1.awards.add(cls.awards)
 
         cls.player2 = Players.objects.create(
             id="player2",
             name="Sam",
             nickname="Sammy",
             url="https://speedrun.com/",
-            countrycode=CountryCodes.objects.get(id="usa"),
+            countrycode=cls.countrycodes,
             pfp="https://google.com/",
             pronouns="He/Him/Them/They",
             twitch="Twitch",
@@ -147,20 +144,20 @@ class ModelTestCase(TestCase):
             bluesky="Bluesky",
             ex_stream=True,
         )
-        cls.player2.awards.add(1)
+        cls.player2.awards.add(cls.awards)
 
         cls.runs = Runs.objects.create(
             id="run123",
             runtype="il",
-            game=Games.objects.get(id="asdef"),
-            category=Categories.objects.get(id="category"),
-            level=Levels.objects.get(id="level"),
+            game=cls.games,
+            category=cls.categories,
+            level=cls.levels,
             subcategory="aeiou aeiou",
             place=666,
             url="https://speedrun.com/",
             video="https://speedrun.com/",
-            date=timezone.make_aware(datetime.datetime.now()),
-            v_date=timezone.make_aware(datetime.datetime.now()),
+            date=timezone.now(),
+            v_date=timezone.now(),
             time="0m 00s",
             time_secs=0.0,
             timenl="0m 00s",
@@ -168,10 +165,10 @@ class ModelTestCase(TestCase):
             timeigt="5m 33s",
             timeigt_secs=999.92,
             points=1000,
-            platform=Platforms.objects.get(id="xbox"),
+            platform=cls.platform,
             emulated=True,
             vid_status="verified",
-            approver=Players.objects.get(id="player1"),
+            approver=cls.player1,
             obsolete=True,
             arch_video="https://speedrun.com/",
             description="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
@@ -180,56 +177,56 @@ class ModelTestCase(TestCase):
         # Add players to run using the through model
         RunPlayers.objects.create(
             run=cls.runs,
-            player=Players.objects.get(id="player2"),
+            player=cls.player2,
             order=1,
         )
 
         cls.runvariablevalues = RunVariableValues.objects.create(
             id=1,
-            run=Runs.objects.get(id="run123"),
-            variable=Variables.objects.get(id="var1"),
-            value=VariableValues.objects.get(value="val1"),
+            run=cls.runs,
+            variable=cls.variables,
+            value=cls.values,
         )
 
         cls.nowstreaming = NowStreaming.objects.create(
-            streamer=Players.objects.get(id="player2"),
-            game=Games.objects.get(id="asdef"),
+            streamer=cls.player2,
+            game=cls.games,
             title="Heckin good",
             offline_ct=9,
-            stream_time=timezone.make_aware(datetime.datetime.now()),
+            stream_time=timezone.now(),
         )
 
     def test_series(self) -> None:
-        self.assertEqual(Series.objects.filter(id="123abc").exists(), True)
+        self.assertTrue(Series.objects.filter(id="123abc").exists())
 
     def test_platforms(self) -> None:
-        self.assertEqual(Platforms.objects.filter(id="xbox").exists(), True)
+        self.assertTrue(Platforms.objects.filter(id="xbox").exists())
 
     def test_games(self) -> None:
-        self.assertEqual(Games.objects.filter(id="asdef").exists(), True)
+        self.assertTrue(Games.objects.filter(id="asdef").exists())
 
     def test_categories(self) -> None:
-        self.assertEqual(Categories.objects.filter(id="category").exists(), True)
+        self.assertTrue(Categories.objects.filter(id="category").exists())
 
     def test_levels(self) -> None:
-        self.assertEqual(Levels.objects.filter(id="level").exists(), True)
+        self.assertTrue(Levels.objects.filter(id="level").exists())
 
     def test_variables(self) -> None:
-        self.assertEqual(Variables.objects.filter(id="var1").exists(), True)
+        self.assertTrue(Variables.objects.filter(id="var1").exists())
 
     def test_variablevalues(self) -> None:
-        self.assertEqual(VariableValues.objects.filter(value="val1").exists(), True)
+        self.assertTrue(VariableValues.objects.filter(value="val1").exists())
 
     def test_players(self) -> None:
-        self.assertEqual(Players.objects.filter(id="player1").exists(), True)
-        self.assertEqual(Players.objects.filter(id="player2").exists(), True)
+        self.assertTrue(Players.objects.filter(id="player1").exists())
+        self.assertTrue(Players.objects.filter(id="player2").exists())
 
     def test_runs(self) -> None:
-        self.assertEqual(Runs.objects.filter(id="run123").exists(), True)
-        self.assertEqual(RunVariableValues.objects.filter(id=1).exists(), True)
+        self.assertTrue(Runs.objects.filter(id="run123").exists())
+        self.assertTrue(RunVariableValues.objects.filter(id=1).exists())
 
     def test_streaming(self) -> None:
-        self.assertEqual(NowStreaming.objects.all().exists(), True)
+        self.assertTrue(NowStreaming.objects.all().exists())
 
 
 class APIGamesTestCase(TestCase):
@@ -288,12 +285,9 @@ class APIGamesTestCase(TestCase):
     def test_get_game_not_found(self) -> None:
         """Test GET /games/{id} returns 404 for non-existent game."""
         response = self.client.get("/nonexistent")
-        self.assertEqual(
-            response.status_code, 200
-        )  # Returns ErrorResponse, not HTTP 404
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"], "Game does not exist")
-        self.assertEqual(data["code"], 404)
 
 
 class APICategoriesTestCase(TestCase):
@@ -336,10 +330,9 @@ class APICategoriesTestCase(TestCase):
     def test_get_all_categories_requires_game(self) -> None:
         """Test GET /categories/all requires game parameter."""
         response = self.client.get("/all")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertEqual(data["error"], "Please provide the game's unique ID or slug.")
-        self.assertEqual(data["code"], 400)
 
     def test_get_all_categories_with_game(self) -> None:
         """Test GET /categories/all?game=game1 endpoint."""
@@ -362,10 +355,9 @@ class APICategoriesTestCase(TestCase):
     def test_get_category_not_found(self) -> None:
         """Test GET /categories/{id} returns 404 for non-existent category."""
         response = self.client.get("/nonexistent")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"], "Category ID Doesn't Exist")
-        self.assertEqual(data["code"], 404)
 
 
 class APILevelsTestCase(TestCase):
@@ -424,10 +416,9 @@ class APILevelsTestCase(TestCase):
     def test_get_level_not_found(self) -> None:
         """Test GET /levels/{id} returns 404 for non-existent level."""
         response = self.client.get("/nonexistent")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"], "Level ID does not exist")
-        self.assertEqual(data["code"], 404)
 
 
 class APIPlatformsTestCase(TestCase):
@@ -465,10 +456,9 @@ class APIPlatformsTestCase(TestCase):
     def test_get_platform_not_found(self) -> None:
         """Test GET /platforms/{id} returns 404 for non-existent platform."""
         response = self.client.get("/nonexistent")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"], "Platform ID does not exist")
-        self.assertEqual(data["code"], 404)
 
 
 class APIPlayersTestCase(TestCase):
@@ -520,10 +510,9 @@ class APIPlayersTestCase(TestCase):
     def test_get_player_not_found(self) -> None:
         """Test GET /players/{id} returns 404 for non-existent player."""
         response = self.client.get("/nonexistent")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"], "Player ID does not exist")
-        self.assertEqual(data["code"], 404)
 
 
 class APIVariablesTestCase(TestCase):
@@ -604,10 +593,9 @@ class APIVariablesTestCase(TestCase):
     def test_get_variable_not_found(self) -> None:
         """Test GET /variables/{id} returns 404 for non-existent variable."""
         response = self.client.get("/nonexistent")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"], "Variable ID does not exist")
-        self.assertEqual(data["code"], 404)
 
 
 class APIRunsTestCase(TestCase):
@@ -715,31 +703,29 @@ class APIRunsTestCase(TestCase):
         self.assertEqual(data["game"]["id"], "game1")
         self.assertEqual(data["game"]["name"], "Test Game")
 
-    def test_get_run_with_player_embed(self) -> None:
-        """Test GET /runs/{id}?embed=player endpoint."""
-        response = self.client.get("/run1?embed=player")
+    def test_get_run_includes_players(self) -> None:
+        """Test GET /runs/{id} always includes the players array."""
+        response = self.client.get("/run1")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["id"], "run1")
-        self.assertIsNotNone(data.get("player"))
-        self.assertEqual(data["player"]["id"], "player1")
-        self.assertEqual(data["player"]["name"], "Tester")  # Uses nickname
+        self.assertIsInstance(data["players"], list)
+        self.assertEqual(len(data["players"]), 1)
+        self.assertEqual(data["players"][0]["id"], "player1")
 
     def test_get_run_not_found(self) -> None:
         """Test GET /runs/{id} returns 404 for non-existent run."""
         response = self.client.get("/nonexistent")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"], "Run ID does not exist")
-        self.assertEqual(data["code"], 404)
 
     def test_get_run_invalid_embed(self) -> None:
         """Test GET /runs/{id}?embed=invalid returns error for invalid embed."""
         response = self.client.get("/run1?embed=invalid")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertIn("Invalid embed", data["error"])
-        self.assertEqual(data["code"], 400)
 
 
 class APIStreamsTestCase(TestCase):
@@ -850,11 +836,6 @@ class AuthenticatedAPITestCase(TestCase):
             description="Temporary key for automated testing",
         )
 
-    def tearDown(self) -> None:
-        # Explicitly delete the API key (though Django's test rollback handles this)
-        if hasattr(self, "api_key_obj") and self.api_key_obj:
-            self.api_key_obj.delete()
-
 
 class APIGamesWriteTestCase(AuthenticatedAPITestCase):
     """Tests for Games POST/PUT/DELETE endpoints."""
@@ -913,7 +894,7 @@ class APIGamesWriteTestCase(AuthenticatedAPITestCase):
             json={
                 "id": "game1",  # Already exists from setUpTestData
                 "name": "Duplicate ID Game",
-                "slug": "duplicate-id-game",
+                "slug": "dup-id-game",
                 "twitch": "Duplicate ID Game",
                 "release": "2024-06-15",
                 "boxart": "https://example.com/boxart.png",
@@ -922,20 +903,17 @@ class APIGamesWriteTestCase(AuthenticatedAPITestCase):
             },
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertEqual(data["error"], "ID Already Exists")
-        self.assertEqual(data["code"], 400)
 
     def test_create_game_with_invalid_auth_fails(self) -> None:
-        from django.test import Client
-
         full_client = Client()
         response = full_client.post(
             "/api/v1/games/",
             data={
                 "name": "Unauthorized Game",
-                "slug": "unauthorized-game",
+                "slug": "unauth-game",
                 "twitch": "Unauthorized Game",
                 "release": "2024-06-15",
                 "boxart": "https://example.com/boxart.png",
@@ -956,6 +934,7 @@ class APIGamesWriteTestCase(AuthenticatedAPITestCase):
             "/game1",
             json={
                 "name": "Updated Game Name",
+                "slug": "updated-game",
             },
             headers={"X-API-Key": self.api_key},
         )
@@ -963,19 +942,16 @@ class APIGamesWriteTestCase(AuthenticatedAPITestCase):
         data = response.json()
         self.assertEqual(data["id"], "game1")
         self.assertEqual(data["name"], "Updated Game Name")
-        # Other fields should remain unchanged
-        self.assertEqual(data["slug"], "test-game")
+        self.assertEqual(data["slug"], "updated-game")
 
     def test_update_nonexistent_game_fails(self) -> None:
         """Test PUT /games/{id} with non-existent ID returns 404."""
         response = self.client.put(
             "/nonexistent",
-            json={"name": "Updated Name"},
+            json={"name": "Updated Name", "slug": "updated"},
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["code"], 404)
+        self.assertEqual(response.status_code, 404)
 
     def test_delete_game(self) -> None:
         """Test DELETE /games/{id} endpoint deletes a game."""
@@ -1008,9 +984,7 @@ class APIGamesWriteTestCase(AuthenticatedAPITestCase):
             "/nonexistent",
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["code"], 404)
+        self.assertEqual(response.status_code, 404)
 
 
 class APIPlatformsWriteTestCase(AuthenticatedAPITestCase):
@@ -1064,10 +1038,9 @@ class APIPlatformsWriteTestCase(AuthenticatedAPITestCase):
             },
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertEqual(data["error"], "ID Already Exists")
-        self.assertEqual(data["code"], 400)
 
     def test_update_platform(self) -> None:
         """Test PUT /platforms/{id} endpoint updates a platform."""
@@ -1171,14 +1144,13 @@ class APIPlayersWriteTestCase(AuthenticatedAPITestCase):
             },
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertEqual(data["error"], "ID Already Exists")
-        self.assertEqual(data["code"], 400)
 
     def test_update_player(self) -> None:
         """Test PUT /players/{id} endpoint updates a player."""
-        player = Players.objects.create(
+        Players.objects.create(
             id="toupdate",
             name="ToUpdate",
             url="https://speedrun.com/user/ToUpdate",
@@ -1275,13 +1247,11 @@ class APICategoriesWriteTestCase(AuthenticatedAPITestCase):
             },
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["code"], 404)
+        self.assertEqual(response.status_code, 404)
 
     def test_update_category(self) -> None:
         """Test PUT /categories/{id} endpoint updates a category."""
-        cat = Categories.objects.create(
+        Categories.objects.create(
             id="toupdate",
             game=self.game,
             name="ToUpdate",
@@ -1376,9 +1346,7 @@ class APILevelsWriteTestCase(AuthenticatedAPITestCase):
             },
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["code"], 404)
+        self.assertEqual(response.status_code, 404)
 
     def test_update_level(self) -> None:
         """Test PUT /levels/{id} endpoint updates a level."""
@@ -1592,10 +1560,9 @@ class APIVariableValuesTestCase(TestCase):
     def test_get_all_values_requires_variable_id(self) -> None:
         """Test GET /variables/values/all requires variable_id parameter."""
         response = self.client.get("/values/all")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertEqual(data["error"], "Please provide the variable's unique ID.")
-        self.assertEqual(data["code"], 400)
 
     def test_get_all_values_with_variable_id(self) -> None:
         """Test GET /variables/values/all?variable_id=var1 endpoint."""
@@ -1624,18 +1591,16 @@ class APIVariableValuesTestCase(TestCase):
     def test_get_all_values_invalid_embed(self) -> None:
         """Test GET /variables/values/all with invalid embed returns error."""
         response = self.client.get("/values/all?variable_id=var1&embed=invalid")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertIn("Invalid embed", data["error"])
-        self.assertEqual(data["code"], 400)
 
     def test_get_all_values_nonexistent_variable(self) -> None:
         """Test GET /variables/values/all with non-existent variable returns 404."""
         response = self.client.get("/values/all?variable_id=nonexistent")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"], "Variable does not exist")
-        self.assertEqual(data["code"], 404)
 
     def test_get_value_by_id(self) -> None:
         """Test GET /variables/values/{value_id} endpoint."""
@@ -1660,18 +1625,16 @@ class APIVariableValuesTestCase(TestCase):
     def test_get_value_not_found(self) -> None:
         """Test GET /variables/values/{value_id} returns 404 for non-existent value."""
         response = self.client.get("/values/noexist")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"], "Variable value does not exist")
-        self.assertEqual(data["code"], 404)
 
     def test_get_value_id_too_long(self) -> None:
         """Test GET /variables/values/{value_id} returns error for ID > 10 chars."""
         response = self.client.get("/values/thisiswaytoolong")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertEqual(data["error"], "Value ID must be 10 characters or less")
-        self.assertEqual(data["code"], 400)
 
 
 class APIVariableValuesWriteTestCase(AuthenticatedAPITestCase):
@@ -1750,10 +1713,9 @@ class APIVariableValuesWriteTestCase(AuthenticatedAPITestCase):
             },
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertEqual(data["error"], "Value ID Already Exists")
-        self.assertEqual(data["code"], 400)
 
     def test_create_value_nonexistent_variable_fails(self) -> None:
         """Test POST /variables/values/ with non-existent variable returns error."""
@@ -1765,10 +1727,9 @@ class APIVariableValuesWriteTestCase(AuthenticatedAPITestCase):
             },
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertEqual(data["error"], "Variable does not exist")
-        self.assertEqual(data["code"], 400)
 
     def test_update_value(self) -> None:
         """Test PUT /variables/values/{value_id} endpoint updates a value."""
@@ -1791,7 +1752,7 @@ class APIVariableValuesWriteTestCase(AuthenticatedAPITestCase):
     def test_update_value_change_variable(self) -> None:
         """Test PUT /variables/values/{value_id} can change parent variable."""
         # Create another variable
-        other_var = Variables.objects.create(
+        Variables.objects.create(
             id="var2",
             name="Platform",
             slug="platform",
@@ -1819,10 +1780,9 @@ class APIVariableValuesWriteTestCase(AuthenticatedAPITestCase):
             json={"name": "Updated"},
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"], "Variable value does not exist")
-        self.assertEqual(data["code"], 404)
 
     def test_delete_value(self) -> None:
         """Test DELETE /variables/values/{value_id} endpoint deletes a value."""
@@ -1850,10 +1810,9 @@ class APIVariableValuesWriteTestCase(AuthenticatedAPITestCase):
             "/values/nonexistent",
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"], "Variable value does not exist")
-        self.assertEqual(data["code"], 404)
 
 
 class APIRunsWriteTestCase(AuthenticatedAPITestCase):
@@ -1951,13 +1910,13 @@ class APIRunsWriteTestCase(AuthenticatedAPITestCase):
             },
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertEqual(data["error"], "Game does not exist")
 
     def test_update_run(self) -> None:
         """Test PUT /runs/{id} endpoint updates a run."""
-        run = Runs.objects.create(
+        Runs.objects.create(
             id="toupdate",
             game=self.game,
             category=self.category,
@@ -1985,7 +1944,7 @@ class APIRunsWriteTestCase(AuthenticatedAPITestCase):
 
     def test_delete_run(self) -> None:
         """Test DELETE /runs/{id} endpoint deletes a run."""
-        run = Runs.objects.create(
+        Runs.objects.create(
             id="todelete",
             game=self.game,
             category=self.category,
@@ -2065,7 +2024,7 @@ class APIStreamsWriteTestCase(AuthenticatedAPITestCase):
             },
             headers={"X-API-Key": self.api_key},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertIn("already has an active stream", data["error"])
 
