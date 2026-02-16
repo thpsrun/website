@@ -1,4 +1,3 @@
-import asyncio
 from typing import Any
 
 from django.contrib import messages
@@ -6,23 +5,8 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import ListView, View
 
-from srl.init_series import init_series
 from srl.models import Categories, Games, Variables, VariableValues
 from srl.srcom import sync_game, sync_game_runs, sync_obsolete_runs, sync_players
-
-
-class UpdateSeriesView(View):
-    """Initalizes the Series and begins gathering data on all speedruns within it from SRC's API."""
-
-    def get(
-        self,
-        request: HttpRequest,
-    ) -> HttpResponse:
-        series_ids = request.GET.getlist("series_ids")
-        for series_id in series_ids:
-            asyncio.run(init_series(series_id))
-
-        return redirect("/illiad/srl/games/")
 
 
 class UpdateGameView(ListView):

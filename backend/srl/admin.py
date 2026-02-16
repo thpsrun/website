@@ -20,7 +20,6 @@ from srl.models import (
     RunPlayers,
     Runs,
     RunVariableValues,
-    Series,
     Variables,
     VariableValues,
 )
@@ -30,50 +29,7 @@ from srl.views import (
     UpdateGameRunsView,
     UpdateGameView,
     UpdatePlayerView,
-    UpdateSeriesView,
 )
-
-
-class SeriesAdmin(admin.ModelAdmin):
-    """Admin panel used with the `Series` model.
-
-    This panel is for the administration of the `Series` model.
-
-    Methods:
-        - update_series: Initializes the retrevial of all information related to the Speedrun.com
-            Series and imports it into this database.
-                - Note: This is a very intensive operation. Automations WILL take time to retrieve\
-                all of the information it can. Once started, let it sit and check the logs regularly
-    """
-
-    list_display = ["name"]
-    actions = ["update_series"]
-
-    @admin.action(description="Initialize Series Data")
-    def update_series(
-        self,
-        _: HttpRequest,
-        queryset: QuerySet["Series"],
-    ) -> HttpResponse:
-        """Initializes the retrieval of all information related to the selected Series."""
-        series_ids = [obj.id for obj in queryset]
-        return redirect(
-            reverse("admin:update_series") + f"?series_ids={','.join(series_ids)}"
-        )
-
-    def get_urls(
-        self,
-    ) -> list[URLPattern]:
-        """Adds all above methods to custom URLs."""
-        urls = super().get_urls()
-        custom_urls = [
-            path(
-                "update-series/",
-                self.admin_site.admin_view(UpdateSeriesView.as_view()),
-                name="update_series",
-            ),
-        ]
-        return custom_urls + urls
 
 
 class GameAdmin(admin.ModelAdmin):
@@ -335,7 +291,6 @@ class PlayersAdmin(admin.ModelAdmin):
     self.admin_site.admin_view(ImportObsoleteView.as_view()),
     name="import_obsolete",
 ), """
-admin.site.register(Series, SeriesAdmin)
 admin.site.register(Games, GameAdmin)
 admin.site.register(Awards, DefaultAdmin)
 admin.site.register(CountryCodes, DefaultAdmin)
