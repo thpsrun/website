@@ -9,7 +9,7 @@
     *   New game screen!
     *   New login system! (Packle)
 *   Migrated the entire API to Django Ninja.
-    *   Versioned the API endpoints for future-proofing and upgrading and testing and stuff. (Packle)
+    *   Versioned the API endpoints for future-proofing and to allow better API upgrading as new features/endpoints are added/tested.
     *   GET endpoints are now publicly accessible! All other methods will require authentication.
         *   Roles system has also been added to API keys to manage scope and rate-limiting.
     *   Documentation is also publicly accessible via `/api/v1/docs`.
@@ -21,10 +21,12 @@
 
 #### Points
 *   Points Algorithm Adjustments!
-    *   If an IL is under 60 seconds, then a different algorithm is used to reduce decay.
+    *   **If an IL is under 60 seconds, then a different algorithm is used to reduce decay.**
     *   Current Formula: `P = e^(4.8284 * (WR/PB - 1)) * max_points`
     *   New Formula: `P = e^(4.8284 * √(WR/60) * (WR/PB - 1)) * max_points`
     *   10 Second IL Example:
+        *   `P = e^(4.8284 * √(10/60) * (10/X - 1)) * 100`
+  
         | **Placement** | **Time (RTA)** | **Old Algorithm** | **New Algorithm** | **Differential** |
         |---------------|----------------|-------------------|-------------------|------------------|
         | 1             | 0:10           | 100               | 100               |      **--**      |
@@ -34,6 +36,8 @@
         | 5             | 0:17           | 13                | 44                |      **+31**     |
         | 6             | 0:20           | 8                 | 37                |      **+29**     |
     *   30 Second IL Example:
+        *   `P = e^(4.8284 * √(30/60) * (30/X - 1)) * 100`
+
         | **Placement** | **Time (RTA)** | **Old Algorithm** | **New Algorithm** | **Differential** |
         |---------------|----------------|-------------------|-------------------|------------------|
         | 1             | 0:30           | 100               | 100               |      **+0**      |

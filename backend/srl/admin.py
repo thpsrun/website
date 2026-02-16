@@ -96,7 +96,12 @@ class GameAdmin(admin.ModelAdmin):
     """
 
     list_display = ["name"]
-    actions = ["update_game", "update_game_runs", "refresh_game_runs", "manage_main_visibility"]
+    actions = [
+        "update_game",
+        "update_game_runs",
+        "refresh_game_runs",
+        "manage_main_visibility",
+    ]
     search_fields = ["name"]
 
     @admin.action(description="Update Game Metadata")
@@ -123,7 +128,7 @@ class GameAdmin(admin.ModelAdmin):
             reverse("admin:update_game_runs") + f"?game_ids={','.join(game_ids)}"
         )
 
-    @admin.action(description="Reset Game Runs")
+    @admin.action(description="(Destructive) Rebuild Game Runs")
     def refresh_game_runs(
         self,
         _: HttpRequest,
@@ -243,24 +248,30 @@ class SpeedrunAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(
         self,
-        db_field: models.ForeignKey[Any, Any],
-        request: HttpRequest,
+        db_field: models.ForeignKey[Any, Any],  # type: ignore
+        request: HttpRequest | None,
         **kwargs: Any,
     ) -> forms.ModelChoiceField:
         """Inlines the `RunVariableValues` model into a `Runs` object."""
         if db_field.name in ["category", "level"]:
-            if request.resolver_match and "object_id" in request.resolver_match.kwargs:
-                run_id = request.resolver_match.kwargs["object_id"]
-                try:
-                    run = Runs.objects.select_related("game").get(id=run_id)
-                    if db_field.name == "category":
-                        kwargs["queryset"] = Categories.objects.filter(game=run.game)
-                    elif db_field.name == "level":
-                        kwargs["queryset"] = Levels.objects.filter(game=run.game)
-                except Runs.DoesNotExist:
-                    pass
+            if request:
+                if (
+                    request.resolver_match
+                    and "object_id" in request.resolver_match.kwargs
+                ):
+                    run_id = request.resolver_match.kwargs["object_id"]
+                    try:
+                        run = Runs.objects.select_related("game").get(id=run_id)
+                        if db_field.name == "category":
+                            kwargs["queryset"] = Categories.objects.filter(
+                                game=run.game
+                            )
+                        elif db_field.name == "level":
+                            kwargs["queryset"] = Levels.objects.filter(game=run.game)
+                    except Runs.DoesNotExist:
+                        pass
 
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)  # type: ignore
 
 
 class PlayersAdmin(admin.ModelAdmin):

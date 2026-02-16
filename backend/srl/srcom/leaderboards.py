@@ -3,23 +3,110 @@ from typing import Any
 from celery import shared_task
 from django.db import transaction
 
-from srl.models import Categories, Games, Levels, RunPlayers, Runs, RunVariableValues
+from srl.models import (
+    Categories,
+    Games,
+    Levels,
+    RunPlayers,
+    Runs,
+    RunVariableValues,
+    Variables,
+    VariableValues,
+)
+from srl.srcom.categories import sync_categories
+from srl.srcom.levels import sync_levels
 from srl.srcom.players import sync_players
+from srl.srcom.variables import sync_variables
 from srl.srcom.schema.internal import RunSyncContext, RunSyncTimesContext
 from srl.srcom.schema.src import (
     SrcCategoriesModel,
+    SrcGamesModel,
     SrcLeaderboardModel,
     SrcLevelsModel,
     SrcRunsModel,
 )
 from srl.srcom.utils import (
+    build_leaderboard_combos,
     build_var_name,
+    create_leaderboard_link,
     create_run_default,
     src_api,
     update_obsolete,
     update_standings,
 )
 from srl.utils import points_formula
+
+
+@shared_task
+def sync_game_runs(
+    game_id: str,
+    reset: int = 0,
+) -> None:
+    if reset == 1:
+        RunVariableValues.objects.filter(run__game__id=game_id).delete()
+        VariableValues.objects.filter(var__game__id=game_id).delete()
+        Variables.objects.filter(game=game_id).delete()
+        Categories.objects.filter(game=game_id).delete()
+        Levels.objects.filter(game=game_id).delete()
+        Runs.objects.filter(game=game_id, obsolete=False).delete()
+
+    game_check: dict[dict, str] = src_api(
+        f"https://speedrun.com/api/v1/games/"
+        f"{game_id}?embed=platforms,levels,categories,variables"
+    )
+
+    if isinstance(game_check, dict):
+        game = SrcGamesModel.model_validate(game_check)
+
+        if game.categories:
+            for category in game.categories:
+                sync_categories.delay(category)
+
+        if game.levels:
+            for level in game.levels:
+                sync_levels.delay(level)
+
+        if game.variables:
+            for variable in game.variables:
+                sync_variables.delay(variable)
+
+        if game.categories:
+            variables = game.variables or []
+
+            for category in game.categories:
+                is_il = category.type == "per-level"
+
+                if is_il and game.levels:
+                    for level in game.levels:
+                        combos = build_leaderboard_combos(
+                            variables=variables,
+                            category_id=category.id,
+                            is_il=True,
+                            level_id=level.id,
+                        )
+                        for combo in combos:
+                            lb_data = create_leaderboard_link(
+                                game_id=game.id,
+                                category_id=category.id,
+                                il_id=level.id,
+                                var_combo=combo if combo else None,
+                            )
+                            if lb_data:
+                                sync_leaderboards.delay(lb_data)
+                else:
+                    combos = build_leaderboard_combos(
+                        variables=variables,
+                        category_id=category.id,
+                        is_il=False,
+                    )
+                    for combo in combos:
+                        lb_data = create_leaderboard_link(
+                            game_id=game.id,
+                            category_id=category.id,
+                            var_combo=combo if combo else None,
+                        )
+                        if lb_data:
+                            sync_leaderboards.delay(lb_data)
 
 
 @shared_task

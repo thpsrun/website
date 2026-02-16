@@ -22,10 +22,9 @@ class RateLimitConfig:
 
 
 class RoleBasedRateLimit:
-    """
-    Custom rate limiter with different limits per API key role.
+    """Custom rate limiter with different limits per API key role.
 
-    Rate limits by role:
+    Rate Limits Per Role:
     - public: 100 requests/hour (for unauthenticated)
     - read_only: 500 requests/hour
     - contributor: 1000 requests/hour

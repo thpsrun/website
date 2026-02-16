@@ -1,18 +1,75 @@
+from itertools import product
 from typing import List
 
 from celery import shared_task
 from django.db.models import Count
 
 from srl.models import Platforms, Players, Runs, VariableValues
-from srl.srcom.schema.src import SrcRunsPlayers
+from srl.srcom.schema.src import SrcRunsPlayers, SrcVariablesModel
 from srl.utils import convert_time, points_formula, src_api, time_conversion
+
+
+def build_leaderboard_combos(
+    variables: list[SrcVariablesModel],
+    category_id: str,
+    is_il: bool,
+    level_id: str | None = None,
+) -> list[list[tuple[str, str]]]:
+    """Builds all possible variable:value combinations for a category's leaderboards.
+
+    Filters variables by subcategory status, scope type, and category applicability,
+    then generates every combination of variable-value pairs using itertools.product.
+
+    Arguments:
+        variables (list[SrcVariablesModel]): All variables for the game.
+        category_id (str): Unique SRC ID for the category being processed.
+        is_il (bool): Whether the category is per-level (True) or per-game (False).
+        level_id (str | None): Unique SRC ID for the level, used for single-level scope filtering.
+
+    Returns:
+        list[list[tuple[str, str]]]: Each inner list is one combo of (var_id, val_id) tuples.
+            Returns [[]] (one empty combo) if no subcategory variables apply.
+    """
+    scope_types = (
+        {"global", "all-level", "single-level"} if is_il else {"global", "full-game"}
+    )
+
+    var_dict: dict[str, list[str]] = {}
+
+    for variable in variables:
+        if not variable.is_subcategory:
+            continue
+
+        if variable.scope.type not in scope_types:
+            continue
+
+        if variable.category is not None and variable.category != category_id:
+            continue
+
+        if (
+            variable.scope.type == "single-level"
+            and variable.scope.level is not None
+            and variable.scope.level != level_id
+        ):
+            continue
+
+        value_ids = list(variable.values.values.keys())
+        var_dict[variable.id] = value_ids
+
+    if not var_dict:
+        return [[]]
+
+    keys = list(var_dict.keys())
+    values_lists = [var_dict[key] for key in keys]
+
+    return [list(zip(keys, vals)) for vals in product(*values_lists)]
 
 
 def create_leaderboard_link(
     game_id: str,
     category_id: str,
-    il_id: str | None,
-    var_combo: str | None,
+    il_id: str | None = None,
+    var_combo: list[tuple[str, str]] | None = None,
 ) -> dict:
     """Helper function that creates the SRC leaderboard link to be queried.
 
@@ -20,7 +77,7 @@ def create_leaderboard_link(
         game_id (str): Unique SRC ID for a game.
         category_id (str): Unique SRC ID for a category.
         il_id (str | None): Unique SRC ID for a level.
-        var_combo (str | None): Variable:value pair combination string to be queried.
+        var_combo (list[tuple[str, str]] | None): List of (variable_id, value_id) tuples.
     """
     base_url = "https://speedrun.com/api/v1/leaderboards/"
     if il_id:
@@ -30,7 +87,7 @@ def create_leaderboard_link(
 
     if var_combo:
         var_string: str = "&".join(
-            f"var={var_id}-{val_id}" for var_id, val_id in var_combo
+            f"var-{var_id}={val_id}" for var_id, val_id in var_combo
         )
         url += f"?{var_string}&embed=players,game,category"
     else:

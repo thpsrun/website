@@ -7,9 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import ListView, View
 
 from srl.init_series import init_series
-from srl.models import Categories, Games, VariableValues, Variables
-
-from .tasks import update_game, update_game_runs, update_player
+from srl.models import Categories, Games, Variables, VariableValues
+from srl.srcom import sync_game, sync_game_runs, sync_obsolete_runs, sync_players
 
 
 class UpdateSeriesView(View):
@@ -35,7 +34,7 @@ class UpdateGameView(ListView):
     ) -> HttpResponse:
         game_ids = request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
-            update_game.delay(game_id)
+            sync_game.delay(game_id)
 
         return redirect("/illiad/srl/games/")
 
@@ -49,7 +48,7 @@ class RefreshGameRunsView(ListView):
     ) -> HttpResponse:
         game_ids = request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
-            update_game_runs.delay(game_id, 1)
+            sync_game_runs.delay(game_id, 1)
 
         return redirect("/illiad/srl/games/")
 
@@ -63,7 +62,7 @@ class UpdateGameRunsView(ListView):
     ) -> HttpResponse:
         game_ids = request.GET.get("game_ids", "").split(",")
         for game_id in game_ids:
-            update_game_runs.delay(game_id, 0)
+            sync_game_runs.delay(game_id, 0)
 
         return redirect("/illiad/srl/games/")
 
@@ -77,24 +76,21 @@ class UpdatePlayerView(ListView):
     ) -> HttpResponse:
         player_ids = request.GET.get("player_ids", "").split(",")
         for player in player_ids:
-            update_player.delay(player)
+            sync_players.delay(player)
 
         return redirect("/illiad/srl/players/")
 
 
-""" class ImportObsoleteView(ListView):
+class ImportObsoleteView(ListView):
     def get(
         self,
         request: HttpRequest,
     ) -> HttpResponse:
         player_ids = request.GET.get("player_ids", "").split(",")
         for player in player_ids:
-            import_obsolete.delay(player, False)
-            print("Speedrun.com is being bad... Waiting 10 extra seconds...")
-            time.sleep(10)
+            sync_obsolete_runs(player)
 
         return redirect("/illiad/srl/players/")
- """
 
 
 class ManageMainVisibilityView(View):
@@ -116,14 +112,15 @@ class ManageMainVisibilityView(View):
         categories_data: list[dict[str, Any]] = []
         for cat in categories:
             variable_values: list[dict[str, Any]] = []
-            for var in cat.variables_set.all():
+            for var in cat.variables_set.all():  # type: ignore
                 for vv in var.variablevalues_set.all():
-                    variable_values.append({
-                        "variable_name": var.name,
-                        "value": vv,
-                    })
+                    variable_values.append(
+                        {
+                            "variable_name": var.name,
+                            "value": vv,
+                        }
+                    )
 
-            # Also include global variables (cat=NULL) scoped to full-game
             global_vars = Variables.objects.filter(
                 game=game,
                 cat__isnull=True,
@@ -131,21 +128,24 @@ class ManageMainVisibilityView(View):
             ).prefetch_related("variablevalues_set")
 
             for var in global_vars:
-                for vv in var.variablevalues_set.all():
-                    # Avoid duplicates if already added
+                for vv in var.variablevalues_set.all():  # type: ignore
                     if not any(
                         existing["value"].value == vv.value
                         for existing in variable_values
                     ):
-                        variable_values.append({
-                            "variable_name": f"{var.name} (global)",
-                            "value": vv,
-                        })
+                        variable_values.append(
+                            {
+                                "variable_name": f"{var.name} (global)",
+                                "value": vv,
+                            }
+                        )
 
-            categories_data.append({
-                "category": cat,
-                "variable_values": variable_values,
-            })
+            categories_data.append(
+                {
+                    "category": cat,
+                    "variable_values": variable_values,
+                }
+            )
 
         return {
             "game": game,
@@ -171,7 +171,6 @@ class ManageMainVisibilityView(View):
     ) -> HttpResponse:
         game = get_object_or_404(Games, id=game_id)
 
-        # Update categories
         categories = Categories.objects.filter(game=game)
         for cat in categories:
             new_value = f"cat_{cat.id}" in request.POST
@@ -179,7 +178,6 @@ class ManageMainVisibilityView(View):
                 cat.appear_on_main = new_value
                 cat.save(update_fields=["appear_on_main", "updated_at"])
 
-        # Update variable values for this game's variables
         game_variable_values = VariableValues.objects.filter(
             var__game=game,
         )
