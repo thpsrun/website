@@ -1,20 +1,76 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from api.v1.schemas.base import BaseEmbedSchema, BaseModel
 
+_TIME_FIELDS = (
+    "time",
+    "time_secs",
+    "timenl",
+    "timenl_secs",
+    "timeigt",
+    "timeigt_secs",
+    "p_time",
+    "p_time_secs",
+)
 
-class RunBaseSchemaTimes(BaseModel):
-    """Base schema that handles the time"""
 
-    time: str | None = None
-    time_secs: float | None = None
-    timenl: str | None = None
-    timenl_secs: float | None = None
-    timeigt: str | None = None
-    timeigt_secs: float | None = None
+class RunTimesSchema(BaseModel):
+    """Nested timing data for a run.
+
+    Attributes:
+        time (str | None): RTA formatted time string (e.g., "1:23.456").
+        time_secs (float | None): RTA time in seconds.
+        timenl (str | None): Load-removed formatted time string.
+        timenl_secs (float | None): Load-removed time in seconds.
+        timeigt (str | None): In-game formatted time string.
+        timeigt_secs (float | None): In-game time in seconds.
+        p_time (str | None): Primary timing method formatted string.
+        p_time_secs (float | None): Primary timing method in seconds.
+    """
+
+    time: str | None = Field(
+        default=None,
+        max_length=25,
+        description="RTA formatted (e.g. 1:23.456)",
+    )
+    time_secs: float | None = Field(
+        default=None,
+        ge=0,
+        description="RTA in seconds",
+    )
+    timenl: str | None = Field(
+        default=None,
+        max_length=25,
+        description="Load-removed formatted",
+    )
+    timenl_secs: float | None = Field(
+        default=None,
+        ge=0,
+        description="Load-removed in seconds",
+    )
+    timeigt: str | None = Field(
+        default=None,
+        max_length=25,
+        description="In-game formatted",
+    )
+    timeigt_secs: float | None = Field(
+        default=None,
+        ge=0,
+        description="In-game in seconds",
+    )
+    p_time: str | None = Field(
+        default=None,
+        max_length=25,
+        description="Primary timing method formatted",
+    )
+    p_time_secs: float | None = Field(
+        default=None,
+        ge=0,
+        description="Primary timing method in seconds",
+    )
 
 
 class RunBaseSchema(BaseEmbedSchema):
@@ -25,8 +81,7 @@ class RunBaseSchema(BaseEmbedSchema):
         runtype (str): Whether this is a full-game or individual level run.
         place (int): Leaderboard position.
         subcategory (str | None): Human-readable subcategory description.
-        time (str | None): Formatted time string (e.g., "1:23.456").
-        time_secs (float | None): Time in seconds (for sorting/calculations).
+        times (RunTimesSchema): Nested timing data (RTA, LRT, IGT, primary).
         video (str | None): Video URL.
         date (datetime | None): Submission date.
         v_date (datetime | None): Verification date.
@@ -35,7 +90,9 @@ class RunBaseSchema(BaseEmbedSchema):
 
     id: str = Field(..., max_length=15)
     runtype: str = Field(
-        ..., pattern="^(main|il)$", description="main=full-game, il=individual level"
+        ...,
+        pattern="^(main|il)$",
+        description="main=full-game, il=individual level",
     )
     place: int = Field(..., ge=0)
     subcategory: str | None = Field(
@@ -43,16 +100,28 @@ class RunBaseSchema(BaseEmbedSchema):
         max_length=100,
         description="Human-readable subcategory combo",
     )
-    time: str | None = Field(
-        default=None, max_length=25, description="Formatted (e.g. 1:23.456)"
-    )
-    time_secs: float | None = Field(
-        default=None, ge=0, description="For sorting/calculations"
-    )
+    times: RunTimesSchema = Field(description="Nested timing data")
     video: str | None = None
     date: datetime | None = None
     v_date: datetime | None = Field(default=None, description="Verification date")
     url: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def nest_timing_fields(
+        cls,
+        data: Any,
+    ) -> Any:
+        """Restructures the flat timing fields from the `Runs` object into a nested object."""
+        if isinstance(data, dict):
+            if "times" not in data:
+                data["times"] = {f: data.pop(f, None) for f in _TIME_FIELDS}
+            return data
+        if hasattr(data, "time"):
+            data.times = RunTimesSchema(
+                **{f: getattr(data, f, None) for f in _TIME_FIELDS},
+            )
+        return data
 
 
 class RunSchema(RunBaseSchema):
@@ -129,6 +198,65 @@ class RunSchema(RunBaseSchema):
         return []
 
 
+class PlayerRunEmbedSchema(RunBaseSchema):
+    """Schema for embedding run data in player profile responses.
+
+    Extends RunBaseSchema with serialized game, category, level, and player
+    data shaped for the frontend player profile view.
+
+    Attributes:
+        game (dict): Game info (name, slug).
+        category (dict | None): Category info (name, slug) if present.
+        level (dict | None): Level info (name, slug) if present.
+        players (list[dict]): Populated separately via player_data_export.
+    """
+
+    game: dict = Field(default_factory=dict)
+    category: dict | None = None
+    level: dict | None = None
+    players: list[dict] = Field(default_factory=list)
+
+    @field_validator("game", mode="before")
+    @classmethod
+    def serialize_game(
+        cls,
+        v: Any,
+    ) -> dict:
+        if hasattr(v, "name"):
+            return {"name": v.name, "slug": v.slug}
+        if isinstance(v, dict):
+            return v
+        return {}
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def serialize_category(
+        cls,
+        v: Any,
+    ) -> dict | None:
+        if v is None:
+            return None
+        if hasattr(v, "name"):
+            return {"name": v.name, "slug": v.slug}
+        if isinstance(v, dict):
+            return v
+        return None
+
+    @field_validator("level", mode="before")
+    @classmethod
+    def serialize_level(
+        cls,
+        v: Any,
+    ) -> dict | None:
+        if v is None:
+            return None
+        if hasattr(v, "name"):
+            return {"name": v.name, "slug": v.slug}
+        if isinstance(v, dict):
+            return v
+        return None
+
+
 class RunCreateSchema(BaseEmbedSchema):
     """Schema for creating runs.
 
@@ -162,6 +290,10 @@ class RunCreateSchema(BaseEmbedSchema):
     subcategory: str | None = Field(default=None, max_length=100)
     time: str | None = Field(default=None, max_length=25)
     time_secs: float | None = Field(default=None, ge=0)
+    timenl: str | None = Field(default=None, max_length=25)
+    timenl_secs: float | None = Field(default=None, ge=0)
+    timeigt: str | None = Field(default=None, max_length=25)
+    timeigt_secs: float | None = Field(default=None, ge=0)
     video: str | None = None
     date: datetime | None = None
     v_date: datetime | None = Field(default=None, description="Verification date")
@@ -196,8 +328,10 @@ class RunUpdateSchema(BaseEmbedSchema):
     runtype: str | None = Field(default=None, pattern="^(main|il)$")
     place: int | None = Field(default=None, ge=1)
     subcategory: str | None = Field(default=None, max_length=100)
-    time: str | None = Field(default=None, max_length=25)
-    time_secs: float | None = Field(default=None, ge=0)
+    timenl: str | None = Field(default=None, max_length=25)
+    timenl_secs: float | None = Field(default=None, ge=0)
+    timeigt: str | None = Field(default=None, max_length=25)
+    timeigt_secs: float | None = Field(default=None, ge=0)
     video: str | None = None
     date: datetime | None = None
     v_date: datetime | None = Field(default=None, description="Verification date")

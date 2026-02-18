@@ -7,6 +7,16 @@ class Categories(models.Model):
     class Meta:
         verbose_name_plural = "Categories"
         ordering = ["name"]
+        indexes = [
+            models.Index(
+                fields=["game", "type"],
+                name="idx_categories_game_type",
+            ),
+            models.Index(
+                fields=["appear_on_main"],
+                name="idx_categories_main",
+            ),
+        ]
 
     type_choices = [
         ("per-level", "Individual Level"),

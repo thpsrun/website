@@ -6,14 +6,14 @@ from api.v1.routers.utils.cache_utils import (
     guide_cache_key,
     leaderboard_cache_key,
     main_pbs_cache_key,
+    main_players_runs_cache_key,
     main_records_cache_key,
     main_wrs_cache_key,
     player_cache_key,
     run_cache_key,
     wr_cache_key,
 )
-from api.v1.routers.utils.decorator_adapters import categories_adapter, levels_adapter
-from api.v1.routers.utils.public_utils import (
+from api.v1.routers.utils.query_utils import (
     get_cached_embed,
     player_data_export,
     query_latest_runs,
@@ -42,7 +42,5 @@ __all__ = [
     "record_player_data_export",
     "query_latest_runs",
     "query_records",
-    # Adapters for React Utilities
-    "categories_adapter",
-    "levels_adapter",
+    "main_players_runs_cache_key",
 ]

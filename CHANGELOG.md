@@ -64,6 +64,7 @@
 
 
 ### Added
+*   Added indexes to multiple models to help speed up load times in virtually all instances.
 *   TODO: Added new login system that allows you to create an account on thps.run and associate your account with SRC.
     *   Logins can be created through the new login interface or through OAuth with Discord.
     *   Added support for token-based one-time passwords (TOTP) to use with your favorite authenticator app or the use of Passkeys.

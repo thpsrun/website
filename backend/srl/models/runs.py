@@ -12,6 +12,32 @@ from srl.models.variables import Variables
 class Runs(models.Model):
     class Meta:
         verbose_name_plural = "Runs"
+        indexes = [
+            models.Index(
+                fields=["game", "category", "place"],
+                name="idx_runs_game_cat_place",
+            ),
+            models.Index(
+                fields=["game", "level", "place"],
+                name="idx_runs_game_level_place",
+            ),
+            models.Index(
+                fields=["place", "obsolete", "vid_status"],
+                name="idx_runs_place_obs_status",
+            ),
+            models.Index(
+                fields=["game", "category", "subcategory", "level"],
+                name="idx_runs_game_cat_sub_level",
+            ),
+            models.Index(
+                fields=["-v_date"],
+                name="idx_runs_vdate_desc",
+            ),
+            models.Index(
+                fields=["runtype"],
+                name="idx_runs_runtype",
+            ),
+        ]
 
     statuschoices = [
         ("verified", "Verified"),
@@ -197,6 +223,37 @@ class Runs(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True,
     )
+
+    _TIMING_FIELD_MAP: dict[str, tuple[str, str]] = {
+        "realtime": ("time", "time_secs"),
+        "realtime_noloads": ("timenl", "timenl_secs"),
+        "ingame": ("timeigt", "timeigt_secs"),
+    }
+
+    def _primary_timing_method(
+        self,
+    ) -> str:
+        if self.category and self.category.defaulttime:
+            return self.category.defaulttime
+        if self.runtype == "il":
+            return self.game.idefaulttime
+        return self.game.defaulttime
+
+    @property
+    def p_time(
+        self,
+    ) -> str | None:
+        method = self._primary_timing_method()
+        field, _ = self._TIMING_FIELD_MAP[method]
+        return getattr(self, field)
+
+    @property
+    def p_time_secs(
+        self,
+    ) -> float | None:
+        method = self._primary_timing_method()
+        _, secs_field = self._TIMING_FIELD_MAP[method]
+        return getattr(self, secs_field)
 
     def __str__(self):
         return self.id

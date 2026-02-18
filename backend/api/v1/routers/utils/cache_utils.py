@@ -4,7 +4,7 @@ from typing import Any, Callable
 from django.core.cache import caches
 from django.db.models import Max, Q
 from guides.models import Guides
-from srl.models import Categories, Levels, Runs, VariableValues, Variables
+from srl.models import Categories, Levels, Players, Runs, Variables, VariableValues
 
 
 def leaderboard_cache_key(
@@ -116,7 +116,9 @@ def main_records_cache_key() -> str:
 
     cat_latest = Categories.objects.filter(
         appear_on_main=True,
-    ).aggregate(latest=Max("updated_at"),)["latest"]
+    ).aggregate(
+        latest=Max("updated_at"),
+    )["latest"]
 
     vv_latest = VariableValues.objects.aggregate(
         latest=Max("updated_at"),
@@ -127,6 +129,23 @@ def main_records_cache_key() -> str:
     timestamp = latest.isoformat() if latest else "None"
 
     return f"main:records:{timestamp}"
+
+
+def main_players_runs_cache_key(
+    player: str,
+) -> str:
+    player_data = Players.objects.get(
+        Q(id__iexact=player) | Q(name__iexact=player) | Q(nickname__iexact=player)
+    ).id
+
+    latest_runs = Runs.objects.filter(
+        run_players__player=player_data,
+        vid_status="verified",
+    ).aggregate(latest=Max("updated_at"),)["latest"]
+
+    timestamp = latest_runs.isoformat() if latest_runs else "None"
+
+    return f"player:runs:{timestamp}"
 
 
 def game_categories_cache_key(

@@ -11,12 +11,8 @@ from srl.models import Categories, Games, Levels, Variables
 from api.ordering import get_ordered_level_names
 from api.permissions import public_auth
 from api.v1.docs.website import GAME_CATEGORIES_GET, GAME_LEVELS_GET, MAIN_PAGE_GET
-from api.v1.routers.utils import (
-    cache_response,
-    categories_adapter,
-    get_cached_embed,
-    levels_adapter,
-)
+from api.v1.routers.decorators import categories_adapter, levels_adapter
+from api.v1.routers.utils import cache_response, get_cached_embed
 from api.v1.schemas.base import ErrorResponse
 
 if TYPE_CHECKING:
@@ -34,10 +30,10 @@ router = Router()
     Get aggregated data for the website main page including latest world records,
     personal bests, and current records for featured categories.
 
-    **Supported Data Types:**
-    - `latest-wrs`: Latest 5 world records
-    - `latest-pbs`: Latest 5 personal bests (excluding WRs)
-    - `records`: Current WRs for featured categories
+    **Supported Embeds:**
+    - `latest-wrs`: Latest 5 world records within the database.
+    - `latest-pbs`: Latest 5 personal bests (excluding WRs) within the database.
+    - `records`: Current WRs for featured categories.
 
     **Supported Parameters:**
     - `embed`: Comma-separated list of data types to include (required)
@@ -61,7 +57,6 @@ def get_main_page_data(
         Field(description="Comma-separated embed types"),
     ] = None,
 ) -> tuple[int, dict[str, Any] | ErrorResponse]:
-    """Get main page data with flexible embed selection."""
     if not embed:
         return 400, ErrorResponse(
             error="Must specify embed types to retrieve",
@@ -107,10 +102,8 @@ def get_main_page_data(
     Get all categories for a game with their variables and values.
     Optimized for the category selection interface.
 
-    **Features:**
-    - Custom category ordering (Any%, 100%, etc. prioritized)
-    - Includes all variables with their possible values
-    - Optimized database queries with prefetch
+    **Supported Parameters:**
+    - `game_id` (str): Filter by specific game ID or its slug
 
     **Examples:**
     - `/website/game/thps4/categories` - Get all THPS4 categories
@@ -171,11 +164,10 @@ def get_game_categories(
             )
         )
 
-        # Convert to response format
         categories_data = []
         for category in categories:
             variables_data = []
-            for variable in category.variables_set.all():
+            for variable in category.variables_set.all():  # type: ignore
                 values_data = [
                     {
                         "value": val.value,
@@ -230,12 +222,9 @@ def get_game_categories(
     description=dedent(
         """
     Get all levels for a game with their variables and values.
-    Used for Individual Level (IL) speedrun interfaces.
 
-    **Features:**
-    - Custom level ordering using existing ordering system
-    - Includes level-specific variables with their possible values
-    - Optimized database queries with prefetch
+    **Supported Parameters:**
+    - `game_id` (str): Filter by specific game ID or its slug
 
     **Examples:**
     - `/website/game/thps4/levels` - Get all THPS4 levels
@@ -289,11 +278,10 @@ def get_game_levels(
             .order_by(level_order)
         )
 
-        # Convert to response format
         levels_data = []
         for level in levels:
             variables_data = []
-            for variable in level.variables_set.all():
+            for variable in level.variables_set.all():  # type: ignore
                 values_data = [
                     {
                         "value": val.value,

@@ -7,9 +7,11 @@ from srl.models import Runs
 
 from api.v1.routers.utils import (
     main_pbs_cache_key,
+    main_players_runs_cache_key,
     main_records_cache_key,
     main_wrs_cache_key,
 )
+from api.v1.schemas.runs import PlayerRunEmbedSchema
 
 TIMEOUT = 604800
 
@@ -27,6 +29,7 @@ def player_data_export(
         }
         for rp in run_players
     ]
+
     return players if players else [{"name": "Anonymous", "country": None}]
 
 
@@ -48,6 +51,7 @@ def record_player_data_export(
         }
         for rp in run_players
     ]
+
     if not players:
         players = [
             {
@@ -56,6 +60,7 @@ def record_player_data_export(
                 "date": run_date,
             }
         ]
+
     return players
 
 
@@ -86,16 +91,16 @@ def query_latest_runs(
         result.append(
             {
                 "id": run.id,
-                "game": {"name": run.game.name, "slug": run.game.slug},
-                "category": ({"name": run.category.name} if run.category else None),
+                "game": {"name": run.game.name},
                 "subcategory": run.subcategory,
                 "players": players_data,
-                "time": run.time,
+                "time": run.p_time,
                 "date": run.v_date.isoformat() if run.v_date else None,
                 "video": run.video,
                 "url": run.url,
             }
         )
+
     return result
 
 
@@ -132,7 +137,7 @@ def query_records() -> list[dict[str, Any]]:
                     "players": [],
                 }
             )
-            seen_records.add(key)
+            seen_records.add(key)  # type: ignore
 
         for record in grouped_runs:
             if (
@@ -154,11 +159,34 @@ def query_records() -> list[dict[str, Any]]:
         reverse=False,
     )
 
-    # Remove the sorting helper field before returning
     for record in run_list:
         del record["game_release"]
 
     return run_list
+
+
+def query_player_runs(
+    obsolete: bool = False,
+) -> list[dict[str, Any]]:
+    filters = {
+        "obsolete": obsolete,
+        "vid_status": "verified",
+    }
+
+    runs: QuerySet[Runs] = (
+        Runs.objects.select_related("game", "category", "level")
+        .prefetch_related("run_players__player__countrycode")
+        .filter(**filters)
+        .order_by("-game__release", "v_date")
+    )
+
+    result = []
+    for run in runs:
+        data = PlayerRunEmbedSchema.model_validate(run).model_dump()
+        data["players"] = player_data_export(run.run_players.all())  # type: ignore
+        result.append(data)
+
+    return result
 
 
 def get_cached_embed(
@@ -173,11 +201,16 @@ def get_cached_embed(
         "latest-wrs": main_wrs_cache_key,
         "latest-pbs": main_pbs_cache_key,
         "records": main_records_cache_key,
+        "pbs": main_players_runs_cache_key,
+        "obsoletes": main_players_runs_cache_key,  # yes this is intentional
     }
+
     query_functions: dict[str, Any] = {
         "latest-wrs": lambda: query_latest_runs(wr=True),
         "latest-pbs": lambda: query_latest_runs(wr=False),
         "records": query_records,
+        "pbs": lambda: query_player_runs(obsolete=False),
+        "obsoletes": lambda: query_player_runs(obsolete=True),
     }
 
     cache = caches[cache_name]

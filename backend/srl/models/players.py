@@ -8,6 +8,16 @@ class Players(models.Model):
     class Meta:
         verbose_name_plural = "Players"
         ordering = ["name"]
+        indexes = [
+            models.Index(
+                fields=["name"],
+                name="idx_players_name",
+            ),
+            models.Index(
+                fields=["nickname"],
+                name="idx_players_nickname",
+            ),
+        ]
 
     id = models.CharField(
         max_length=10,

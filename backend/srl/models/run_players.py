@@ -11,6 +11,12 @@ class RunPlayers(models.Model):
                 name="unique_run_player",
             )
         ]
+        indexes = [
+            models.Index(
+                fields=["player", "run"],
+                name="idx_runplayers_player_run",
+            ),
+        ]
         ordering = ["run", "order"]
 
     run = models.ForeignKey(

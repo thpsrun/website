@@ -10,6 +10,16 @@ from srl.models.levels import Levels
 class Variables(models.Model):
     class Meta:
         verbose_name_plural = "Variables"
+        indexes = [
+            models.Index(
+                fields=["game", "cat"],
+                name="idx_variables_game_cat",
+            ),
+            models.Index(
+                fields=["game", "scope"],
+                name="idx_variables_game_scope",
+            ),
+        ]
 
     type_choices = [
         ("global", "Entire Game"),
