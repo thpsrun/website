@@ -10,7 +10,7 @@ from ninja.errors import ValidationError
 
 from api.v1.routers.guides.guides import router as guides_router
 from api.v1.routers.guides.tags import router as tags_router
-from api.v1.routers.react.website import router as website_router
+from api.v1.routers.pages.home import router as website_router
 from api.v1.routers.resources.categories import router as categories_router
 from api.v1.routers.resources.games import router as games_router
 from api.v1.routers.resources.levels import router as levels_router

@@ -43,6 +43,26 @@ services:
     networks:
       - thpsrun
 
+  celery:
+    container_name: celery
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        UID: 1000
+        GID: 1000
+    restart: unless-stopped
+    command: celery -A website worker --loglevel=info -E --max-tasks-per-child=100
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend:/app
+    networks:
+      - thpsrun
+
   redis:
     container_name: redis
     image: redis:alpine
