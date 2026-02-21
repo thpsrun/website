@@ -1,33 +1,37 @@
 # syntax=docker/dockerfile:1
-FROM python:3.14.3-bookworm
+
+# ── Stage 1: build ────────────────────────────────────────────────────────────
+FROM python:3.14.3-alpine AS builder
+
+RUN apk add --no-cache build-base libpq-dev
+
+COPY requirements.txt /tmp/requirements.txt
+RUN python -m venv /venv \
+    && /venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+
+# ── Stage 2: runtime ──────────────────────────────────────────────────────────
+FROM python:3.14.3-alpine
 
 ARG UID=1002
 ARG GID=1002
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV DEBIAN_FRONTEND=noninteractive
-ENV DEBCONF_NOWARNINGS="yes"
+ENV PATH="/venv/bin:$PATH"
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends  build-essential libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache bash libpq \
+    && addgroup -g ${GID} app_user \
+    && adduser -u ${UID} -G app_user -D app_user \
+    && install -d -m 0755 -o app_user -g app_user /app \
+    && install -d -m 0755 -o app_user -g app_user /app/static
 
-COPY requirements.txt /tmp/requirements.txt
+COPY --from=builder /venv /venv
 COPY docker/entrypoint.sh /app/entrypoint.sh
-
-RUN pip install --no-cache-dir -r /tmp/requirements.txt \
-    && rm -rf /tmp/requirements.txt \
-    && groupadd -g ${GID} app_user \
-    && useradd -u ${UID} -g ${GID} app_user \
-    && install -d -m 0755 -o app_user -g app_user /app
+RUN chmod +x /app/entrypoint.sh
 
 WORKDIR /app
 USER app_user:app_user
 
-RUN mkdir /app/static
-
 COPY --chown=app_user:app_user . .
-RUN chmod +x docker/*.sh
 
-ENTRYPOINT [ "/app/entrypoint.sh" ]
+ENTRYPOINT ["/app/entrypoint.sh"]

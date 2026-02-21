@@ -31,8 +31,30 @@ services:
       - postgres
       - redis
     volumes:
-      - ./backend:/app
       - static_files:/app/static:rw
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - thpsrun
+
+  celery:
+    container_name: celery
+    restart: unless-stopped
+    build: .
+    command: celery -A website worker --loglevel=info -E --max-tasks-per-child=100
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
     networks:
       - thpsrun
 
@@ -40,8 +62,9 @@ services:
     container_name: redis
     image: redis:alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    security_opt:
+      - no-new-privileges:true
     networks:
       - thpsrun
 

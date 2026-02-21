@@ -109,10 +109,14 @@ DATABASES = {
     }
 }
 
+redis_password = os.getenv("REDIS_PASSWORD", "")
+redis_auth = f":{redis_password}@" if redis_password else ""
+REDIS_DB = f"redis://{redis_auth}redis:6379"
+
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://redis:6379/1",
+        "LOCATION": f"{REDIS_DB}/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "SOCKET_CONNECT_TIMEOUT": 5,
@@ -156,8 +160,8 @@ STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CELERY SETTINGS
-CELERY_BROKER_URL = "redis://redis:6379/0"
-CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+CELERY_BROKER_URL = f"{REDIS_DB}/0"
+CELERY_RESULT_BACKEND = f"{REDIS_DB}/0"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
