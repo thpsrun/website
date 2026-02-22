@@ -1,3 +1,10 @@
+### v3.4.8.4
+###### February 22, 2026
+*   Fixed an issue where players with too many pronouns would break importing.
+    *   Increased pronouns' character field from 20 to 50.
+
+* * *
+
 ### v3.4.8.3
 ###### February 13, 2026
 *   Added "100% (Console)" as an option to appear on the front page.
