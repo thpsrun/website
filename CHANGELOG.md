@@ -18,6 +18,7 @@
 *   Caching has been added to all API endpoints.
     *   Cached responses last ~7 days.
         *   Upon a run, category, or player account being updated, then this will also update the cached.
+*   Categories, Levels, and Variable:Value pairs can now be individually re-ordered dynamically via new Django Action panels.
 
 #### Points
 *   Points Algorithm Adjustments!
@@ -75,6 +76,9 @@
 *   Added `appear_on_main` field to `Categories` and `VariableValues` that will allow for querying only categories that, well, we only want to appear on the main page.
     *   Also added a devoted `Manage Page Visibility` Django Action that will allow admins to easily mark the category + variable:value pairs to show on the main page.
         *   Not the best system, will work to update this in the future maybe.
+*   Added `order` field to `Categories`, `Levels`, and `VariableValues` that will help establish the order of that model when returned from the API.
+    *   Also created a specialized `Manage Category & Level Ordering` Django Action to help admins manage the order of the model objects.
+*   Added a new `is_ce` property to `Games` to help centralize determining if the object is a Category Extension or not.
 *   Added `archived` field to `Variables`, `VariableValues`, `Categories`, and `Levels`.
 *   Added a `Categories`-specific override that lets you force change the default timing method of the category.
     *   THPS4 5th Gen, you're welcome.
@@ -108,20 +112,17 @@
 *   Changed the amount of characters in the `Rules` field of `Categories`, `Variables`, and `VariableValue` to 5,000 (up from 1,000).
 
 ### Removed
-*   
+*   Removed `all_cats` as a field, since new logic helps consolidate field options.
 
 ### Misc.
 *   
 
 ### TODO
-*   [LOW] Fix `Categories` `defaulttime` logic to override the main game when they are different.
-*   Fix `init_series.py` to accomodate newly refactored SRC logic.
 *   Add new login system and upgrade `Users` model to accept OAuth tokens from Discord, allow for new signups, and require an SRC account.
     *   When synced, SRC account should be crawled to see if the user has any runs in the database; if no, then they are restricted.
     *   TOTP-based tokens and Passkeys should also be added.
     *   Revise Privacy Policy on new guidelines.
 *   Upgrade the `website` endpoint with custom APIs for:
-    *   Main Page
     *   Player Profile
         *   Run History
     *   Overall Points Leaderboard

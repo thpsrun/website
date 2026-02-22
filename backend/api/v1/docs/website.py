@@ -67,7 +67,9 @@ MAIN_PAGE_GET = {
                 }
             },
         },
-        400: {"description": "Invalid embed types requested or missing embed parameter."},
+        400: {
+            "description": "Invalid embed types requested or missing embed parameter."
+        },
         429: {"description": "Rate limit exceeded, calm your horses."},
         500: {"description": "Server Error. Error is logged."},
     },
@@ -105,7 +107,6 @@ GAME_CATEGORIES_GET = {
                                     "name": "Platform",
                                     "slug": "platform",
                                     "scope": "full-game",
-                                    "all_cats": True,
                                     "hidden": False,
                                     "values": [
                                         {
@@ -141,7 +142,6 @@ GAME_CATEGORIES_GET = {
                                     "name": "Platform",
                                     "slug": "platform",
                                     "scope": "full-game",
-                                    "all_cats": True,
                                     "hidden": False,
                                     "values": [
                                         {
@@ -195,7 +195,6 @@ GAME_LEVELS_GET = {
                                     "name": "Difficulty",
                                     "slug": "difficulty",
                                     "scope": "single-level",
-                                    "all_cats": False,
                                     "hidden": False,
                                     "values": [
                                         {
@@ -228,7 +227,6 @@ GAME_LEVELS_GET = {
                                     "name": "Difficulty",
                                     "slug": "difficulty",
                                     "scope": "single-level",
-                                    "all_cats": False,
                                     "hidden": False,
                                     "values": [
                                         {

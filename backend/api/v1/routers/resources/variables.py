@@ -654,7 +654,7 @@ def get_variable(
     - `name` (str): Variable name.
     - `scope` (str): Where variable applies (`global`, `full-game`, `all-levels`, `single-level`).
     - `archive` (bool): Whether variable is archived/hidden from listings.
-    - `category_id` (str | None): Specific category ID (if not all_cats).
+    - `category_id` (str | None): Specific category ID.
     - `level_id` (str | None): Specific level ID (required if scope is `single-level`).
     """
     ),
@@ -745,7 +745,6 @@ def create_variable(
     - `game_id` (str | None): Updated game ID.
     - `name` (str | None): Updated variable name.
     - `scope` (str | None): Updated scope (`global`, `full-game`, `all-levels`, `single-level`).
-    - `all_cats` (bool | None): Updated all_cats flag.
     - `archive` (bool | None): Updated archive status.
     - `category_id` (str | None): Updated category ID.
     - `level_id` (str | None): Updated level ID.

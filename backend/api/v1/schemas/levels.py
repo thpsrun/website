@@ -3,6 +3,7 @@ from typing import Any
 from pydantic import Field, field_validator
 
 from api.v1.schemas.base import BaseEmbedSchema, SlugMixin
+from api.v1.schemas.variables import VariableWithValuesSchema
 
 
 class LevelBaseSchema(SlugMixin, BaseEmbedSchema):
@@ -75,6 +76,9 @@ class LevelCreateSchema(SlugMixin, BaseEmbedSchema):
     game_id: str
     url: str
     rules: str | None = None
+    order: int = Field(
+        default=0, exclude=True, description="Sort order; managed via admin panel"
+    )
 
 
 class LevelUpdateSchema(BaseEmbedSchema):
@@ -91,3 +95,18 @@ class LevelUpdateSchema(BaseEmbedSchema):
     name: str | None = None
     url: str | None = None
     rules: str | None = None
+    order: int = Field(
+        default=0, exclude=True, description="Sort order; managed via admin panel"
+    )
+
+
+class GameLevelResponseSchema(LevelBaseSchema):
+    """Response schema for game levels with embedded variables.
+
+    Used by the /website/game/{game_id}/levels endpoint.
+
+    Attributes:
+        variables (list[VariableWithValuesSchema]): Variables with their possible values.
+    """
+
+    variables: list[VariableWithValuesSchema] = Field(default_factory=list)

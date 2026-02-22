@@ -20,6 +20,12 @@ class VariableValueSchema(BaseEmbedSchema):
     value: str = Field(..., max_length=15)
     name: str = Field(..., max_length=50)
     slug: str = Field(..., max_length=15, description="URL-friendly slug")
+    appear_on_main: bool = Field(
+        default=False, exclude=True, description="Show on main leaderboard page"
+    )
+    order: int = Field(
+        default=0, exclude=True, description="Sort order; managed via admin panel"
+    )
     archive: bool = Field(default=False, description="Hidden from listings")
     rules: str | None = Field(default=None, max_length=5000)
     variable: dict | None = Field(None, description="Included with ?embed=variable")
@@ -100,7 +106,7 @@ class VariableCreateSchema(BaseEmbedSchema):
         slug (str): URL-friendly version.
         scope (str): Where this variable applies.
         archive (bool): Whether variable is archived/hidden.
-        category_id (str | None): Specific category ID (if not all_cats).
+        category_id (str | None): Specific category ID.
         level_id (str | None): Specific level ID (if scope=single-level).
     """
 
@@ -162,6 +168,12 @@ class VariableValueCreateSchema(BaseEmbedSchema):
         max_length=15,
         description="URL-friendly; auto-generates from name",
     )
+    appear_on_main: bool = Field(
+        default=False, exclude=True, description="Show on main leaderboard page"
+    )
+    order: int = Field(
+        default=0, exclude=True, description="Sort order; managed via admin panel"
+    )
     archive: bool = Field(default=False, description="Hidden from listings")
     rules: str | None = Field(default=None, max_length=5000)
 
@@ -180,5 +192,11 @@ class VariableValueUpdateSchema(BaseEmbedSchema):
     variable_id: str | None = None
     name: str | None = Field(default=None, max_length=50)
     slug: str | None = Field(default=None, max_length=15)
+    appear_on_main: bool = Field(
+        default=False, exclude=True, description="Show on main leaderboard page"
+    )
+    order: int = Field(
+        default=0, exclude=True, description="Sort order; managed via admin panel"
+    )
     archive: bool | None = None
     rules: str | None = Field(default=None, max_length=5000)

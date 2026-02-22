@@ -5,7 +5,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import ListView, View
 
-from srl.models import Categories, Games, Variables, VariableValues
+from srl.models import Categories, Games, Levels, Variables, VariableValues
 from srl.srcom import sync_game, sync_game_runs, sync_obsolete_runs, sync_players
 
 
@@ -175,3 +175,106 @@ class ManageMainVisibilityView(View):
         return redirect(
             request.path,
         )
+
+
+class ManageOrderingView(View):
+    """Admin view to manage sort ordering for full-game categories, levels, and variable values."""
+
+    def _sorted_for_display(
+        self,
+        queryset,
+    ) -> list:
+        """Return items sorted: order>=1 first ascending, then order=0 alphabetically."""
+        items = list(queryset)
+        ordered = sorted([i for i in items if i.order > 0], key=lambda x: x.order)
+        unordered = sorted([i for i in items if i.order == 0], key=lambda x: x.name)
+        return ordered + unordered
+
+    def _build_context(
+        self,
+        game: Games,
+    ) -> dict[str, Any]:
+        categories = self._sorted_for_display(
+            Categories.objects.filter(game=game, type="per-game"),
+        )
+        levels = self._sorted_for_display(
+            Levels.objects.filter(game=game),
+        )
+        variable_groups: list[dict[str, Any]] = []
+        for var in Variables.objects.filter(game=game).order_by("name").prefetch_related(
+            "variablevalues_set"
+        ):
+            vv_list = self._sorted_for_display(var.variablevalues_set.all())  # type: ignore
+            if vv_list:
+                variable_groups.append({"variable": var, "values": vv_list})
+
+        return {
+            "game": game,
+            "categories": categories,
+            "levels": levels,
+            "variable_groups": variable_groups,
+            "title": f"Manage Ordering: {game.name}",
+            "opts": Games._meta,
+            "has_view_permission": True,
+        }
+
+    def get(
+        self,
+        request: HttpRequest,
+        game_id: str,
+    ) -> HttpResponse:
+        game = get_object_or_404(Games, id=game_id)
+        context = self._build_context(game)
+        return render(request, "admin/srl/manage_ordering.html", context)
+
+    def post(
+        self,
+        request: HttpRequest,
+        game_id: str,
+    ) -> HttpResponse:
+        game = get_object_or_404(Games, id=game_id)
+        item_id = request.POST.get("item_id", "")
+        direction = request.POST.get("direction", "")
+        item_type = request.POST.get("item_type", "")
+
+        if item_type == "category":
+            queryset = Categories.objects.filter(game=game, type="per-game")
+        elif item_type == "level":
+            queryset = Levels.objects.filter(game=game)
+        elif item_type == "variable_value":
+            var_id = request.POST.get("var_id", "")
+            if not var_id:
+                messages.error(request, "Missing variable ID.")
+                return redirect(request.path)
+            queryset = VariableValues.objects.filter(var__game=game, var_id=var_id)
+        else:
+            messages.error(request, "Invalid item type.")
+            return redirect(request.path)
+
+        items = self._sorted_for_display(queryset)
+
+        idx = next(
+            (i for i, item in enumerate(items) if str(item.pk) == item_id),
+            None,
+        )
+        if idx is None:
+            messages.error(request, "Item not found.")
+            return redirect(request.path)
+
+        if direction == "up" and idx > 0:
+            new_idx = idx - 1
+        elif direction == "down" and idx < len(items) - 1:
+            new_idx = idx + 1
+        else:
+            messages.warning(request, "Cannot move item in that direction.")
+            return redirect(request.path)
+
+        items[idx], items[new_idx] = items[new_idx], items[idx]
+
+        for position, item in enumerate(items, start=1):
+            if item.order != position:
+                item.order = position
+                item.save(update_fields=["order"])
+
+        messages.success(request, "Order updated.")
+        return redirect(request.path)

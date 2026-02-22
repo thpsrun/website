@@ -28,7 +28,6 @@ LEVELS_GET = {
                                 "name": "Platform",
                                 "slug": "platform",
                                 "scope": "single-level",
-                                "all_cats": False,
                                 "hidden": False,
                                 "values": [
                                     {

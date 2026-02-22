@@ -149,7 +149,7 @@ class RunSchema(RunBaseSchema):
         default_factory=dict,
         description="ID mapping or embedded with ?embed=variables",
     )
-    bonus: int = Field(exclude=True)
+    bonus: int = Field(default=0, le=4, description="Streak month bonus")
 
     @field_validator("game", "category", "level", mode="before")
     @classmethod

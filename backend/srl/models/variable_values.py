@@ -31,10 +31,19 @@ class VariableValues(models.Model):
     )
     appear_on_main = models.BooleanField(
         verbose_name="Appear on Main Page",
-        default=True,
+        default=False,
         help_text=(
             "When unchecked, runs with this variable value will NOT appear "
             "on the main page, even if the parent category is enabled."
+        ),
+    )
+    order = models.IntegerField(
+        verbose_name="Sort Order",
+        default=0,
+        help_text=(
+            "Controls display order within this variable's values. "
+            "order=0 items sort alphabetically as a fallback. "
+            "Items with order>=1 sort first in ascending order."
         ),
     )
     archive = models.BooleanField(

@@ -3,6 +3,7 @@ from typing import Any
 from pydantic import Field, field_validator
 
 from api.v1.schemas.base import BaseEmbedSchema, SlugMixin
+from api.v1.schemas.variables import VariableWithValuesSchema
 
 
 class CategoryBaseSchema(SlugMixin, BaseEmbedSchema):
@@ -24,7 +25,7 @@ class CategoryBaseSchema(SlugMixin, BaseEmbedSchema):
     url: str
     rules: str | None = Field(default=None, max_length=5000)
     appear_on_main: bool = Field(
-        default=False, description="Show on main leaderboard page"
+        default=False, exclude=True, description="Show on main leaderboard page"
     )
     archive: bool = Field(default=False, description="Hidden from listings")
 
@@ -91,7 +92,10 @@ class CategoryCreateSchema(SlugMixin, BaseEmbedSchema):
     url: str
     rules: str | None = None
     appear_on_main: bool = Field(
-        default=False, description="Show on main leaderboard page"
+        default=False, exclude=True, description="Show on main leaderboard page"
+    )
+    order: int = Field(
+        default=0, exclude=True, description="Sort order; managed via admin panel"
     )
     archive: bool = Field(default=False, description="Hidden from listings")
 
@@ -119,4 +123,19 @@ class CategoryUpdateSchema(BaseEmbedSchema):
     appear_on_main: bool | None = Field(
         None, description="Show on main leaderboard page"
     )
+    order: int | None = Field(
+        default=None, description="Sort order; managed via admin panel"
+    )
     archive: bool | None = Field(default=None, description="Hidden from listings")
+
+
+class GameCategoryResponseSchema(CategoryBaseSchema):
+    """Response schema for game categories with embedded variables.
+
+    Used by the /website/game/{game_id}/categories endpoint.
+
+    Attributes:
+        variables (list[VariableWithValuesSchema]): Variables with their possible values.
+    """
+
+    variables: list[VariableWithValuesSchema] = Field(default_factory=list)

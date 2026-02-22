@@ -31,7 +31,6 @@ CATEGORIES_GET = {
                                 "name": "Platform",
                                 "slug": "platform",
                                 "scope": "full-game",
-                                "all_cats": True,
                                 "hidden": False,
                                 "values": [
                                     {

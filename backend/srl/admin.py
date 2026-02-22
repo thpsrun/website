@@ -25,6 +25,7 @@ from srl.models import (
 )
 from srl.views import (
     ManageMainVisibilityView,
+    ManageOrderingView,
     RefreshGameRunsView,
     UpdateGameRunsView,
     UpdateGameView,
@@ -57,6 +58,7 @@ class GameAdmin(admin.ModelAdmin):
         "update_game_runs",
         "refresh_game_runs",
         "manage_main_visibility",
+        "manage_ordering",
     ]
     search_fields = ["name"]
 
@@ -110,6 +112,20 @@ class GameAdmin(admin.ModelAdmin):
             )
         return redirect(reverse("admin:srl_games_changelist"))
 
+    @admin.action(description="Manage Category & Level Ordering")
+    def manage_ordering(
+        self,
+        _: HttpRequest,
+        queryset: QuerySet["Games"],
+    ) -> HttpResponse:
+        """Opens the ordering editor for the selected game."""
+        game = queryset.first()
+        if game:
+            return redirect(
+                reverse("admin:manage_ordering", args=[game.id]),
+            )
+        return redirect(reverse("admin:srl_games_changelist"))
+
     def get_urls(
         self,
     ) -> list[URLPattern]:
@@ -135,6 +151,11 @@ class GameAdmin(admin.ModelAdmin):
                 "<str:game_id>/manage-main-visibility/",
                 self.admin_site.admin_view(ManageMainVisibilityView.as_view()),
                 name="manage_main_visibility",
+            ),
+            path(
+                "<str:game_id>/manage-ordering/",
+                self.admin_site.admin_view(ManageOrderingView.as_view()),
+                name="manage_ordering",
             ),
         ]
         return custom_urls + urls

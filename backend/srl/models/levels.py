@@ -38,6 +38,14 @@ class Levels(models.Model):
         blank=True,
         null=True,
     )
+    order = models.IntegerField(
+        verbose_name="Sort Order",
+        default=0,
+        help_text=(
+            "Controls display order. order=0 items sort alphabetically as a fallback. "
+            "Items with order>=1 sort first in ascending order."
+        ),
+    )
     archive = models.BooleanField(
         verbose_name="Archive Level",
         default=False,

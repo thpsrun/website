@@ -9,7 +9,6 @@ VARIABLES_GET = {
                         "name": "Platform",
                         "slug": "platform",
                         "scope": "full-game",
-                        "all_cats": True,
                         "hidden": False,
                         "values": [
                             {
@@ -78,7 +77,6 @@ VARIABLES_POST = {
                         "name": "Platform",
                         "slug": "platform",
                         "scope": "full-game",
-                        "all_cats": True,
                         "hidden": False,
                     }
                 }
@@ -113,7 +111,7 @@ VARIABLES_POST = {
                         "category_id": {
                             "type": "string",
                             "example": "rklge08d",
-                            "description": "CATEGORY ID (REQUIRED IF all_cats IS FALSE)",
+                            "description": "CATEGORY ID",
                         },
                         "level_id": {
                             "type": "string",
@@ -131,11 +129,6 @@ VARIABLES_POST = {
                             "example": "full-game",
                             "description": "VARIABLE SCOPE",
                         },
-                        "all_cats": {
-                            "type": "boolean",
-                            "example": True,
-                            "description": "WHETHER VARIABLE APPLIES TO ALL CATEGORIES",
-                        },
                         "hidden": {
                             "type": "boolean",
                             "example": False,
@@ -147,7 +140,6 @@ VARIABLES_POST = {
                     "name": "Platform",
                     "game_id": "n2680o1p",
                     "scope": "full-game",
-                    "all_cats": True,
                     "hidden": False,
                 },
             }
@@ -166,7 +158,6 @@ VARIABLES_PUT = {
                         "name": "Platform",
                         "slug": "platform",
                         "scope": "full-game",
-                        "all_cats": True,
                         "hidden": False,
                     }
                 }
@@ -229,11 +220,6 @@ VARIABLES_PUT = {
                             "example": "full-game",
                             "description": "UPDATED VARIABLE SCOPE",
                         },
-                        "all_cats": {
-                            "type": "boolean",
-                            "example": True,
-                            "description": "UPDATED ALL CATEGORIES FLAG",
-                        },
                         "hidden": {
                             "type": "boolean",
                             "example": False,
@@ -289,7 +275,6 @@ VARIABLES_ALL = {
                             "name": "Platform",
                             "slug": "platform",
                             "scope": "full-game",
-                            "all_cats": True,
                             "hidden": False,
                         },
                         {
@@ -297,7 +282,6 @@ VARIABLES_ALL = {
                             "name": "Difficulty",
                             "slug": "difficulty",
                             "scope": "single-level",
-                            "all_cats": False,
                             "hidden": False,
                         },
                     ]

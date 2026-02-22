@@ -1,22 +1,21 @@
 from textwrap import dedent
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import Annotated, Any
 
-from django.db.models import Case, IntegerField, Prefetch, Q, Value, When
+from django.db.models import Case, F, IntegerField, Prefetch, Q, Value, When
 from django.http import HttpRequest
 from ninja import Query, Router
 from ninja.responses import codes_4xx
 from pydantic import Field
-from srl.models import Categories, Games, Levels, Variables
+from srl.models import Categories, Games, Levels, Variables, VariableValues
 
-from api.ordering import get_ordered_level_names
 from api.permissions import public_auth
 from api.v1.docs.website import GAME_CATEGORIES_GET, GAME_LEVELS_GET, MAIN_PAGE_GET
 from api.v1.routers.decorators import categories_adapter, levels_adapter
 from api.v1.routers.utils import cache_response, get_cached_embed
 from api.v1.schemas.base import ErrorResponse
-
-if TYPE_CHECKING:
-    pass
+from api.v1.schemas.categories import GameCategoryResponseSchema
+from api.v1.schemas.levels import GameLevelResponseSchema
+from api.v1.schemas.variables import VariableValueSchema, VariableWithValuesSchema
 
 router = Router()
 
@@ -95,7 +94,7 @@ def get_main_page_data(
 
 @router.get(
     "/game/{game_id}/categories",
-    response={200: list[dict[str, Any]], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: list[GameCategoryResponseSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Game Categories with Variables",
     description=dedent(
         """
@@ -120,7 +119,7 @@ def get_main_page_data(
 def get_game_categories(
     request: HttpRequest,
     game_id: Annotated[str, Query],
-) -> tuple[int, list[dict[str, Any]] | ErrorResponse]:
+) -> tuple[int, list[GameCategoryResponseSchema] | ErrorResponse]:
     """Get categories for a game with variables."""
     if len(game_id) > 15:
         return 400, ErrorResponse(
@@ -138,73 +137,77 @@ def get_game_categories(
                 details=None,
             )
 
-        # Orders categories by a priority system for consistent display across the site.
-        # Common category types (Any%, 100%, etc.) are sorted to top with specific order,
-        # while other categories fall back to alphabetical sorting.
+        # Orders categories by the admin-managed `order` field. Categories with order=0
+        # fall back to alphabetical sorting at the end of the list.
         categories = (
             Categories.objects.filter(game=game)
             .annotate(
-                order=Case(
-                    When(name__istartswith="Any%", then=Value(1)),
-                    When(name__istartswith="All Goals & Golds", then=Value(2)),
-                    When(name__istartswith="Story", then=Value(3)),
-                    When(name__istartswith="Classic", then=Value(4)),
-                    When(name__istartswith="0%", then=Value(5)),
-                    When(name__istartswith="100%", then=Value(7)),
-                    default=Value(6),
+                sort_key=Case(
+                    When(order=0, then=Value(999999)),
+                    default=F("order"),
                     output_field=IntegerField(),
                 )
             )
-            .order_by("order", "name")
+            .order_by("sort_key", "name")
             .prefetch_related(
                 Prefetch(
                     "variables_set",
-                    queryset=Variables.objects.prefetch_related("variablevalues_set"),
+                    queryset=Variables.objects.prefetch_related(
+                        Prefetch(
+                            "variablevalues_set",
+                            queryset=VariableValues.objects.annotate(
+                                vv_sort_key=Case(
+                                    When(order=0, then=Value(999999)),
+                                    default=F("order"),
+                                    output_field=IntegerField(),
+                                )
+                            ).order_by("vv_sort_key", "name"),
+                        )
+                    ),
                 )
             )
         )
 
-        categories_data = []
+        categories_data: list[GameCategoryResponseSchema] = []
         for category in categories:
-            variables_data = []
+            variables_data: list[VariableWithValuesSchema] = []
             for variable in category.variables_set.all():  # type: ignore
-                values_data = [
-                    {
-                        "value": val.value,
-                        "name": val.name,
-                        "slug": val.slug,
-                        "appear_on_main": val.appear_on_main,
-                        "archive": val.archive,
-                        "rules": val.rules,
-                    }
+                values_data: list[VariableValueSchema] = [
+                    VariableValueSchema(
+                        value=val.value,
+                        name=val.name,
+                        slug=val.slug,
+                        appear_on_main=val.appear_on_main,
+                        order=val.order,
+                        archive=val.archive,
+                        rules=val.rules,
+                        variable=None,
+                    )
                     for val in variable.variablevalues_set.all()
                 ]
+                variables_data.append(VariableWithValuesSchema(
+                    id=variable.id,
+                    name=variable.name,
+                    slug=variable.slug,
+                    scope=variable.scope,
+                    archive=variable.archive,
+                    values=values_data,
+                    game=None,
+                    category=None,
+                    level=None,
+                ))
 
-                variables_data.append(
-                    {
-                        "id": variable.id,
-                        "name": variable.name,
-                        "slug": variable.slug,
-                        "scope": variable.scope,
-                        "all_cats": (variable.cat is None),
-                        "archive": variable.archive,
-                        "values": values_data,
-                    }
-                )
-
-            categories_data.append(
-                {
-                    "id": category.id,
-                    "name": category.name,
-                    "slug": category.slug,
-                    "type": category.type,
-                    "url": category.url,
-                    "rules": category.rules,
-                    "appear_on_main": category.appear_on_main,
-                    "archive": category.archive,
-                    "variables": variables_data,
-                }
-            )
+            categories_data.append(GameCategoryResponseSchema(
+                id=category.id,
+                name=category.name,
+                slug=category.slug,
+                type=category.type,
+                url=category.url,
+                rules=category.rules,
+                appear_on_main=category.appear_on_main,
+                archive=category.archive,
+                variables=variables_data,
+            ))
 
         return 200, categories_data
 
@@ -217,7 +220,7 @@ def get_game_categories(
 
 @router.get(
     "/game/{game_id}/levels",
-    response={200: list[dict[str, Any]], codes_4xx: ErrorResponse, 500: ErrorResponse},
+    response={200: list[GameLevelResponseSchema], codes_4xx: ErrorResponse, 500: ErrorResponse},
     summary="Get Game Levels with Variables",
     description=dedent(
         """
@@ -241,8 +244,8 @@ def get_game_categories(
 def get_game_levels(
     request: HttpRequest,
     game_id: Annotated[str, Query],
-) -> tuple[int, list[dict[str, Any]] | ErrorResponse]:
-    """Get levels for a game with variables (converted from Web_Levels.py)."""
+) -> tuple[int, list[GameLevelResponseSchema] | ErrorResponse]:
+    """Get levels for a game with variables."""
     if len(game_id) > 15:
         return 400, ErrorResponse(
             error="ID must be 15 characters or less",
@@ -259,63 +262,72 @@ def get_game_levels(
                 details=None,
             )
 
-        # Orders levels using a game-specific ordering system. The `get_ordered_level_names`
-        # function returns levels in the canonical order for each game (e.g., story order
-        # or difficulty progression), falling back to alphabetical if no custom order exists.
-        get_order = get_ordered_level_names(game.slug)
-        level_order = Case(
-            *(When(name=name, then=position) for position, name in enumerate(get_order))
-        )
-
         levels = (
             Levels.objects.filter(game=game)
+            .annotate(
+                sort_key=Case(
+                    When(order=0, then=Value(999999)),
+                    default=F("order"),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("sort_key", "name")
             .prefetch_related(
                 Prefetch(
                     "variables_set",
-                    queryset=Variables.objects.prefetch_related("variablevalues_set"),
+                    queryset=Variables.objects.prefetch_related(
+                        Prefetch(
+                            "variablevalues_set",
+                            queryset=VariableValues.objects.annotate(
+                                vv_sort_key=Case(
+                                    When(order=0, then=Value(999999)),
+                                    default=F("order"),
+                                    output_field=IntegerField(),
+                                )
+                            ).order_by("vv_sort_key", "name"),
+                        )
+                    ),
                 )
             )
-            .order_by(level_order)
         )
 
-        levels_data = []
+        levels_data: list[GameLevelResponseSchema] = []
         for level in levels:
             variables_data = []
             for variable in level.variables_set.all():  # type: ignore
                 values_data = [
-                    {
-                        "value": val.value,
-                        "name": val.name,
-                        "slug": val.slug,
-                        "appear_on_main": val.appear_on_main,
-                        "archive": val.archive,
-                        "rules": val.rules,
-                    }
+                    VariableValueSchema(
+                        value=val.value,
+                        name=val.name,
+                        slug=val.slug,
+                        appear_on_main=val.appear_on_main,
+                        order=val.order,
+                        archive=val.archive,
+                        rules=val.rules,
+                        variable=None,
+                    )
                     for val in variable.variablevalues_set.all()
                 ]
+                variables_data.append(VariableWithValuesSchema(
+                    id=variable.id,
+                    name=variable.name,
+                    slug=variable.slug,
+                    scope=variable.scope,
+                    archive=variable.archive,
+                    values=values_data,
+                    game=None,
+                    category=None,
+                    level=None,
+                ))
 
-                variables_data.append(
-                    {
-                        "id": variable.id,
-                        "name": variable.name,
-                        "slug": variable.slug,
-                        "scope": variable.scope,
-                        "all_cats": (variable.cat is None),
-                        "archive": variable.archive,
-                        "values": values_data,
-                    }
-                )
-
-            levels_data.append(
-                {
-                    "id": level.id,
-                    "name": level.name,
-                    "slug": level.slug,
-                    "url": level.url,
-                    "rules": level.rules,
-                    "variables": variables_data,
-                }
-            )
+            levels_data.append(GameLevelResponseSchema(
+                id=level.id,
+                name=level.name,
+                slug=level.slug,
+                url=level.url,
+                rules=level.rules,
+                variables=variables_data,
+            ))
 
         return 200, levels_data
 
