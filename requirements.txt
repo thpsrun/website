@@ -15,12 +15,12 @@ django-resized==1.0.*
 django-sekizai==4.1.*
 djangorestframework==3.16.*
 djangorestframework-api-key==3.1.*
-hypercorn==0.17.*
+gunicorn==23.*
 langcodes==3.5.*
 language_data==1.4.*
 markdown==3.*
 pillow==12.1.*
-psycopg==3.3.*
+psycopg[c]==3.3.*
 python-dateutil==2.9.*
 python-dotenv==1.1.*
 pytz==2025.2

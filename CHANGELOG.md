@@ -1,3 +1,13 @@
+### v3.5
+###### February 28, 2026
+*   Added an experimental patch that should stop the site from randomly breaking every couple of days.
+    *   There was an issue where Celery workers would get "stuck" and never time out. This makes it so they will time out AND the service is separated from the main Django application.
+    *   There is a chance some new oddities occur. Will be keeping an eye on it.
+*   Added an experimental multi-phase Dockerfile build to (hopefully) fix an issue with permissions and to harden the image.
+    *   With `v4`, there will be an emphasis on security at all architecture levels to meet or exceed GDPR requirements.
+
+* * *
+
 ### v3.4.8.4
 ###### February 22, 2026
 *   Fixed an issue where players with too many pronouns would break importing.

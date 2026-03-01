@@ -24,10 +24,35 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        UID: 1000
+        GID: 1000
     command: /app/start.sh server
     restart: unless-stopped
     ports:
       - "8001:8001"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./srlc:/app
+      - static_files:/app/static:rw
+      - ../guides:/app/docs
+    networks:
+      - thpsrun
+
+  celery:
+    container_name: celery
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        UID: 1000
+        GID: 1000
+    command: /app/start.sh celery
+    restart: unless-stopped
     env_file:
       - .env
     depends_on:
