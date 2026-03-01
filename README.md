@@ -1,9 +1,9 @@
 # thps.run Website
-## Version 3.4.8.4
+## Version 3.5
 
 ![Django](https://img.shields.io/badge/Django-5.2-green.svg?logo=django&logoColor=white)
 ![DjangoREST](https://img.shields.io/badge/django--rest--framework-3.16-blue?labelColor=333333&logo=django&logoColor=white&color=green)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.4-green?logo=postgresql&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.6-green?logo=postgresql&logoColor=white)
 
 ### What the heck is this??
 This has been the pet project of [ThePackle](https://twitch.tv/thepackle) for a few years now. In short, it is a highly-customizable, easy-to-use, and curated website that mimics a lot of the leaderboard functionality seen from [HaloRuns](https://haloruns.com). Built entirely in Django (Python), this is the open-source files used for websites like [thps.run](https://thps.run).
