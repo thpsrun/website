@@ -36,6 +36,12 @@ class Guides(models.Model):
     class Meta:
         verbose_name_plural = "Guides"
         ordering = ["-created_at", "title"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["game", "slug"],
+                name="unique_guide_slug_per_game",
+            ),
+        ]
 
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -53,7 +59,6 @@ class Guides(models.Model):
     )
     slug = models.SlugField(
         max_length=200,
-        unique=True,
         verbose_name="Slug",
     )
     tags = models.ManyToManyField(

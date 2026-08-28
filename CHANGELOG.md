@@ -1,3 +1,9 @@
+### v4.5
+###### August 28, 2026
+*   Added the ability to create and edit slugs for guides.
+*   Fixed an issue where, if you select the "New Guide" button in a game's Guides section, it wouldn't auto-populate the game name in the form.
+***
+
 ### v4.4.3
 ###### August 11, 2026
 *   Fixed an issue where the Celery agents would fail to create a backup of the runner's data, since they were never given full access to the `MEDIA_ROOT` folder it would be housed in.
