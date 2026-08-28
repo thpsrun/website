@@ -154,6 +154,8 @@ class GuideCreateSchema(BaseEmbedSchema):
 
     Attributes:
         title (str): Guide title.
+        slug (str | None): Optional URL-friendly slug; derived from the title
+            when omitted.
         game_id (str): Associated game ID.
         tag_ids (list[int] | None): List of tag IDs to associate with guide.
         short_description (str): Brief description.
@@ -161,6 +163,12 @@ class GuideCreateSchema(BaseEmbedSchema):
     """
 
     title: str = Field(..., min_length=1, max_length=200)
+    slug: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=200,
+        description="Optional URL-friendly slug; derived from the title when omitted",
+    )
     game_id: str
     tag_ids: list[int] | None = Field(default=[])
     short_description: str = Field(..., min_length=1, max_length=500)

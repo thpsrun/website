@@ -71,8 +71,14 @@ def guide_from_path(
     request: HttpRequest,
 ) -> Guides:
     kwargs = _path_kwargs(request)
-    if "slug" in kwargs:
-        return get_object_or_404(Guides, slug__iexact=kwargs["slug"])
+    # Slugs are unique per game, so a guide is identified by (game_slug, slug).
+    guide_slug = kwargs.get("guide_slug") or kwargs.get("slug")
+    if guide_slug is not None:
+        lookup: dict[str, Any] = {"slug__iexact": guide_slug}
+        game_slug = kwargs.get("game_slug")
+        if game_slug is not None:
+            lookup["game__slug__iexact"] = game_slug
+        return get_object_or_404(Guides, **lookup)
     if "guide_id" in kwargs:
         return get_object_or_404(Guides, pk=kwargs["guide_id"])
     return None  # type: ignore

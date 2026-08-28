@@ -149,19 +149,21 @@ def list_guides(
 
 
 @router.get(
-    "/{slug}",
+    "/{game_slug}/{guide_slug}",
     response={
         200: GuideSchema,
         400: ErrorResponse,
         404: ErrorResponse,
         500: ErrorResponse,
     },
-    summary="Get Guide by Slug",
+    summary="Get Guide by Game and Slug",
     description="""\
-Get a specific guide by its slug.
+Get a specific guide by its game and slug. Slugs are unique per game, so both
+are required to identify a guide.
 
 Supported Parameters:
-- `slug` (str): Simplified, URL friendly name of the guide.
+- `game_slug` (str): Slug of the game the guide belongs to.
+- `guide_slug` (str): Simplified, URL friendly name of the guide.
 - `embed` (list | None): Comma-separated list of resources to embed.
 
 Supported Embeds:
@@ -172,14 +174,18 @@ Supported Embeds:
 )
 def get_guide(
     request: HttpRequest,
-    slug: str,
+    game_slug: str,
+    guide_slug: str,
     embed: Annotated[
         str | None, Query(description="Comma-separated embeds (game,tags)")
     ] = None,
 ) -> Status:
     embed_list = parse_embeds(embed, "guides")
 
-    queryset = Guides.objects.filter(slug__iexact=slug).select_related(
+    queryset = Guides.objects.filter(
+        game__slug__iexact=game_slug,
+        slug__iexact=guide_slug,
+    ).select_related(
         *_AUTHOR_SELECT_RELATED,
     )
     if "game" in embed_list:
@@ -192,7 +198,7 @@ def get_guide(
         return Status(
             404,
             ErrorResponse(
-                error=f"Guide with slug '{slug}' not found",
+                error=f"Guide '{guide_slug}' not found in game '{game_slug}'",
                 details=None,
             ),
         )
@@ -224,6 +230,7 @@ guide is owned by the calling user.
 
 Request Body:
 - `title` (str): Name of the guide.
+- `slug` (str | None): Optional URL-friendly slug (unique within the game).
 - `game_id` (str): Unique game ID or slug of the game this is associated with.
 - `tag_ids` (list[int] | None): List of tag IDs.
 - `short_description` (str): Brief description of the guide (limit 500 characters).
@@ -261,20 +268,21 @@ def create_guide(
                 ),
             )
 
-    slug = slugify(data.title)
+    # Slugs from users take precedence... if not, just derive one from the title instead.
+    slug = slugify(data.slug or data.title)
     if not slug:
         return Status(
             400,
             ErrorResponse(
-                error="Guide title must contain at least one letter or number",
-                details=None,
+                error="Slug must contain at least one letter or number",
+                details={"slug": data.slug or data.title},
             ),
         )
-    if Guides.objects.filter(slug__iexact=slug).exists():
+    if Guides.objects.filter(game=game, slug__iexact=slug).exists():
         return Status(
             400,
             ErrorResponse(
-                error="A guide with this title already exists",
+                error="Guide With Slug Already Exists",
                 details={"slug": slug},
             ),
         )
@@ -283,6 +291,7 @@ def create_guide(
         with transaction.atomic():
             guide = Guides.objects.create(
                 title=data.title,
+                slug=slug,
                 game=game,
                 owner=request.user,
                 short_description=data.short_description,
@@ -311,7 +320,7 @@ def create_guide(
 
 
 @router.put(
-    "/{slug}",
+    "/{game_slug}/{guide_slug}",
     response={
         200: GuideSchema,
         400: ErrorResponse,
@@ -322,10 +331,11 @@ def create_guide(
     },
     summary="Update Guide",
     description="""\
-Modifies an existing guide.
+Modifies an existing guide, identified by its game and slug.
 
 Request Body:
 - `title` (str | None): Name of the guide.
+- `slug` (str | None): URL-friendly slug (unique within the guide's game).
 - `game_id` (str | None): Unique game ID or slug of the game this is associated with.
 - `tag_ids` (list[int] | None): List of tag IDs.
 - `short_description` (str | None): Brief description of the guide (limit 500 characters).
@@ -338,11 +348,15 @@ Request Body:
 )
 def update_guide(
     request: HttpRequest,
-    slug: str,
+    game_slug: str,
+    guide_slug: str,
     data: GuideUpdateSchema,
 ) -> Status:
     guide = (
-        Guides.objects.filter(slug__iexact=slug)
+        Guides.objects.filter(
+            game__slug__iexact=game_slug,
+            slug__iexact=guide_slug,
+        )
         .select_related(*_AUTHOR_SELECT_RELATED)
         .first()
     )
@@ -350,7 +364,7 @@ def update_guide(
         return Status(
             404,
             ErrorResponse(
-                error=f"Guide with slug '{slug}' not found",
+                error=f"Guide '{guide_slug}' not found in game '{game_slug}'",
                 details=None,
             ),
         )
@@ -413,8 +427,9 @@ def update_guide(
                             details={"slug": data.slug},
                         ),
                     )
+                target_game = new_game if new_game is not None else guide.game
                 existing_guide = (
-                    Guides.objects.filter(slug__iexact=new_slug)
+                    Guides.objects.filter(game=target_game, slug__iexact=new_slug)
                     .exclude(id=guide.pk)
                     .first()
                 )
@@ -458,7 +473,7 @@ def update_guide(
 
 
 @router.delete(
-    "/{slug}",
+    "/{game_slug}/{guide_slug}",
     response={
         200: dict[str, str],
         401: ErrorResponse,
@@ -468,10 +483,11 @@ def update_guide(
     },
     summary="Delete Guide",
     description="""\
-Deletes an existing guide.
+Deletes an existing guide, identified by its game and slug.
 
 Supported Parameters:
-- `slug` (str): Simplified, URL friendly name of the guide.
+- `game_slug` (str): Slug of the game the guide belongs to.
+- `guide_slug` (str): Simplified, URL friendly name of the guide.
 """,
     auth=authed(
         ["guides.delete_own", "guides.delete_any"],
@@ -480,14 +496,18 @@ Supported Parameters:
 )
 def delete_guide(
     request: HttpRequest,
-    slug: str,
+    game_slug: str,
+    guide_slug: str,
 ) -> Status:
-    guide = Guides.objects.filter(slug__iexact=slug).first()
+    guide = Guides.objects.filter(
+        game__slug__iexact=game_slug,
+        slug__iexact=guide_slug,
+    ).first()
     if not guide:
         return Status(
             404,
             ErrorResponse(
-                error=f"Guide with slug '{slug}' not found",
+                error=f"Guide '{guide_slug}' not found in game '{game_slug}'",
                 details=None,
             ),
         )
